@@ -380,6 +380,10 @@ class ChatArchive:
 
             for p in doc.paragraphs:
                 text = p.text.strip()
+                # Clean up non-breaking spaces and other Unicode issues
+                text = text.replace('\xa0', ' ').replace('\u00a0', ' ')
+                text = re.sub(r'\s+', ' ', text).strip()
+                
                 if not text:
                     if current_role and current_content:
                         formatted_content = "\n".join(current_content)
@@ -392,9 +396,9 @@ class ChatArchive:
                 if ts:
                     timestamps.append(ts)
 
-                # Check if this is a role indicator
+                # Check if this is a role indicator - handle various formats
                 role_match = re.match(
-                    r"^(You|ChatGPT|User|Assistant|System)(\s+said)?:?$",
+                    r"^(You|ChatGPT|User|Assistant|System)(\s+said)?:?\s*$",
                     text,
                     re.IGNORECASE,
                 )
@@ -404,14 +408,26 @@ class ChatArchive:
                         formatted_content = "\n".join(current_content)
                         lines.append(f"**{current_role}**:\n\n{formatted_content}\n")
 
-                    current_role = role_match.group(1)
+                    # Normalize the role name
+                    raw_role = role_match.group(1)
+                    if raw_role.lower() == 'chatgpt':
+                        current_role = 'ChatGPT'
+                    elif raw_role.lower() == 'you':
+                        current_role = 'You'
+                    else:
+                        current_role = raw_role.capitalize()
                     current_content = []
                 else:
                     # Add to current content
                     if current_role:
-                        current_content.append(text)
+                        # Apply additional cleaning to content text
+                        cleaned_text = clean_text_content(text)
+                        if cleaned_text:  # Only add non-empty content
+                            current_content.append(cleaned_text)
                     else:
-                        lines.append(text)
+                        cleaned_text = clean_text_content(text)
+                        if cleaned_text:
+                            lines.append(cleaned_text)
 
             # Don't forget the last block
             if current_role and current_content:

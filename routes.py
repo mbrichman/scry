@@ -53,9 +53,9 @@ def parse_messages_from_document(document):
     current_timestamp = None
 
     for line in lines:
-        # Check for message headers with timestamps
-        user_match = re.search(r"\*\*You said\*\* \*\(on ([^)]+)\)\*:", line)
-        assistant_match = re.search(r"\*\*ChatGPT said\*\* \*\(on ([^)]+)\)\*:", line)
+        # Check for message headers with timestamps (JSON format) or without (DOCX format)
+        user_match = re.search(r"\*\*You said\*\* \*\(on ([^)]+)\)\*:", line) or re.search(r"\*\*You\*\*:", line)
+        assistant_match = re.search(r"\*\*ChatGPT said\*\* \*\(on ([^)]+)\)\*:", line) or re.search(r"\*\*ChatGPT\*\*:", line)
         system_match = re.search(r"\*([^*]+)\* \*\(on ([^)]+)\)\*:", line)
 
         if user_match:
@@ -77,7 +77,14 @@ def parse_messages_from_document(document):
             # Start new user message
             current_role = "user"
             current_content = []
-            current_timestamp = user_match.group(1)
+            # Extract timestamp if it exists (JSON format has it, DOCX format doesn't)
+            if hasattr(user_match, 'group') and user_match.lastindex and user_match.lastindex >= 1:
+                try:
+                    current_timestamp = user_match.group(1)
+                except (AttributeError, IndexError):
+                    current_timestamp = None
+            else:
+                current_timestamp = None
 
         elif assistant_match:
             # Save previous message if any
@@ -98,7 +105,14 @@ def parse_messages_from_document(document):
             # Start new assistant message
             current_role = "assistant"
             current_content = []
-            current_timestamp = assistant_match.group(1)
+            # Extract timestamp if it exists (JSON format has it, DOCX format doesn't)
+            if hasattr(assistant_match, 'group') and assistant_match.lastindex and assistant_match.lastindex >= 1:
+                try:
+                    current_timestamp = assistant_match.group(1)
+                except (AttributeError, IndexError):
+                    current_timestamp = None
+            else:
+                current_timestamp = None
 
         elif system_match:
             # Save previous message if any
@@ -366,8 +380,19 @@ def init_routes(app, archive):
         date_filter = request.args.get("date", "all")
         sort_order = request.args.get("sort", "newest")
 
-        # Get ALL documents directly, but only include valid parameters
-        all_docs = archive.get_documents(include=["documents", "metadatas"], limit=9999)
+        # Get ALL documents directly, including their IDs
+        try:
+            # ChromaDB should return the IDs automatically with documents and metadatas
+            all_docs = archive.get_documents(include=["documents", "metadatas"], limit=9999)
+            
+            # Try to get the actual IDs by querying differently if needed
+            if not all_docs.get("ids"):
+                # Fallback: Get all docs with a query to get IDs
+                all_docs_with_ids = archive.collection.get(include=["documents", "metadatas"])
+                all_docs["ids"] = all_docs_with_ids.get("ids", [])
+        except Exception as e:
+            print(f"Error getting documents: {e}")
+            all_docs = archive.get_documents(include=["documents", "metadatas"], limit=9999)
 
         if not all_docs or not all_docs.get("documents"):
             print("DEBUG: No documents found in the database")
@@ -556,46 +581,63 @@ def init_routes(app, archive):
         # Get document by ID using the where filter
         # Since we can't use the 'ids' parameter directly, we need to use 'where' with a field that contains the ID
 
-        # First, try to get the document with the ID in the 'id' field
-        doc_result = archive.get_documents(
-            where={"id": doc_id}, include=["documents", "metadatas"]
-        )
+        # Try to find the document by its actual ChromaDB ID
+        try:
+            # Get all documents with their IDs
+            all_docs = archive.collection.get(include=["documents", "metadatas"])
+            
+            if all_docs.get("ids") and doc_id in all_docs["ids"]:
+                # Found the document by ID
+                idx = all_docs["ids"].index(doc_id)
+                doc_result = {
+                    "documents": [all_docs["documents"][idx]],
+                    "metadatas": [all_docs["metadatas"][idx]],
+                    "ids": [doc_id]
+                }
+            else:
+                doc_result = None
+        except Exception as e:
+            print(f"Error finding document {doc_id}: {e}")
+            doc_result = None
 
-        # If that doesn't work, the ID might be stored in other fields or be a generated ID like 'chat-0'
+        # If that didn't work, try the old fallback methods
+        if not doc_result or not doc_result.get("documents"):
+            # First, try to get the document with the ID in the metadata 'id' field  
+            doc_result = archive.get_documents(
+                where={"id": doc_id}, include=["documents", "metadatas"]
+            )
+
+        # Final fallback - try other possible ID fields
         if not doc_result or not doc_result.get("documents") or not doc_result["documents"]:
-            # If doc_id is in the format "chat-X", extract the index
-            if doc_id.startswith("chat-"):
+            # If doc_id is in the format "chat-X" or "docx-X", this might be an old-style lookup
+            if doc_id.startswith(("chat-", "docx-")):
                 try:
                     idx = int(doc_id.split("-")[1])
                     # Get all documents and find the one with the matching index
-                    all_docs = archive.get_documents(
+                    all_docs_fallback = archive.get_documents(
                         include=["documents", "metadatas"], limit=9999
                     )
 
                     if (
-                        all_docs
-                        and all_docs.get("documents")
-                        and idx < len(all_docs["documents"])
+                        all_docs_fallback
+                        and all_docs_fallback.get("documents")
+                        and idx < len(all_docs_fallback["documents"])
                     ):
                         # Create a filtered result with only the matching document
                         doc_result = {
-                            "documents": [all_docs["documents"][idx]],
+                            "documents": [all_docs_fallback["documents"][idx]],
                             "metadatas": [
-                                all_docs["metadatas"][idx]
-                                if idx < len(all_docs.get("metadatas", []))
+                                all_docs_fallback["metadatas"][idx]
+                                if idx < len(all_docs_fallback.get("metadatas", []))
                                 else {}
                             ],
-                            "ids": [
-                                all_docs["ids"][idx]
-                                if "ids" in all_docs and idx < len(all_docs["ids"])
-                                else doc_id
-                            ],
+                            "ids": [doc_id]
                         }
                     else:
                         # Document not found
                         return "Conversation not found", 404
                 except (ValueError, IndexError):
-                    # Invalid chat-X format
+                    # Invalid format
                     return "Conversation not found", 404
             else:
                 # Try other possible ID fields
@@ -623,91 +665,8 @@ def init_routes(app, archive):
         document = doc_result["documents"][0]
         metadata = doc_result["metadatas"][0] if doc_result.get("metadatas") else {}
 
-        # Parse the document to extract messages
-        messages = []
-
-        # Simple parsing of markdown format with "You said" and "ChatGPT said" headers
-        # This is a basic implementation - might need adjustment based on actual format
-        lines = document.split("\n")
-        current_role = None
-        current_content = []
-        current_timestamp = None
-
-        for line in lines:
-            # Check for message headers with timestamps
-            user_match = re.search(r"\*\*You said\*\* \*\(on ([^)]+)\)\*:", line)
-            assistant_match = re.search(r"\*\*ChatGPT said\*\* \*\(on ([^)]+)\)\*:", line)
-            system_match = re.search(r"\*([^*]+)\* \*\(on ([^)]+)\)\*:", line)
-
-            if user_match:
-                # Save previous message if any
-                if current_role:
-                    messages.append(
-                        {
-                            "role": current_role,
-                            "content": markdown.markdown(
-                                "\n".join(current_content), extensions=["extra", "tables"]
-                            ),
-                            "timestamp": current_timestamp,
-                        }
-                    )
-
-                # Start new user message
-                current_role = "user"
-                current_content = []
-                current_timestamp = user_match.group(1)
-
-            elif assistant_match:
-                # Save previous message if any
-                if current_role:
-                    messages.append(
-                        {
-                            "role": current_role,
-                            "content": markdown.markdown(
-                                "\n".join(current_content), extensions=["extra", "tables"]
-                            ),
-                            "timestamp": current_timestamp,
-                        }
-                    )
-
-                # Start new assistant message
-                current_role = "assistant"
-                current_content = []
-                current_timestamp = assistant_match.group(1)
-
-            elif system_match:
-                # Save previous message if any
-                if current_role:
-                    messages.append(
-                        {
-                            "role": current_role,
-                            "content": markdown.markdown(
-                                "\n".join(current_content), extensions=["extra", "tables"]
-                            ),
-                            "timestamp": current_timestamp,
-                        }
-                    )
-
-                # Start new system message
-                current_role = "system"
-                current_content = []
-                current_timestamp = system_match.group(2)
-
-            elif current_role:
-                # Add line to current message
-                current_content.append(line)
-
-        # Don't forget the last message
-        if current_role:
-            messages.append(
-                {
-                    "role": current_role,
-                    "content": markdown.markdown(
-                        "\n".join(current_content), extensions=["extra", "tables"]
-                    ),
-                    "timestamp": current_timestamp,
-                }
-            )
+        # Parse the document to extract messages using the same logic as the index.html search results
+        messages = parse_messages_from_document(document)
 
         # Create conversation object
         conversation = {"id": doc_id, "meta": metadata, "document": document}
@@ -723,10 +682,10 @@ def init_routes(app, archive):
             where={"id": doc_id}, include=["documents", "metadatas"]
         )
 
-        # If that doesn't work, the ID might be stored in other fields or be a generated ID like 'chat-0'
+        # If that doesn't work, the ID might be stored in other fields or be a generated ID like 'chat-0' or 'docx-0'
         if not doc_result or not doc_result.get("documents") or not doc_result["documents"]:
-            # If doc_id is in the format "chat-X", extract the index
-            if doc_id.startswith("chat-"):
+            # If doc_id is in the format "chat-X" or "docx-X", extract the index
+            if doc_id.startswith(("chat-", "docx-")):
                 try:
                     idx = int(doc_id.split("-")[1])
                     # Get all documents and find the one with the matching index
@@ -752,7 +711,7 @@ def init_routes(app, archive):
                         # Document not found
                         return "Conversation not found", 404
                 except (ValueError, IndexError):
-                    # Invalid chat-X format
+                    # Invalid format
                     return "Conversation not found", 404
             else:
                 # Try other possible ID fields
