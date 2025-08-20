@@ -11,6 +11,33 @@ from docx import Document
 from config import COLLECTION_NAME, PERSIST_DIR, DEFAULT_EMBEDDING_MODEL
 
 
+def clean_text_content(text):
+    """Clean text content by removing non-printable characters and ChatGPT artifacts while preserving markdown"""
+    if not text or not isinstance(text, str):
+        return text
+    
+    # Remove ChatGPT private use area Unicode characters (formatting markers)
+    cleaned = re.sub(r'[\ue000-\uf8ff]', '', text)
+    
+    # Remove ChatGPT plugin/tool artifacts
+    cleaned = re.sub(r'businesses_map\{[^}]*\}', '', cleaned)
+    cleaned = re.sub(r'businesses_map(?=\s|$)', '', cleaned)
+    cleaned = re.sub(r'[a-zA-Z_]+_map\{[^}]*\}', '', cleaned)
+    cleaned = re.sub(r'\{"name":"[^}]*","location":"[^}]*","description":"[^}]*","[^}]*"\}', '', cleaned)
+    cleaned = re.sub(r'"cite":"turn\d+search\d+"', '', cleaned)
+    
+    # Clean up excessive whitespace but preserve markdown structure
+    cleaned = re.sub(r'[ \t]+', ' ', cleaned)     # Multiple spaces/tabs to single space
+    cleaned = re.sub(r'\n[ \t]+', '\n', cleaned)  # Remove spaces at start of lines
+    cleaned = re.sub(r'[ \t]+\n', '\n', cleaned)  # Remove spaces at end of lines
+    cleaned = re.sub(r'\n{3,}', '\n\n', cleaned)  # Limit consecutive newlines to 2
+    
+    # Strip leading/trailing whitespace
+    cleaned = cleaned.strip()
+    
+    return cleaned
+
+
 class ChatArchive:
     def __init__(self):
         self.embedder = None
@@ -190,7 +217,7 @@ class ChatArchive:
 
                 role = message.get("author", {}).get("role", "unknown")
                 parts = message.get("content", {}).get("parts", [])
-                content = " ".join([p for p in parts if isinstance(p, str)]).strip()
+                content = clean_text_content(" ".join([p for p in parts if isinstance(p, str)]))
                 if not content:
                     continue
 

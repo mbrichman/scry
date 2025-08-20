@@ -10,32 +10,37 @@ from utils import highlight_concepts
 
 
 def clean_message_content(content):
-    """Clean artifacts and special tokens from message content"""
-    if not content:
+    """Clean artifacts and special tokens from message content while preserving markdown"""
+    if not content or not isinstance(content, str):
         return content
     
-    # Remove common ChatGPT artifacts and tokens
-    artifacts_to_remove = [
-        r'citeturn\d+search\d+',  # citeturn0search3, etc.
-        r'cite\d*',               # cite0, cite1, etc. and standalone 'cite'
-        r'search\d+',             # search0, search1, etc.
-        r'turn\d+',               # turn0, turn1, etc.
-        r'\bcite\b',              # standalone 'cite' word
-        r'\【\d+:\d+†[^】]*\】',   # Citation format like 【1:2†source】
-        r'\【\d+†[^】]*\】',       # Citation format like 【1†source】
-        r'\[\d+:\d+\]',           # Reference format like [1:2]
-        r'\[\d+\]',               # Reference format like [1]
-    ]
+    # Remove ChatGPT private use area Unicode characters (formatting markers)
+    cleaned = re.sub(r'[\ue000-\uf8ff]', '', content)
     
-    cleaned_content = content
-    for pattern in artifacts_to_remove:
-        cleaned_content = re.sub(pattern, '', cleaned_content, flags=re.IGNORECASE)
+    # Remove ChatGPT plugin/tool artifacts
+    cleaned = re.sub(r'businesses_map\{[^}]*\}', '', cleaned)
+    cleaned = re.sub(r'businesses_map(?=\s|$)', '', cleaned)
+    cleaned = re.sub(r'[a-zA-Z_]+_map\{[^}]*\}', '', cleaned)
+    cleaned = re.sub(r'\{"name":"[^}]*","location":"[^}]*","description":"[^}]*","[^}]*"\}', '', cleaned)
+    cleaned = re.sub(r'"cite":"turn\d+search\d+"', '', cleaned)
     
-    # Clean up extra whitespace
-    cleaned_content = re.sub(r'\s+', ' ', cleaned_content)
-    cleaned_content = cleaned_content.strip()
+    # Remove common ChatGPT citation artifacts
+    cleaned = re.sub(r'citeturn\d+search\d+', '', cleaned, flags=re.IGNORECASE)
+    cleaned = re.sub(r'\【\d+:\d+†[^】]*\】', '', cleaned)   # Citation format like 【1:2†source】
+    cleaned = re.sub(r'\【\d+†[^】]*\】', '', cleaned)       # Citation format like 【1†source】
+    cleaned = re.sub(r'\[\d+:\d+\]', '', cleaned)           # Reference format like [1:2]
+    cleaned = re.sub(r'\[\d+\]', '', cleaned)               # Reference format like [1]
     
-    return cleaned_content
+    # Clean up excessive whitespace but preserve markdown structure
+    cleaned = re.sub(r'[ \t]+', ' ', cleaned)     # Multiple spaces/tabs to single space
+    cleaned = re.sub(r'\n[ \t]+', '\n', cleaned)  # Remove spaces at start of lines
+    cleaned = re.sub(r'[ \t]+\n', '\n', cleaned)  # Remove spaces at end of lines
+    cleaned = re.sub(r'\n{3,}', '\n\n', cleaned)  # Limit consecutive newlines to 2
+    
+    # Strip leading/trailing whitespace
+    cleaned = cleaned.strip()
+    
+    return cleaned
 
 
 def parse_messages_from_document(document):
@@ -63,7 +68,7 @@ def parse_messages_from_document(document):
                     {
                         "role": current_role,
                         "content": markdown.markdown(
-                            cleaned_content, extensions=["extra"]
+                            cleaned_content, extensions=["extra", "tables"]
                         ),
                         "timestamp": current_timestamp,
                     }
@@ -84,7 +89,7 @@ def parse_messages_from_document(document):
                     {
                         "role": current_role,
                         "content": markdown.markdown(
-                            cleaned_content, extensions=["extra"]
+                            cleaned_content, extensions=["extra", "tables"]
                         ),
                         "timestamp": current_timestamp,
                     }
@@ -105,7 +110,7 @@ def parse_messages_from_document(document):
                     {
                         "role": current_role,
                         "content": markdown.markdown(
-                            cleaned_content, extensions=["extra"]
+                            cleaned_content, extensions=["extra", "tables"]
                         ),
                         "timestamp": current_timestamp,
                     }
@@ -129,7 +134,7 @@ def parse_messages_from_document(document):
             {
                 "role": current_role,
                 "content": markdown.markdown(
-                    cleaned_content, extensions=["extra"]
+                    cleaned_content, extensions=["extra", "tables"]
                 ),
                 "timestamp": current_timestamp,
             }
@@ -394,7 +399,7 @@ def init_routes(app, archive):
 
             # Basic preview
             preview = doc[:500] + "..." if len(doc) > 500 else doc
-            preview_html = markdown.markdown(preview, extensions=["extra"])
+            preview_html = markdown.markdown(preview, extensions=["extra", "tables"])
 
             # Get a title - with fallbacks
             title = meta.get("title", "")
@@ -641,7 +646,7 @@ def init_routes(app, archive):
                         {
                             "role": current_role,
                             "content": markdown.markdown(
-                                "\n".join(current_content), extensions=["extra"]
+                                "\n".join(current_content), extensions=["extra", "tables"]
                             ),
                             "timestamp": current_timestamp,
                         }
@@ -659,7 +664,7 @@ def init_routes(app, archive):
                         {
                             "role": current_role,
                             "content": markdown.markdown(
-                                "\n".join(current_content), extensions=["extra"]
+                                "\n".join(current_content), extensions=["extra", "tables"]
                             ),
                             "timestamp": current_timestamp,
                         }
@@ -677,7 +682,7 @@ def init_routes(app, archive):
                         {
                             "role": current_role,
                             "content": markdown.markdown(
-                                "\n".join(current_content), extensions=["extra"]
+                                "\n".join(current_content), extensions=["extra", "tables"]
                             ),
                             "timestamp": current_timestamp,
                         }
@@ -698,7 +703,7 @@ def init_routes(app, archive):
                 {
                     "role": current_role,
                     "content": markdown.markdown(
-                        "\n".join(current_content), extensions=["extra"]
+                        "\n".join(current_content), extensions=["extra", "tables"]
                     ),
                     "timestamp": current_timestamp,
                 }
