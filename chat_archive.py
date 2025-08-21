@@ -176,7 +176,7 @@ class ChatArchive:
             )
 
     def index_json(self, json_path, chunk_size=0):
-        """Index ChatGPT conversations from a JSON export"""
+        """Index conversations from a JSON export (supports ChatGPT and Claude formats)"""
         try:
             with open(json_path, "r", encoding="utf-8") as f:
                 data = json.load(f)
@@ -190,10 +190,9 @@ class ChatArchive:
         # Load embedder
         embedder = self.load_embedder()
 
-        conversations = (
-            data if isinstance(data, list) else data.get("conversations", [])
-        )
-        print(f"Found {len(conversations)} conversations in the JSON file")
+        # Detect format and get conversations
+        conversations, file_format = self._detect_json_format(data)
+        print(f"Detected {file_format} format with {len(conversations)} conversations")
 
         if len(conversations) == 0:
             return False, "No conversations found in the JSON file"
@@ -201,43 +200,18 @@ class ChatArchive:
         documents, metadatas, ids = [], [], []
 
         for idx, conv in enumerate(conversations):
-            messages = []
-            message_map = conv.get("mapping", {})
-            ordered = sorted(
-                message_map.values(), key=lambda m: m.get("create_time", 0)
-            )
-
-            # Store all timestamps for more comprehensive filtering
-            timestamps = []
-
-            for msg in ordered:
-                message = msg.get("message")
-                if not message:
-                    continue
-
-                role = message.get("author", {}).get("role", "unknown")
-                parts = message.get("content", {}).get("parts", [])
-                content = clean_text_content(" ".join([p for p in parts if isinstance(p, str)]))
-                if not content:
-                    continue
-
-                ts = message.get("create_time", None)
-                if ts:
-                    timestamps.append(ts)
-                dt_str = (
-                    datetime.fromtimestamp(ts).strftime("%Y-%m-%d %H:%M:%S")
-                    if ts
-                    else "unknown time"
-                )
-
-                if role == "user":
-                    messages.append(f"**You said** *(on {dt_str})*:\n\n{content}")
-                elif role == "assistant":
-                    messages.append(f"**ChatGPT said** *(on {dt_str})*:\n\n{content}")
-                else:
-                    messages.append(
-                        f"*{role.capitalize()}* *(on {dt_str})*:\n\n{content}"
-                    )
+            if file_format == "ChatGPT":
+                processed_conv = self._process_chatgpt_conversation(conv, idx)
+            elif file_format == "Claude":
+                processed_conv = self._process_claude_conversation(conv, idx)
+            else:
+                print(f"Unknown format, skipping conversation {idx}")
+                continue
+                
+            if not processed_conv:
+                continue
+                
+            messages, timestamps, title = processed_conv
 
             # Calculate earliest and latest timestamps
             valid_timestamps = [ts for ts in timestamps if ts]
@@ -245,12 +219,18 @@ class ChatArchive:
             latest_ts = max(valid_timestamps) if valid_timestamps else None
 
             # Convert timestamps to ISO format for better filtering
-            earliest_ts_iso = (
-                datetime.fromtimestamp(earliest_ts).isoformat() if earliest_ts else None
-            )
-            latest_ts_iso = (
-                datetime.fromtimestamp(latest_ts).isoformat() if latest_ts else None
-            )
+            if file_format == "ChatGPT":
+                # ChatGPT timestamps are Unix epoch seconds
+                earliest_ts_iso = (
+                    datetime.fromtimestamp(earliest_ts).isoformat() if earliest_ts else None
+                )
+                latest_ts_iso = (
+                    datetime.fromtimestamp(latest_ts).isoformat() if latest_ts else None
+                )
+            elif file_format == "Claude":
+                # Claude timestamps are already ISO strings
+                earliest_ts_iso = earliest_ts
+                latest_ts_iso = latest_ts
 
             full_text = "\n\n".join(messages)
 
@@ -267,14 +247,14 @@ class ChatArchive:
 
                 for chunk_idx, chunk in enumerate(chunks):
                     chunk_text = "\n\n".join(chunk)
-                    chunk_title = f"{conv.get('title', f'Chat {idx}')} (Part {chunk_idx+1}/{len(chunks)})"
+                    chunk_title = f"{title} (Part {chunk_idx+1}/{len(chunks)})"
 
                     documents.append(chunk_text)
 
                     # Create a metadata dict with no None values
                     metadata_dict = {
                         "title": chunk_title,
-                        "source": "json",
+                        "source": file_format.lower(),
                         "message_count": len(chunk),
                         "is_chunk": True,
                         "chunk_index": chunk_idx,
@@ -282,9 +262,10 @@ class ChatArchive:
                     }
 
                     # Only add fields that aren't None
-                    if conv.get("id"):
-                        metadata_dict["id"] = f"{conv.get('id')}-{chunk_idx}"
-                        metadata_dict["conversation_id"] = conv.get("id")
+                    conv_id = conv.get("id") or conv.get("uuid")
+                    if conv_id:
+                        metadata_dict["id"] = f"{conv_id}-{chunk_idx}"
+                        metadata_dict["conversation_id"] = conv_id
                     if earliest_ts_iso:
                         metadata_dict["earliest_ts"] = earliest_ts_iso
                     if latest_ts_iso:
@@ -297,15 +278,16 @@ class ChatArchive:
 
                 # Create a metadata dict with no None values
                 metadata_dict = {
-                    "title": conv.get("title", f"Chat {idx}"),
-                    "source": "json",
+                    "title": title,
+                    "source": file_format.lower(),
                     "message_count": len(messages),
                     "is_chunk": False,
                 }
 
                 # Only add fields that aren't None
-                if conv.get("id"):
-                    metadata_dict["id"] = conv.get("id")
+                conv_id = conv.get("id") or conv.get("uuid")
+                if conv_id:
+                    metadata_dict["id"] = conv_id
                 if earliest_ts_iso:
                     metadata_dict["earliest_ts"] = earliest_ts_iso
                 if latest_ts_iso:
@@ -340,6 +322,118 @@ class ChatArchive:
             total_indexed += len(batch_docs)
 
         return True, f"Successfully indexed {total_indexed} documents"
+
+    def _detect_json_format(self, data):
+        """Detect whether JSON is ChatGPT or Claude format"""
+        # Ensure data is a list
+        if isinstance(data, dict):
+            conversations = data.get("conversations", [])
+        else:
+            conversations = data if isinstance(data, list) else []
+            
+        if not conversations:
+            return [], "Unknown"
+            
+        # Check first conversation to determine format
+        first_conv = conversations[0] if conversations else {}
+        
+        # Claude format has 'uuid', 'name', and 'chat_messages'
+        if (first_conv.get("uuid") and 
+            first_conv.get("name") is not None and  # name can be empty string
+            "chat_messages" in first_conv):
+            return conversations, "Claude"
+            
+        # ChatGPT format has 'title', 'mapping', and timestamps as epoch
+        elif (first_conv.get("title") is not None and 
+              "mapping" in first_conv and
+              first_conv.get("create_time")):
+            return conversations, "ChatGPT"
+            
+        return conversations, "Unknown"
+        
+    def _process_chatgpt_conversation(self, conv, idx):
+        """Process a ChatGPT format conversation"""
+        messages = []
+        message_map = conv.get("mapping", {})
+        ordered = sorted(
+            message_map.values(), key=lambda m: m.get("create_time", 0)
+        )
+
+        # Store all timestamps for more comprehensive filtering
+        timestamps = []
+
+        for msg in ordered:
+            message = msg.get("message")
+            if not message:
+                continue
+
+            role = message.get("author", {}).get("role", "unknown")
+            parts = message.get("content", {}).get("parts", [])
+            content = clean_text_content(" ".join([p for p in parts if isinstance(p, str)]))
+            if not content:
+                continue
+
+            ts = message.get("create_time", None)
+            if ts:
+                timestamps.append(ts)
+            dt_str = (
+                datetime.fromtimestamp(ts).strftime("%Y-%m-%d %H:%M:%S")
+                if ts
+                else "unknown time"
+            )
+
+            if role == "user":
+                messages.append(f"**You said** *(on {dt_str})*:\n\n{content}")
+            elif role == "assistant":
+                messages.append(f"**ChatGPT said** *(on {dt_str})*:\n\n{content}")
+            else:
+                messages.append(
+                    f"*{role.capitalize()}* *(on {dt_str})*:\n\n{content}"
+                )
+                
+        title = conv.get("title", f"Chat {idx}")
+        return (messages, timestamps, title) if messages else None
+        
+    def _process_claude_conversation(self, conv, idx):
+        """Process a Claude format conversation"""
+        messages = []
+        chat_messages = conv.get("chat_messages", [])
+        
+        # Store all timestamps for more comprehensive filtering
+        timestamps = []
+        
+        for msg in chat_messages:
+            role = msg.get("sender", "unknown")
+            content = clean_text_content(msg.get("text", ""))
+            
+            if not content:
+                continue
+                
+            # Parse timestamp from ISO string
+            ts_str = msg.get("created_at")
+            ts_parsed = None
+            dt_str = "unknown time"
+            
+            if ts_str:
+                try:
+                    # Parse ISO timestamp
+                    ts_parsed = datetime.fromisoformat(ts_str.replace('Z', '+00:00'))
+                    timestamps.append(ts_str)  # Store original ISO string
+                    dt_str = ts_parsed.strftime("%Y-%m-%d %H:%M:%S")
+                except (ValueError, AttributeError):
+                    pass
+                    
+            if role == "human":
+                messages.append(f"**You said** *(on {dt_str})*:\n\n{content}")
+            elif role == "assistant":
+                messages.append(f"**Claude said** *(on {dt_str})*:\n\n{content}")
+            else:
+                messages.append(
+                    f"*{role.capitalize()}* *(on {dt_str})*:\n\n{content}"
+                )
+                
+        title = conv.get("name", f"Claude Chat {idx}")
+        return (messages, timestamps, title) if messages else None
 
     def index_docx(self, doc_folder):
         """Index Word documents containing chat conversations"""

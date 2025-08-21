@@ -55,7 +55,10 @@ def parse_messages_from_document(document):
     for line in lines:
         # Check for message headers with timestamps (JSON format) or without (DOCX format)
         user_match = re.search(r"\*\*You said\*\* \*\(on ([^)]+)\)\*:", line) or re.search(r"\*\*You\*\*:", line)
-        assistant_match = re.search(r"\*\*ChatGPT said\*\* \*\(on ([^)]+)\)\*:", line) or re.search(r"\*\*ChatGPT\*\*:", line)
+        assistant_match = (
+            re.search(r"\*\*(ChatGPT|Claude) said\*\* \*\(on ([^)]+)\)\*:", line) or 
+            re.search(r"\*\*(ChatGPT|Claude)\*\*:", line)
+        )
         system_match = re.search(r"\*([^*]+)\* \*\(on ([^)]+)\)\*:", line)
 
         if user_match:
@@ -106,9 +109,9 @@ def parse_messages_from_document(document):
             current_role = "assistant"
             current_content = []
             # Extract timestamp if it exists (JSON format has it, DOCX format doesn't)
-            if hasattr(assistant_match, 'group') and assistant_match.lastindex and assistant_match.lastindex >= 1:
+            if hasattr(assistant_match, 'group') and assistant_match.lastindex and assistant_match.lastindex >= 2:
                 try:
-                    current_timestamp = assistant_match.group(1)
+                    current_timestamp = assistant_match.group(2)  # Timestamp is now group 2 due to (ChatGPT|Claude) being group 1
                 except (AttributeError, IndexError):
                     current_timestamp = None
             else:
@@ -233,12 +236,16 @@ def init_routes(app, archive):
                         except:
                             pass
 
+                    # Determine assistant name based on source
+                    assistant_name = "Claude" if meta.get("source") == "claude" else "ChatGPT"
+                    
                     results.append(
                         {
                             "title": meta.get("title", "Untitled"),
                             "date": date_str,
                             "messages": messages,
                             "meta": meta,
+                            "assistant_name": assistant_name,
                         }
                     )
 
@@ -459,7 +466,10 @@ def init_routes(app, archive):
                             break
                         # Handle ISO format strings
                         elif isinstance(date_value, str):
-                            date_obj = datetime.fromisoformat(date_value)
+                            date_obj = datetime.fromisoformat(date_value.replace('Z', '+00:00'))
+                            # Convert to timezone-naive for consistent sorting
+                            if date_obj.tzinfo is not None:
+                                date_obj = date_obj.replace(tzinfo=None)
                             break
                     except (ValueError, TypeError):
                         pass
@@ -668,10 +678,13 @@ def init_routes(app, archive):
         # Parse the document to extract messages using the same logic as the index.html search results
         messages = parse_messages_from_document(document)
 
+        # Determine assistant name based on source
+        assistant_name = "Claude" if metadata.get("source") == "claude" else "ChatGPT"
+        
         # Create conversation object
         conversation = {"id": doc_id, "meta": metadata, "document": document}
 
-        return render_template("view.html", conversation=conversation, messages=messages)
+        return render_template("view.html", conversation=conversation, messages=messages, assistant_name=assistant_name)
 
     @app.route("/export/<doc_id>")
     def export_conversation(doc_id):

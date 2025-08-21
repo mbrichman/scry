@@ -185,7 +185,7 @@
                             {% if message.role == 'user' %}
                                 You
                             {% elif message.role == 'assistant' %}
-                                ChatGPT
+                                {{ assistant_name }}
                             {% else %}
                                 {{ message.role|capitalize }}
                             {% endif %}
@@ -265,7 +265,7 @@
                     // Get the timestamp
                     const timestampElement = message.querySelector('.timestamp');
                     let timestamp = '';
-                    if (timestampElement) {
+                    if (timestampElement && timestampElement.textContent.trim()) {
                         // Get original timestamp if available, otherwise formatted
                         timestamp = timestampElement.getAttribute('data-original') || timestampElement.textContent.trim();
                     }
@@ -283,7 +283,7 @@
                     }
                     
                     // Add the message to markdown
-                    if (timestamp) {
+                    if (timestamp && timestamp !== '') {
                         markdown += `**${role}** *(on ${timestamp})*:\n\n`;
                     } else {
                         markdown += `**${role}**:\n\n`;
