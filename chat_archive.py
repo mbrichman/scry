@@ -197,7 +197,21 @@ class ChatArchive:
         if len(conversations) == 0:
             return False, "No conversations found in the JSON file"
 
+        # Get existing conversation IDs to avoid duplicates (only same format)
+        existing_docs = self.get_documents(include=["metadatas"], limit=9999)
+        existing_conv_ids = set()
+        for meta in existing_docs.get("metadatas", []):
+            # Only check for duplicates within the same source format
+            if meta.get("source") == file_format.lower():
+                conv_id = meta.get("conversation_id") or meta.get("id")
+                if conv_id:
+                    existing_conv_ids.add(conv_id)
+        
+        print(f"Found {len(existing_conv_ids)} existing {file_format} conversation IDs")
+
         documents, metadatas, ids = [], [], []
+        skipped_duplicates = 0
+        processed_count = 0
 
         for idx, conv in enumerate(conversations):
             if file_format == "ChatGPT":
@@ -212,6 +226,17 @@ class ChatArchive:
                 continue
                 
             messages, timestamps, title = processed_conv
+
+            # Check for duplicates using conversation ID
+            conv_id = conv.get("id") or conv.get("uuid")
+            if conv_id and conv_id in existing_conv_ids:
+                skipped_duplicates += 1
+                continue
+
+            # Skip empty conversations
+            if not messages or not any(msg.strip() for msg in messages):
+                print(f"Skipping empty conversation {idx}: {title}")
+                continue
 
             # Calculate earliest and latest timestamps
             valid_timestamps = [ts for ts in timestamps if ts]
@@ -272,7 +297,7 @@ class ChatArchive:
                         metadata_dict["latest_ts"] = latest_ts_iso
 
                     metadatas.append(metadata_dict)
-                    ids.append(f"chat-{idx}-chunk-{chunk_idx}")
+                    ids.append(f"{file_format.lower()}-chat-{idx}-chunk-{chunk_idx}")
             else:
                 documents.append(full_text)
 
@@ -294,10 +319,13 @@ class ChatArchive:
                     metadata_dict["latest_ts"] = latest_ts_iso
 
                 metadatas.append(metadata_dict)
-                ids.append(f"chat-{idx}")
+                ids.append(f"{file_format.lower()}-chat-{idx}")
 
         if not documents:
-            return False, "No valid conversations found to index"
+            if skipped_duplicates > 0:
+                return True, f"All {skipped_duplicates} conversations already indexed (no new content)"
+            else:
+                return False, "No valid conversations found to index"
 
         # Process in batches to avoid memory issues with large datasets
         batch_size = 100
@@ -321,7 +349,11 @@ class ChatArchive:
 
             total_indexed += len(batch_docs)
 
-        return True, f"Successfully indexed {total_indexed} documents"
+        message = f"Successfully indexed {total_indexed} documents"
+        if skipped_duplicates > 0:
+            message += f" (skipped {skipped_duplicates} duplicates)"
+        
+        return True, message
 
     def _detect_json_format(self, data):
         """Detect whether JSON is ChatGPT or Claude format"""

@@ -3,7 +3,7 @@ from pathlib import Path
 # === CONFIG ===
 COLLECTION_NAME = "chat_history"
 PERSIST_DIR = "./chroma_storage"
-DEFAULT_EMBEDDING_MODEL = "all-MiniLM-L6-v2"
+DEFAULT_EMBEDDING_MODEL = "BAAI/bge-large-en-v1.5"
 SECRET_KEY = "your-secret-key-change-this-in-production"
 
 # Create storage dir if it doesn't exist
