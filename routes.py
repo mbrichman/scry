@@ -219,99 +219,20 @@ def init_routes(app, archive):
 
     @app.route("/", methods=["GET", "POST"])
     def index():
-        search_form = SearchForm()
-        search_triggered = False
-        results = []
-        stats = {}
-
-        # Get DB stats
-        doc_count = archive.get_count()
-        stats["doc_count"] = doc_count
-
-        # Check if search was triggered (either by form submission or URL parameter)
-        query = None
-
-        if request.method == "POST":
-            # Handle traditional form submission (POST)
+        """Redirect to conversations view"""
+        from flask import redirect, url_for
+        
+        # If there's a search query, pass it to conversations
+        if request.args.get("q"):
+            return redirect(url_for("conversations", **request.args))
+        elif request.method == "POST":
+            # Handle POST form submission by redirecting to GET
+            search_form = SearchForm()
             if search_form.validate_on_submit():
-                query = search_form.query.data
-                search_triggered = True
-        elif request.method == "GET" and request.args.get("q"):
-            # Handle URL parameter (GET)
-            query = request.args.get("q")
-            # Populate the form with the query from URL
-            search_form.query.data = query
-            search_triggered = True
-
-        # Perform search if triggered
-        if search_triggered and query:
-            # Default values for optional parameters
-            n_results = 5
-            keyword_search = False
-            date_range = None
-
-            # Use form values if available (POST method) or defaults (GET method with URL params)
-            if request.method == "POST" and hasattr(search_form, "results_count"):
-                n_results = search_form.results_count.data or 5
-
-            if request.method == "POST" and hasattr(search_form, "search_type"):
-                keyword_search = search_form.search_type.data == "keyword"
-
-            if (
-                request.method == "POST"
-                and hasattr(search_form, "date_from")
-                and hasattr(search_form, "date_to")
-            ):
-                if search_form.date_from.data and search_form.date_to.data:
-                    date_range = (search_form.date_from.data, search_form.date_to.data)
-
-            # Perform search
-            raw_results = archive.search(
-                query_text=query,
-                n_results=n_results,
-                date_range=date_range,
-                keyword_search=keyword_search,
-            )
-
-            # Process results
-            if raw_results["documents"][0]:
-                for doc, meta in zip(
-                    raw_results["documents"][0], raw_results["metadatas"][0]
-                ):
-                    # Get dates from metadata
-                    date_str = meta.get("earliest_ts", "Unknown date")
-                    if date_str != "Unknown date":
-                        try:
-                            date_obj = datetime.fromisoformat(date_str)
-                            date_str = date_obj.strftime("%Y-%m-%d %H:%M")
-                        except:
-                            pass
-
-                    # Get conversation ID for the view link
-                    # Try different ID sources in order of preference
-                    conv_id = (
-                        meta.get("id") or 
-                        meta.get("conversation_id") or
-                        f"unknown-{len(results)}"
-                    )
-                    
-                    results.append(
-                        {
-                            "title": meta.get("title", "Untitled"),
-                            "date": date_str,
-                            "id": conv_id,
-                            "source": meta.get("source", "unknown"),
-                        }
-                    )
-
-        return render_template(
-            "index.html",
-            search_form=search_form,
-            search_triggered=search_triggered,
-            results=results,
-            stats=stats,
-            request=request,  # Pass request object to template
-        )
+                return redirect(url_for("conversations", q=search_form.query.data))
+        
+        # Otherwise just redirect to conversations
+        return redirect(url_for("conversations"))
 
     @app.route("/upload", methods=["GET", "POST"])
     def upload():
@@ -430,162 +351,264 @@ def init_routes(app, archive):
 
         return render_template("stats.html", stats=stats_data)
 
-    @app.route("/conversations")
-    @app.route("/conversations/<int:page>")
+    @app.route("/conversations", methods=["GET", "POST"])
+    @app.route("/conversations/<int:page>", methods=["GET", "POST"])
     def conversations(page=1):
-        """Display all documents in a list with filtering and pagination"""
+        """Display all documents in a list with filtering, pagination, and search"""
         # Items per page
         per_page = 20
+
+        # Initialize search form
+        search_form = SearchForm()
+        search_triggered = False
+        query = None
+
+        # Check if search was triggered (either by form submission or URL parameter)
+        if request.method == "POST":
+            # Handle traditional form submission (POST)
+            if search_form.validate_on_submit():
+                query = search_form.query.data
+                search_triggered = True
+        elif request.method == "GET" and request.args.get("q"):
+            # Handle URL parameter (GET)
+            query = request.args.get("q")
+            # Populate the form with the query from URL
+            search_form.query.data = query
+            search_triggered = True
 
         # Get filter parameters from URL
         source_filter = request.args.get("source", "all")
         date_filter = request.args.get("date", "all")
         sort_order = request.args.get("sort", "newest")
 
-        # Get ALL documents directly, including their IDs
-        try:
-            # ChromaDB should return the IDs automatically with documents and metadatas
-            all_docs = archive.get_documents(include=["documents", "metadatas"], limit=9999)
-            
-            # Try to get the actual IDs by querying differently if needed
-            if not all_docs.get("ids"):
-                # Fallback: Get all docs with a query to get IDs
-                all_docs_with_ids = archive.collection.get(include=["documents", "metadatas"])
-                all_docs["ids"] = all_docs_with_ids.get("ids", [])
-        except Exception as e:
-            print(f"Error getting documents: {e}")
-            all_docs = archive.get_documents(include=["documents", "metadatas"], limit=9999)
+        # Handle search if triggered
+        if search_triggered and query:
+            # Perform search instead of getting all documents
+            n_results = 50  # Get more results for search
+            keyword_search = False
+            date_range = None
 
-        if not all_docs or not all_docs.get("documents"):
-            print("DEBUG: No documents found in the database")
-            return render_template("conversations.html", conversations=None)
+            # Use form values if available (POST method)
+            if request.method == "POST" and hasattr(search_form, "results_count"):
+                n_results = search_form.results_count.data or 50
 
-        print(f"DEBUG: Found {len(all_docs['documents'])} total documents")
+            if request.method == "POST" and hasattr(search_form, "search_type"):
+                keyword_search = search_form.search_type.data == "keyword"
 
-        # Get all items - with minimal processing and filtering
-        items = []
+            if (
+                request.method == "POST"
+                and hasattr(search_form, "date_from")
+                and hasattr(search_form, "date_to")
+            ):
+                if search_form.date_from.data and search_form.date_to.data:
+                    date_range = (search_form.date_from.data, search_form.date_to.data)
 
-        for idx, doc in enumerate(all_docs["documents"]):
-            # Get metadata for this document
-            meta = (
-                all_docs["metadatas"][idx]
-                if idx < len(all_docs.get("metadatas", []))
-                else {}
+            # Perform search
+            search_results = archive.search(
+                query_text=query,
+                n_results=n_results,
+                date_range=date_range,
+                keyword_search=keyword_search,
             )
 
-            # IDs are returned automatically with the query
-            doc_id = (
-                all_docs["ids"][idx]
-                if "ids" in all_docs and idx < len(all_docs["ids"])
-                else f"doc-{idx}"
-            )
-
-            # Skip empty documents
-            if not doc or not doc.strip():
-                continue
-
-            # Basic preview
-            preview = doc[:500] + "..." if len(doc) > 500 else doc
-            preview_html = markdown.markdown(preview, extensions=["extra", "tables"])
-
-            # Get a title - with fallbacks
-            title = meta.get("title", "")
-            if not title:
-                # Try to extract a title from the first line of content
-                first_line = doc.split("\n")[0] if doc else ""
-                if (
-                    first_line and len(first_line) < 100
-                ):  # Only use as title if reasonably short
-                    title = first_line.strip("# ")
-                else:
-                    title = f"Conversation {idx+1}"
-
-            # Get a date for sorting
-            date_obj = None
-
-            # Try standard metadata fields
-            for date_field in [
-                "update_time",
-                "create_time",
-                "latest_ts",
-                "earliest_ts",
-                "modified",
-                "created",
-            ]:
-                if meta.get(date_field) and not date_obj:
-                    try:
-                        date_value = meta[date_field]
-                        # Handle epoch timestamps (floating point seconds)
-                        if isinstance(date_value, (float, int)):
-                            date_obj = datetime.fromtimestamp(date_value)
-                            break
-                        # Handle ISO format strings
-                        elif isinstance(date_value, str):
-                            date_obj = datetime.fromisoformat(date_value.replace('Z', '+00:00'))
-                            # Convert to timezone-naive for consistent sorting
+            # Convert search results to items format
+            items = []
+            if search_results["documents"][0]:
+                # Get distances if available (for relevance scoring)
+                distances = search_results.get("distances", [[]])[0]
+                
+                for i, (doc, meta) in enumerate(zip(
+                    search_results["documents"][0], search_results["metadatas"][0]
+                )):
+                    # Get relevance score (distance - lower is better)
+                    relevance_score = distances[i] if i < len(distances) else None
+                    
+                    # Get conversation ID for the view link
+                    conv_id = (
+                        meta.get("id") or 
+                        meta.get("conversation_id") or
+                        f"unknown-{len(items)}"
+                    )
+                    
+                    # Get title
+                    title = meta.get("title", "Untitled")
+                    
+                    # Get dates from metadata
+                    date_obj = None
+                    date_str = meta.get("earliest_ts", "Unknown date")
+                    if date_str != "Unknown date":
+                        try:
+                            date_obj = datetime.fromisoformat(date_str.replace('Z', '+00:00'))
                             if date_obj.tzinfo is not None:
                                 date_obj = date_obj.replace(tzinfo=None)
-                            break
-                    except (ValueError, TypeError):
-                        pass
-
-            # Try to extract any date from the document content
-            if not date_obj:
-                date_patterns = [
-                    r"\d{4}-\d{2}-\d{2}[ T]\d{2}:\d{2}:\d{2}",  # ISO format or space-separated
-                    r"\d{4}-\d{2}-\d{2}",  # Just date
-                    r"\d{2}/\d{2}/\d{4}",  # MM/DD/YYYY
-                    r"\w+ \d{1,2}, \d{4}",  # Month Day, Year
-                ]
-
-                for pattern in date_patterns:
-                    matches = re.findall(pattern, doc)
-                    if matches:
-                        try:
-                            date_str = matches[0]
-                            # Try different date formats
-                            for fmt in (
-                                "%Y-%m-%d %H:%M:%S",
-                                "%Y-%m-%dT%H:%M:%S",
-                                "%Y-%m-%d",
-                                "%m/%d/%Y",
-                                "%B %d, %Y",
-                            ):
-                                try:
-                                    date_obj = datetime.strptime(date_str, fmt)
-                                    break
-                                except ValueError:
-                                    continue
-                            if date_obj:
-                                break
                         except:
+                            date_obj = datetime(1970, 1, 1)
+                    else:
+                        date_obj = datetime(1970, 1, 1)
+
+                    # Basic preview
+                    preview = doc[:500] + "..." if len(doc) > 500 else doc
+                    preview_html = markdown.markdown(preview, extensions=["extra", "tables"])
+
+                    items.append({
+                        "id": conv_id,
+                        "meta": {
+                            "title": title,
+                            "source": meta.get("source", "unknown"),
+                            "earliest_ts": meta.get("earliest_ts", ""),
+                            "message_count": meta.get("message_count", 0),
+                            "relevance_score": relevance_score,
+                            "relevance_display": f"{relevance_score:.3f}" if relevance_score is not None else "N/A",
+                        },
+                        "date_obj": date_obj,
+                        "preview": preview_html,
+                    })
+
+        else:
+            # Get ALL documents directly, including their IDs (original behavior)
+            try:
+                # ChromaDB should return the IDs automatically with documents and metadatas
+                all_docs = archive.get_documents(include=["documents", "metadatas"], limit=9999)
+                
+                # Try to get the actual IDs by querying differently if needed
+                if not all_docs.get("ids"):
+                    # Fallback: Get all docs with a query to get IDs
+                    all_docs_with_ids = archive.collection.get(include=["documents", "metadatas"])
+                    all_docs["ids"] = all_docs_with_ids.get("ids", [])
+            except Exception as e:
+                print(f"Error getting documents: {e}")
+                all_docs = archive.get_documents(include=["documents", "metadatas"], limit=9999)
+
+            if not all_docs or not all_docs.get("documents"):
+                print("DEBUG: No documents found in the database")
+                return render_template("conversations.html", conversations=None, search_form=search_form)
+
+            print(f"DEBUG: Found {len(all_docs['documents'])} total documents")
+
+            # Get all items - with minimal processing and filtering
+            items = []
+
+            for idx, doc in enumerate(all_docs["documents"]):
+                # Get metadata for this document
+                meta = (
+                    all_docs["metadatas"][idx]
+                    if idx < len(all_docs.get("metadatas", []))
+                    else {}
+                )
+
+                # IDs are returned automatically with the query
+                doc_id = (
+                    all_docs["ids"][idx]
+                    if "ids" in all_docs and idx < len(all_docs["ids"])
+                    else f"doc-{idx}"
+                )
+
+                # Skip empty documents
+                if not doc or not doc.strip():
+                    continue
+
+                # Basic preview
+                preview = doc[:500] + "..." if len(doc) > 500 else doc
+                preview_html = markdown.markdown(preview, extensions=["extra", "tables"])
+
+                # Get a title - with fallbacks
+                title = meta.get("title", "")
+                if not title:
+                    # Try to extract a title from the first line of content
+                    first_line = doc.split("\n")[0] if doc else ""
+                    if (
+                        first_line and len(first_line) < 100
+                    ):  # Only use as title if reasonably short
+                        title = first_line.strip("# ")
+                    else:
+                        title = f"Conversation {idx+1}"
+
+                # Get a date for sorting
+                date_obj = None
+
+                # Try standard metadata fields
+                for date_field in [
+                    "update_time",
+                    "create_time",
+                    "latest_ts",
+                    "earliest_ts",
+                    "modified",
+                    "created",
+                ]:
+                    if meta.get(date_field) and not date_obj:
+                        try:
+                            date_value = meta[date_field]
+                            # Handle epoch timestamps (floating point seconds)
+                            if isinstance(date_value, (float, int)):
+                                date_obj = datetime.fromtimestamp(date_value)
+                                break
+                            # Handle ISO format strings
+                            elif isinstance(date_value, str):
+                                date_obj = datetime.fromisoformat(date_value.replace('Z', '+00:00'))
+                                # Convert to timezone-naive for consistent sorting
+                                if date_obj.tzinfo is not None:
+                                    date_obj = date_obj.replace(tzinfo=None)
+                                break
+                        except (ValueError, TypeError):
                             pass
 
-            # Last resort: use creation time of metadata if available
-            if not date_obj:
-                # Use a very old date as fallback so undated conversations don't interfere with date filters
-                date_obj = datetime(1970, 1, 1)
+                # Try to extract any date from the document content
+                if not date_obj:
+                    date_patterns = [
+                        r"\d{4}-\d{2}-\d{2}[ T]\d{2}:\d{2}:\d{2}",  # ISO format or space-separated
+                        r"\d{4}-\d{2}-\d{2}",  # Just date
+                        r"\d{2}/\d{2}/\d{4}",  # MM/DD/YYYY
+                        r"\w+ \d{1,2}, \d{4}",  # Month Day, Year
+                    ]
 
-            # Store original index in metadata for ordering
-            meta["original_index"] = idx
+                    for pattern in date_patterns:
+                        matches = re.findall(pattern, doc)
+                        if matches:
+                            try:
+                                date_str = matches[0]
+                                # Try different date formats
+                                for fmt in (
+                                    "%Y-%m-%d %H:%M:%S",
+                                    "%Y-%m-%dT%H:%M:%S",
+                                    "%Y-%m-%d",
+                                    "%m/%d/%Y",
+                                    "%B %d, %Y",
+                                ):
+                                    try:
+                                        date_obj = datetime.strptime(date_str, fmt)
+                                        break
+                                    except ValueError:
+                                        continue
+                                if date_obj:
+                                    break
+                            except:
+                                pass
 
-            # Add to items list
-            items.append(
-                {
-                    "id": doc_id,
-                    "meta": {
-                        "title": title,
-                        "source": meta.get("source", "unknown"),
-                        "earliest_ts": meta.get("earliest_ts", ""),
-                        "message_count": meta.get("message_count", 0),
-                        "original_index": meta.get("original_index", idx),
-                    },
-                    "date_obj": date_obj,
-                    "preview": preview_html,
-                }
-            )
+                # Last resort: use creation time of metadata if available
+                if not date_obj:
+                    # Use a very old date as fallback so undated conversations don't interfere with date filters
+                    date_obj = datetime(1970, 1, 1)
 
-        print(f"DEBUG: Processed {len(items)} valid items for display")
+                # Store original index in metadata for ordering
+                meta["original_index"] = idx
+
+                # Add to items list
+                items.append(
+                    {
+                        "id": doc_id,
+                        "meta": {
+                            "title": title,
+                            "source": meta.get("source", "unknown"),
+                            "earliest_ts": meta.get("earliest_ts", ""),
+                            "message_count": meta.get("message_count", 0),
+                            "original_index": meta.get("original_index", idx),
+                        },
+                        "date_obj": date_obj,
+                        "preview": preview_html,
+                    }
+                )
+
+            print(f"DEBUG: Processed {len(items)} valid items for display")
 
         # Apply filters using clean, focused functions
         items = filter_by_source(items, source_filter)
@@ -615,6 +638,9 @@ def init_routes(app, archive):
             source_filter=source_filter,
             date_filter=date_filter,
             sort_order=sort_order,
+            search_form=search_form,
+            search_triggered=search_triggered,
+            query=query,
         )
 
     @app.route("/view/<doc_id>")

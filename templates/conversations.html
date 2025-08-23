@@ -118,9 +118,6 @@
             <h2>Conversations</h2>
             <ul class="nav nav-pills">
                 <li class="nav-item">
-                    <a class="nav-link" href="/">Search</a>
-                </li>
-                <li class="nav-item">
                     <a class="nav-link active" href="/conversations">Conversations</a>
                 </li>
                 <li class="nav-item">
@@ -130,6 +127,24 @@
                     <a class="nav-link" href="/stats">Stats</a>
                 </li>
             </ul>
+        </div>
+
+        <!-- Search Form -->
+        <div class="search-section mb-4">
+            <form method="POST" action="/conversations" class="mb-3">
+                {{ search_form.hidden_tag() }}
+                <div class="input-group">
+                    {{ search_form.query(class="form-control", placeholder="Search conversations...") }}
+                    <button type="submit" class="btn btn-primary">Search</button>
+                </div>
+            </form>
+            
+            {% if search_triggered %}
+                <div class="alert alert-info">
+                    <strong>Search Results for:</strong> "{{ query }}"
+                    <a href="/conversations" class="btn btn-sm btn-outline-secondary ms-2">Clear Search</a>
+                </div>
+            {% endif %}
         </div>
         
         <div class="filters">
@@ -176,7 +191,15 @@
                             {{ conversation.preview|safe }}
                         </div>
                         <div class="conversation-footer">
-                            <a href="/view/{{ conversation.id }}" class="btn btn-sm btn-outline-primary">View Conversation</a>
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div>
+                                    <span class="badge bg-secondary">{{ 'ChatGPT' if conversation.meta.source|lower == 'chatgpt' else conversation.meta.source|capitalize }}</span>
+                                    {% if conversation.meta.relevance_display and conversation.meta.relevance_display != 'N/A' %}
+                                        <span class="badge bg-info ms-2">Score: {{ conversation.meta.relevance_display }}</span>
+                                    {% endif %}
+                                </div>
+                                <a href="/view/{{ conversation.id }}" class="btn btn-sm btn-outline-primary">View Conversation</a>
+                            </div>
                         </div>
                     </div>
                 {% endfor %}

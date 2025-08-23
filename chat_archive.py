@@ -81,15 +81,19 @@ class ChatArchive:
             documents=documents, embeddings=embeddings, metadatas=metadatas, ids=ids
         )
 
-    def query(self, query_embeddings, n_results=5, where=None):
+    def query(self, query_embeddings, n_results=5, where=None, include_distances=False):
         """Query the collection"""
+        include_list = ["documents", "metadatas"]
+        if include_distances:
+            include_list.append("distances")
+            
         if where:
             return self.collection.query(
-                query_embeddings=query_embeddings, n_results=n_results, where=where
+                query_embeddings=query_embeddings, n_results=n_results, where=where, include=include_list
             )
         else:
             return self.collection.query(
-                query_embeddings=query_embeddings, n_results=n_results
+                query_embeddings=query_embeddings, n_results=n_results, include=include_list
             )
 
     def get_documents(self, where=None, include=None, limit=None):
@@ -173,6 +177,7 @@ class ChatArchive:
                 query_embeddings=[embedding.tolist()],
                 n_results=n_results,
                 where=date_filter,
+                include_distances=True,
             )
 
     def index_json(self, json_path, chunk_size=0):
