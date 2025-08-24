@@ -1,568 +1,515 @@
-<!DOCTYPE html>
-<html>
-<head>
-    <title>View Conversation - ChatGPT Search</title>
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
-    <style>
-        body {
-            padding: 20px;
-            background-color: #f8f9fa;
-        }
-        .container {
-            max-width: 900px;
-        }
-        .header {
-            padding-bottom: 1rem;
-            margin-bottom: 2rem;
-            border-bottom: 1px solid #e5e5e5;
-        }
-        .nav-pills .nav-link.active {
-            background-color: #17a2b8;
-        }
+{% extends "base.html" %}
+
+{% block title %}View Conversation - ChatGPT Search{% endblock %}
+
+{% block page_title %}View Conversation{% endblock %}
+
+{% block page_styles %}
+<style>
+    .conversation-header {
+        margin-bottom: 2rem;
+    }
+    .conversation-title {
+        margin-bottom: 0.5rem;
+    }
+    .conversation-metadata {
+        color: #6c757d;
+        font-size: 0.9rem;
+        margin-bottom: 1rem;
+    }
+    .message {
+        margin-bottom: 1.5rem;
+        border-radius: 10px;
+        overflow: hidden;
+    }
+    .message-header {
+        padding: 0.75rem 1rem;
+        font-weight: 500;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+    .message-body {
+        padding: 1rem;
+        line-height: 1.6;
+    }
+    .user-message .message-header {
+        background-color: #e3f2fd;
+        color: #0d6efd;
+    }
+    .user-message .message-body {
+        background-color: #f8fbff;
+    }
+    .assistant-message .message-header {
+        background-color: #e3f9f4;
+        color: #20c997;
+    }
+    .assistant-message .message-body {
+        background-color: #f6fdfb;
+    }
+    .system-message .message-header {
+        background-color: #f8f9fa;
+        color: #6c757d;
+    }
+    .system-message .message-body {
+        background-color: #ffffff;
+    }
+    .timestamp {
+        font-size: 0.8rem;
+        color: #6c757d;
+    }
+    pre {
+        background-color: #f8f9fa;
+        padding: 1rem;
+        border-radius: 5px;
+        overflow-x: auto;
+    }
+    code {
+        padding: 0.2rem 0.4rem;
+        background-color: #f8f9fa;
+        border-radius: 3px;
+    }
+    .action-buttons {
+        margin-top: 1.5rem;
+        margin-bottom: 3rem;
+    }
+    .message-content img {
+        max-width: 100%;
+        height: auto;
+    }
+    .message-content table {
+        width: 100%;
+        margin-bottom: 1rem;
+        border-collapse: collapse;
+    }
+    .message-content th,
+    .message-content td {
+        padding: 0.75rem;
+        border: 1px solid #dee2e6;
+    }
+    .message-content blockquote {
+        padding: 0.5rem 1rem;
+        margin: 0 0 1rem;
+        border-left: 0.25rem solid #e9ecef;
+        color: #6c757d;
+    }
+    .copy-button {
+        font-size: 0.9rem;
+        padding: 0.5rem 1rem;
+        margin-left: 1rem;
+        background-color: #6c757d;
+        border: none;
+        color: white;
+        border-radius: 5px;
+        cursor: pointer;
+        opacity: 0.8;
+        transition: opacity 0.2s, background-color 0.2s;
+    }
+    .copy-button:hover {
+        opacity: 1;
+        background-color: #5a6268;
+    }
+    .copy-success {
+        display: none;
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        padding: 10px 20px;
+        background-color: #28a745;
+        color: white;
+        border-radius: 4px;
+        z-index: 1000;
+        box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+    }
+    
+    /* Responsive improvements */
+    @media (max-width: 768px) {
         .conversation-header {
-            margin-bottom: 2rem;
+            margin-bottom: 1rem;
         }
         .conversation-title {
-            margin-bottom: 0.5rem;
+            font-size: 1.25rem;
+            margin-bottom: 0.25rem;
         }
         .conversation-metadata {
-            color: #6c757d;
-            font-size: 0.9rem;
-            margin-bottom: 1rem;
+            font-size: 0.8rem;
         }
         .message {
-            margin-bottom: 1.5rem;
-            border-radius: 10px;
-            overflow: hidden;
+            margin-bottom: 1rem;
+            border-radius: 8px;
         }
         .message-header {
-            padding: 0.75rem 1rem;
-            font-weight: 500;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
+            padding: 0.5rem 0.75rem;
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 3px;
         }
         .message-body {
-            padding: 1rem;
-            line-height: 1.6;
-        }
-        .user-message .message-header {
-            background-color: #e3f2fd;
-            color: #0d6efd;
-        }
-        .user-message .message-body {
-            background-color: #f8fbff;
-        }
-        .assistant-message .message-header {
-            background-color: #e3f9f4;
-            color: #20c997;
-        }
-        .assistant-message .message-body {
-            background-color: #f6fdfb;
-        }
-        .system-message .message-header {
-            background-color: #f8f9fa;
-            color: #6c757d;
-        }
-        .system-message .message-body {
-            background-color: #ffffff;
+            padding: 0.75rem;
         }
         .timestamp {
-            font-size: 0.8rem;
-            color: #6c757d;
-        }
-        pre {
-            background-color: #f8f9fa;
-            padding: 1rem;
-            border-radius: 5px;
-            overflow-x: auto;
-        }
-        code {
-            padding: 0.2rem 0.4rem;
-            background-color: #f8f9fa;
-            border-radius: 3px;
+            font-size: 0.7rem;
         }
         .action-buttons {
-            margin-top: 1.5rem;
-            margin-bottom: 3rem;
+            margin-top: 1rem;
+            margin-bottom: 2rem;
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
         }
-        .message-content img {
-            max-width: 100%;
-            height: auto;
-        }
-        .message-content table {
+        .action-buttons .btn {
             width: 100%;
-            margin-bottom: 1rem;
-            border-collapse: collapse;
+            margin-left: 0 !important;
+        }
+        .copy-button {
+            width: 100%;
+            margin: 0.5rem 0 0 0;
+        }
+        pre {
+            padding: 0.75rem;
+            font-size: 0.85rem;
+        }
+        code {
+            padding: 0.15rem 0.3rem;
+            font-size: 0.85rem;
         }
         .message-content th,
         .message-content td {
-            padding: 0.75rem;
-            border: 1px solid #dee2e6;
+            padding: 0.5rem;
+            font-size: 0.85rem;
         }
-        .message-content blockquote {
-            padding: 0.5rem 1rem;
-            margin: 0 0 1rem;
-            border-left: 0.25rem solid #e9ecef;
-            color: #6c757d;
+    }
+    
+    @media (max-width: 576px) {
+        .message-header {
+            padding: 0.5rem;
         }
-        .copy-button {
-            font-size: 0.9rem;
-            padding: 0.5rem 1rem;
-            margin-left: 1rem;
-            background-color: #6c757d;
-            border: none;
-            color: white;
-            border-radius: 5px;
-            cursor: pointer;
-            opacity: 0.8;
-            transition: opacity 0.2s, background-color 0.2s;
-        }
-        .copy-button:hover {
-            opacity: 1;
-            background-color: #5a6268;
+        .message-body {
+            padding: 0.5rem;
         }
         .copy-success {
-            display: none;
-            position: fixed;
-            top: 20px;
-            right: 20px;
-            padding: 10px 20px;
-            background-color: #28a745;
-            color: white;
-            border-radius: 4px;
-            z-index: 1000;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+            top: 10px;
+            right: 10px;
+            left: 10px;
+            padding: 8px 15px;
+            font-size: 0.9rem;
         }
-        
-        /* Responsive improvements */
-        @media (max-width: 768px) {
-            body {
-                padding: 10px;
-            }
-            .container {
-                max-width: 100%;
-            }
-            .header {
-                flex-direction: column;
-                align-items: flex-start;
-                gap: 10px;
-                padding-bottom: 0.5rem;
-                margin-bottom: 1rem;
-            }
-            .nav-pills {
-                align-self: stretch;
-            }
-            .nav-pills .nav-item {
-                flex: 1;
-                text-align: center;
-            }
-            .conversation-header {
-                margin-bottom: 1rem;
-            }
-            .conversation-title {
-                font-size: 1.25rem;
-                margin-bottom: 0.25rem;
-            }
-            .conversation-metadata {
-                font-size: 0.8rem;
-            }
-            .message {
-                margin-bottom: 1rem;
-                border-radius: 8px;
-            }
-            .message-header {
-                padding: 0.5rem 0.75rem;
-                flex-direction: column;
-                align-items: flex-start;
-                gap: 3px;
-            }
-            .message-body {
-                padding: 0.75rem;
-            }
-            .timestamp {
-                font-size: 0.7rem;
-            }
-            .action-buttons {
-                margin-top: 1rem;
-                margin-bottom: 2rem;
-                display: flex;
-                flex-direction: column;
-                gap: 0.5rem;
-            }
-            .action-buttons .btn {
-                width: 100%;
-                margin-left: 0 !important;
-            }
-            .copy-button {
-                width: 100%;
-                margin: 0.5rem 0 0 0;
-            }
-            pre {
-                padding: 0.75rem;
-                font-size: 0.85rem;
-            }
-            code {
-                padding: 0.15rem 0.3rem;
-                font-size: 0.85rem;
-            }
-            .message-content th,
-            .message-content td {
-                padding: 0.5rem;
-                font-size: 0.85rem;
-            }
-        }
-        
-        @media (max-width: 576px) {
-            .message-header {
-                padding: 0.5rem;
-            }
-            .message-body {
-                padding: 0.5rem;
-            }
-            .copy-success {
-                top: 10px;
-                right: 10px;
-                left: 10px;
-                padding: 8px 15px;
-                font-size: 0.9rem;
-            }
-        }
-    </style>
-</head>
-<body>
-    <div class="container">
-        <div class="header d-flex justify-content-between align-items-center">
-            <h2>View Conversation</h2>
-            <ul class="nav nav-pills">
-                <li class="nav-item">
-                    <a class="nav-link" href="/conversations">Conversations</a>
-                </li>
-                <li class="nav-item">
-                    <a class="nav-link" href="/upload">Upload</a>
-                </li>
-                <li class="nav-item">
-                    <a class="nav-link" href="/stats">Stats</a>
-                </li>
-            </ul>
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="conversation-header">
+    <div class="d-flex align-items-start justify-content-between">
+        <div>
+            <h3 class="conversation-title">{{ conversation.meta.title }}</h3>
         </div>
-        
-        <div class="conversation-header">
-            <div class="d-flex align-items-start justify-content-between">
-                <div>
-                    <h3 class="conversation-title">{{ conversation.meta.title }}</h3>
-                </div>
-                <button class="copy-button" onclick="copyConversationAsMarkdown()">Copy to Clipboard</button>
-            </div>
-            <div class="conversation-metadata">
-                <div><strong>Source:</strong> {{ conversation.meta.source }}</div>
-                {% if conversation.meta.earliest_ts %}
-                    <div><strong>Date:</strong> <span class="date-to-format">{{ conversation.meta.earliest_ts }}</span></div>
-                {% endif %}
-                {% if conversation.meta.message_count %}
-                    <div><strong>Messages:</strong> {{ conversation.meta.message_count }}</div>
-                {% endif %}
-                {% if conversation.meta.is_chunk %}
-                    <div><strong>Chunk:</strong> {{ conversation.meta.chunk_index + 1 }}/{{ conversation.meta.total_chunks }}</div>
-                {% endif %}
-            </div>
-        </div>
-        
-        <div class="conversation-messages">
-            {% for message in messages %}
-                <div class="message {{ message.role }}-message">
-                    <div class="message-header">
-                        <div class="role-name">
-                            {% if message.role == 'user' %}
-                                You
-                            {% elif message.role == 'assistant' %}
-                                {{ assistant_name }}
-                            {% else %}
-                                {{ message.role|capitalize }}
-                            {% endif %}
-                        </div>
-                        {% if message.timestamp %}
-                            <div class="timestamp date-to-format">{{ message.timestamp }}</div>
-                        {% endif %}
-                    </div>
-                    <div class="message-body">
-                        <div class="message-content">{{ message.content|safe }}</div>
-                    </div>
-                </div>
-            {% endfor %}
-        </div>
-        
-        <div class="action-buttons">
-            <a href="/conversations" class="btn btn-outline-secondary">Back to Conversations</a>
-            {% if conversation.meta.id %}
-                <a href="/export/{{ conversation.meta.id }}" class="btn btn-outline-primary ms-2">Export as Markdown</a>
-            {% endif %}
-        </div>
+        <button class="copy-button" onclick="copyConversationAsMarkdown()">Copy to Clipboard</button>
     </div>
+    <div class="conversation-metadata">
+        <div><strong>Source:</strong> {{ conversation.meta.source }}</div>
+        {% if conversation.meta.earliest_ts %}
+            <div><strong>Date:</strong> <span class="date-to-format">{{ conversation.meta.earliest_ts }}</span></div>
+        {% endif %}
+        {% if conversation.meta.message_count %}
+            <div><strong>Messages:</strong> {{ conversation.meta.message_count }}</div>
+        {% endif %}
+        {% if conversation.meta.is_chunk %}
+            <div><strong>Chunk:</strong> {{ conversation.meta.chunk_index + 1 }}/{{ conversation.meta.total_chunks }}</div>
+        {% endif %}
+    </div>
+</div>
+
+<div class="conversation-messages">
+    {% for message in messages %}
+        <div class="message {{ message.role }}-message">
+            <div class="message-header">
+                <div class="role-name">
+                    {% if message.role == 'user' %}
+                        You
+                    {% elif message.role == 'assistant' %}
+                        {{ assistant_name }}
+                    {% else %}
+                        {{ message.role|capitalize }}
+                    {% endif %}
+                </div>
+                {% if message.timestamp %}
+                    <div class="timestamp date-to-format">{{ message.timestamp }}</div>
+                {% endif %}
+            </div>
+            <div class="message-body">
+                <div class="message-content">{{ message.content|safe }}</div>
+            </div>
+        </div>
+    {% endfor %}
+</div>
+
+<div class="action-buttons">
+    <a href="/conversations" class="btn btn-outline-secondary">Back to Conversations</a>
+    {% if conversation.meta.id %}
+        <a href="/export/{{ conversation.meta.id }}" class="btn btn-outline-primary ms-2">Export as Markdown</a>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block page_scripts %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Format dates
+        formatDates();
+    });
     
-    <!-- Copy success notification -->
-    <div class="copy-success" id="copySuccess">Conversation copied to clipboard!</div>
-    
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
-    <script>
-        document.addEventListener('DOMContentLoaded', function() {
-            // Format dates
-            formatDates();
+    function formatDates() {
+        const dateElements = document.querySelectorAll('.date-to-format');
+        
+        dateElements.forEach(function(element) {
+            const dateStr = element.textContent.trim();
+            // Store original date for copy functionality
+            element.setAttribute('data-original', dateStr);
+            const formattedDate = formatDateNicely(dateStr);
+            element.textContent = formattedDate;
         });
-        
-        function formatDates() {
-            const dateElements = document.querySelectorAll('.date-to-format');
+    }
+    
+    // Copy conversation as markdown function
+    window.copyConversationAsMarkdown = function() {
+        try {
+            // Get the conversation title
+            const titleElement = document.querySelector('.conversation-title');
+            const title = titleElement ? titleElement.textContent.trim() : 'Conversation';
             
-            dateElements.forEach(function(element) {
-                const dateStr = element.textContent.trim();
-                // Store original date for copy functionality
-                element.setAttribute('data-original', dateStr);
-                const formattedDate = formatDateNicely(dateStr);
-                element.textContent = formattedDate;
+            // Get the date from metadata
+            const dateElement = document.querySelector('.conversation-metadata .date-to-format');
+            let date = '';
+            if (dateElement) {
+                // Get the original date text (before formatting)
+                const originalDate = dateElement.getAttribute('data-original') || dateElement.textContent.trim();
+                date = originalDate;
+            }
+            
+            // Start building markdown content
+            let markdown = `# ${title}\n\n`;
+            if (date) {
+                markdown += `**Date:** ${date}\n\n`;
+            }
+            markdown += '---\n\n';
+            
+            // Get all messages
+            const messages = document.querySelectorAll('.message');
+            
+            messages.forEach((message, index) => {
+                // Get the role
+                const roleElement = message.querySelector('.role-name');
+                const role = roleElement ? roleElement.textContent.trim() : 'Unknown';
+                
+                // Get the timestamp
+                const timestampElement = message.querySelector('.timestamp');
+                let timestamp = '';
+                if (timestampElement && timestampElement.textContent.trim()) {
+                    // Get original timestamp if available, otherwise formatted
+                    timestamp = timestampElement.getAttribute('data-original') || timestampElement.textContent.trim();
+                }
+                
+                // Get the message content and convert it back to markdown
+                const contentElement = message.querySelector('.message-content');
+                let content = '';
+                
+                if (contentElement) {
+                    // Clone the element to avoid modifying the original
+                    const clonedContent = contentElement.cloneNode(true);
+                    
+                    // Convert HTML back to approximate markdown
+                    content = htmlToMarkdown(clonedContent);
+                }
+                
+                // Add the message to markdown
+                if (timestamp && timestamp !== '') {
+                    markdown += `**${role}** *(on ${timestamp})*:\n\n`;
+                } else {
+                    markdown += `**${role}**:\n\n`;
+                }
+                markdown += content + '\n\n';
             });
-        }
-        
-        // Copy conversation as markdown function
-        window.copyConversationAsMarkdown = function() {
-            try {
-                // Get the conversation title
-                const titleElement = document.querySelector('.conversation-title');
-                const title = titleElement ? titleElement.textContent.trim() : 'Conversation';
-                
-                // Get the date from metadata
-                const dateElement = document.querySelector('.conversation-metadata .date-to-format');
-                let date = '';
-                if (dateElement) {
-                    // Get the original date text (before formatting)
-                    const originalDate = dateElement.getAttribute('data-original') || dateElement.textContent.trim();
-                    date = originalDate;
-                }
-                
-                // Start building markdown content
-                let markdown = `# ${title}\n\n`;
-                if (date) {
-                    markdown += `**Date:** ${date}\n\n`;
-                }
-                markdown += '---\n\n';
-                
-                // Get all messages
-                const messages = document.querySelectorAll('.message');
-                
-                messages.forEach((message, index) => {
-                    // Get the role
-                    const roleElement = message.querySelector('.role-name');
-                    const role = roleElement ? roleElement.textContent.trim() : 'Unknown';
-                    
-                    // Get the timestamp
-                    const timestampElement = message.querySelector('.timestamp');
-                    let timestamp = '';
-                    if (timestampElement && timestampElement.textContent.trim()) {
-                        // Get original timestamp if available, otherwise formatted
-                        timestamp = timestampElement.getAttribute('data-original') || timestampElement.textContent.trim();
-                    }
-                    
-                    // Get the message content and convert it back to markdown
-                    const contentElement = message.querySelector('.message-content');
-                    let content = '';
-                    
-                    if (contentElement) {
-                        // Clone the element to avoid modifying the original
-                        const clonedContent = contentElement.cloneNode(true);
-                        
-                        // Convert HTML back to approximate markdown
-                        content = htmlToMarkdown(clonedContent);
-                    }
-                    
-                    // Add the message to markdown
-                    if (timestamp && timestamp !== '') {
-                        markdown += `**${role}** *(on ${timestamp})*:\n\n`;
-                    } else {
-                        markdown += `**${role}**:\n\n`;
-                    }
-                    markdown += content + '\n\n';
-                });
-                
-                // Copy to clipboard
-                navigator.clipboard.writeText(markdown).then(function() {
-                    // Show success message
-                    const successMessage = document.getElementById('copySuccess');
-                    successMessage.textContent = 'Conversation copied to clipboard!';
-                    successMessage.style.display = 'block';
-                    
-                    // Hide after 2 seconds
-                    setTimeout(function() {
-                        successMessage.style.display = 'none';
-                    }, 2000);
-                }).catch(function(err) {
-                    console.error('Failed to copy: ', err);
-                    // Fallback: show error message
-                    const successMessage = document.getElementById('copySuccess');
-                    successMessage.textContent = 'Failed to copy to clipboard';
-                    successMessage.style.backgroundColor = '#dc3545';
-                    successMessage.style.display = 'block';
-                    
-                    setTimeout(function() {
-                        successMessage.style.display = 'none';
-                        successMessage.style.backgroundColor = '#28a745';
-                    }, 2000);
-                });
-            } catch (err) {
-                console.error('Error copying conversation:', err);
-            }
-        };
-        
-        // Helper function to convert HTML back to markdown
-        function htmlToMarkdown(element) {
-            let text = '';
             
-            for (let node of element.childNodes) {
-                if (node.nodeType === Node.TEXT_NODE) {
-                    text += node.textContent;
-                } else if (node.nodeType === Node.ELEMENT_NODE) {
-                    const tagName = node.tagName.toLowerCase();
-                    
-                    switch (tagName) {
-                        case 'h1':
-                            text += '# ' + node.textContent + '\n\n';
-                            break;
-                        case 'h2':
-                            text += '## ' + node.textContent + '\n\n';
-                            break;
-                        case 'h3':
-                            text += '### ' + node.textContent + '\n\n';
-                            break;
-                        case 'h4':
-                            text += '#### ' + node.textContent + '\n\n';
-                            break;
-                        case 'h5':
-                            text += '##### ' + node.textContent + '\n\n';
-                            break;
-                        case 'h6':
-                            text += '###### ' + node.textContent + '\n\n';
-                            break;
-                        case 'p':
-                            text += htmlToMarkdown(node) + '\n\n';
-                            break;
-                        case 'strong':
-                        case 'b':
-                            text += '**' + node.textContent + '**';
-                            break;
-                        case 'em':
-                        case 'i':
-                            text += '*' + node.textContent + '*';
-                            break;
-                        case 'code':
-                            text += '`' + node.textContent + '`';
-                            break;
-                        case 'pre':
-                            const codeContent = node.textContent;
-                            text += '```\n' + codeContent + '\n```\n\n';
-                            break;
-                        case 'blockquote':
-                            const quoteLines = node.textContent.split('\n');
-                            text += quoteLines.map(line => '> ' + line).join('\n') + '\n\n';
-                            break;
-                        case 'ul':
-                            const ulItems = node.querySelectorAll('li');
-                            ulItems.forEach(li => {
-                                text += '- ' + li.textContent + '\n';
-                            });
-                            text += '\n';
-                            break;
-                        case 'ol':
-                            const olItems = node.querySelectorAll('li');
-                            olItems.forEach((li, index) => {
-                                text += `${index + 1}. ${li.textContent}\n`;
-                            });
-                            text += '\n';
-                            break;
-                        case 'table':
-                            // Simple table handling
-                            const rows = node.querySelectorAll('tr');
-                            rows.forEach((row, rowIndex) => {
-                                const cells = row.querySelectorAll('td, th');
-                                const cellContents = Array.from(cells).map(cell => cell.textContent.trim());
-                                text += '| ' + cellContents.join(' | ') + ' |\n';
-                                
-                                // Add header separator after first row
-                                if (rowIndex === 0 && node.querySelector('th')) {
-                                    text += '|' + ' --- |'.repeat(cellContents.length) + '\n';
-                                }
-                            });
-                            text += '\n';
-                            break;
-                        case 'a':
-                            const href = node.getAttribute('href');
-                            if (href) {
-                                text += `[${node.textContent}](${href})`;
-                            } else {
-                                text += node.textContent;
+            // Copy to clipboard
+            navigator.clipboard.writeText(markdown).then(function() {
+                // Show success message
+                const successMessage = document.getElementById('copySuccess');
+                successMessage.textContent = 'Conversation copied to clipboard!';
+                successMessage.style.display = 'block';
+                
+                // Hide after 2 seconds
+                setTimeout(function() {
+                    successMessage.style.display = 'none';
+                }, 2000);
+            }).catch(function(err) {
+                console.error('Failed to copy: ', err);
+                // Fallback: show error message
+                const successMessage = document.getElementById('copySuccess');
+                successMessage.textContent = 'Failed to copy to clipboard';
+                successMessage.style.backgroundColor = '#dc3545';
+                successMessage.style.display = 'block';
+                
+                setTimeout(function() {
+                    successMessage.style.display = 'none';
+                    successMessage.style.backgroundColor = '#28a745';
+                }, 2000);
+            });
+        } catch (err) {
+            console.error('Error copying conversation:', err);
+        }
+    };
+    
+    // Helper function to convert HTML back to markdown
+    function htmlToMarkdown(element) {
+        let text = '';
+        
+        for (let node of element.childNodes) {
+            if (node.nodeType === Node.TEXT_NODE) {
+                text += node.textContent;
+            } else if (node.nodeType === Node.ELEMENT_NODE) {
+                const tagName = node.tagName.toLowerCase();
+                
+                switch (tagName) {
+                    case 'h1':
+                        text += '# ' + node.textContent + '\n\n';
+                        break;
+                    case 'h2':
+                        text += '## ' + node.textContent + '\n\n';
+                        break;
+                    case 'h3':
+                        text += '### ' + node.textContent + '\n\n';
+                        break;
+                    case 'h4':
+                        text += '#### ' + node.textContent + '\n\n';
+                        break;
+                    case 'h5':
+                        text += '##### ' + node.textContent + '\n\n';
+                        break;
+                    case 'h6':
+                        text += '###### ' + node.textContent + '\n\n';
+                        break;
+                    case 'p':
+                        text += htmlToMarkdown(node) + '\n\n';
+                        break;
+                    case 'strong':
+                    case 'b':
+                        text += '**' + node.textContent + '**';
+                        break;
+                    case 'em':
+                    case 'i':
+                        text += '*' + node.textContent + '*';
+                        break;
+                    case 'code':
+                        text += '`' + node.textContent + '`';
+                        break;
+                    case 'pre':
+                        const codeContent = node.textContent;
+                        text += '```\n' + codeContent + '\n```\n\n';
+                        break;
+                    case 'blockquote':
+                        const quoteLines = node.textContent.split('\n');
+                        text += quoteLines.map(line => '> ' + line).join('\n') + '\n\n';
+                        break;
+                    case 'ul':
+                        const ulItems = node.querySelectorAll('li');
+                        ulItems.forEach(li => {
+                            text += '- ' + li.textContent + '\n';
+                        });
+                        text += '\n';
+                        break;
+                    case 'ol':
+                        const olItems = node.querySelectorAll('li');
+                        olItems.forEach((li, index) => {
+                            text += `${index + 1}. ${li.textContent}\n`;
+                        });
+                        text += '\n';
+                        break;
+                    case 'table':
+                        // Simple table handling
+                        const rows = node.querySelectorAll('tr');
+                        rows.forEach((row, rowIndex) => {
+                            const cells = row.querySelectorAll('td, th');
+                            const cellContents = Array.from(cells).map(cell => cell.textContent.trim());
+                            text += '| ' + cellContents.join(' | ') + ' |\n';
+                            
+                            // Add header separator after first row
+                            if (rowIndex === 0 && node.querySelector('th')) {
+                                text += '|' + ' --- |'.repeat(cellContents.length) + '\n';
                             }
-                            break;
-                        case 'br':
-                            text += '\n';
-                            break;
-                        default:
-                            // For other elements, just get the text content and recurse
-                            text += htmlToMarkdown(node);
-                            break;
-                    }
+                        });
+                        text += '\n';
+                        break;
+                    case 'a':
+                        const href = node.getAttribute('href');
+                        if (href) {
+                            text += `[${node.textContent}](${href})`;
+                        } else {
+                            text += node.textContent;
+                        }
+                        break;
+                    case 'br':
+                        text += '\n';
+                        break;
+                    default:
+                        // For other elements, just get the text content and recurse
+                        text += htmlToMarkdown(node);
+                        break;
                 }
             }
-            
-            return text;
         }
         
-        // Helper function to format dates nicely
-        function formatDateNicely(dateStr) {
-            try {
-                // Handle different formats
-                let date;
-                
-                // Try parsing different date formats
-                if (dateStr.match(/^\d{4}-\d{2}-\d{2}T/)) {
-                    // ISO format: 2025-03-03T10:01:18
-                    date = new Date(dateStr);
-                } 
-                else if (dateStr.match(/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}/)) {
-                    // Format: 2025-03-03 10:01:18
-                    date = new Date(dateStr.replace(' ', 'T'));
-                }
-                else if (dateStr.match(/^\d{4}-\d{2}-\d{2}$/)) {
-                    // Format: 2025-03-03
-                    date = new Date(dateStr);
-                }
-                else {
-                    // Unknown format, return as is
-                    return dateStr;
-                }
-                
-                // If date parsing failed, return original
-                if (isNaN(date.getTime())) {
-                    return dateStr;
-                }
-                
-                // Format the date
-                const options = { 
-                    month: 'short', 
-                    day: 'numeric',
-                    hour: '2-digit',
-                    minute: '2-digit'
-                };
-                
-                // Add year if not the current year
-                if (date.getFullYear() !== new Date().getFullYear()) {
-                    options.year = 'numeric';
-                }
-                
-                return date.toLocaleDateString(undefined, options);
-                
-            } catch (e) {
-                console.error("Error formatting date:", e);
+        return text;
+    }
+    
+    // Helper function to format dates nicely
+    function formatDateNicely(dateStr) {
+        try {
+            // Handle different formats
+            let date;
+            
+            // Try parsing different date formats
+            if (dateStr.match(/^\d{4}-\d{2}-\d{2}T/)) {
+                // ISO format: 2025-03-03T10:01:18
+                date = new Date(dateStr);
+            } 
+            else if (dateStr.match(/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}/)) {
+                // Format: 2025-03-03 10:01:18
+                date = new Date(dateStr.replace(' ', 'T'));
+            }
+            else if (dateStr.match(/^\d{4}-\d{2}-\d{2}$/)) {
+                // Format: 2025-03-03
+                date = new Date(dateStr);
+            }
+            else {
+                // Unknown format, return as is
                 return dateStr;
             }
+            
+            // If date parsing failed, return original
+            if (isNaN(date.getTime())) {
+                return dateStr;
+            }
+            
+            // Format the date
+            const options = { 
+                month: 'short', 
+                day: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit'
+            };
+            
+            // Add year if not the current year
+            if (date.getFullYear() !== new Date().getFullYear()) {
+                options.year = 'numeric';
+            }
+            
+            return date.toLocaleDateString(undefined, options);
+            
+        } catch (e) {
+            console.error("Error formatting date:", e);
+            return dateStr;
         }
-    </script>
-</body>
-</html>
+    }
+</script>
+{% endblock %}
