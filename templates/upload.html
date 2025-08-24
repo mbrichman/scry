@@ -2,6 +2,7 @@
 <html>
 <head>
     <title>Upload - ChatGPT Search</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
     <style>
         body {
@@ -59,6 +60,66 @@
         .status-error {
             background-color: #f8d7da;
             color: #721c24;
+        }
+        
+        /* Responsive improvements */
+        @media (max-width: 768px) {
+            body {
+                padding: 10px;
+            }
+            .container {
+                max-width: 100%;
+            }
+            .header {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 10px;
+                padding-bottom: 0.5rem;
+                margin-bottom: 1rem;
+            }
+            .nav-pills {
+                align-self: stretch;
+            }
+            .nav-pills .nav-item {
+                flex: 1;
+                text-align: center;
+            }
+            .upload-box {
+                padding: 1.5rem;
+            }
+            .upload-icon {
+                font-size: 2rem;
+                margin-bottom: 0.75rem;
+            }
+            .help-section {
+                padding: 1rem;
+                margin-top: 1rem;
+            }
+            .help-section h4 {
+                font-size: 1.1rem;
+            }
+            .help-section ol, .help-section ul {
+                padding-left: 1.25rem;
+            }
+            .status-area {
+                padding: 0.75rem;
+            }
+        }
+        
+        @media (max-width: 576px) {
+            .upload-box {
+                padding: 1rem;
+            }
+            .help-section {
+                padding: 0.75rem;
+            }
+            .help-section ol, .help-section ul {
+                padding-left: 1rem;
+                font-size: 0.9rem;
+            }
+            .help-section li {
+                margin-bottom: 0.25rem;
+            }
         }
     </style>
 </head>
@@ -136,21 +197,6 @@
                 <li>Include dates in standard format (YYYY-MM-DD) for better timeline filtering</li>
             </ul>
         </div>
-    </div>
-
-    <div class="header d-flex justify-content-between align-items-center">
-        <h2>Upload Documents</h2>
-        <ul class="nav nav-pills">
-            <li class="nav-item">
-                <a class="nav-link" href="/conversations">Conversations</a>
-            </li>
-            <li class="nav-item">
-                <a class="nav-link active" href="/upload">Upload</a>
-            </li>
-            <li class="nav-item">
-                <a class="nav-link" href="/stats">Stats</a>
-            </li>
-        </ul>
     </div>
     
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
