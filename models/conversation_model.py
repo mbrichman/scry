@@ -79,9 +79,17 @@ class ConversationModel(BaseModel):
 
     def add_documents(self, documents, embeddings, metadatas, ids):
         """Add documents to the collection"""
-        self.collection.add(
-            documents=documents, embeddings=embeddings, metadatas=metadatas, ids=ids
-        )
+        try:
+            self.collection.add(
+                documents=documents, embeddings=embeddings, metadatas=metadatas, ids=ids
+            )
+        except chromadb.errors.NotFoundError:
+            # Collection doesn't exist, reinitialize it
+            print("Collection not found during add, reinitializing...")
+            self.initialize()
+            self.collection.add(
+                documents=documents, embeddings=embeddings, metadatas=metadatas, ids=ids
+            )
 
     def query(self, query_embeddings, n_results=5, where=None, include_distances=False):
         """Query the collection"""
@@ -89,14 +97,27 @@ class ConversationModel(BaseModel):
         if include_distances:
             include_list.append("distances")
             
-        if where:
-            return self.collection.query(
-                query_embeddings=query_embeddings, n_results=n_results, where=where, include=include_list
-            )
-        else:
-            return self.collection.query(
-                query_embeddings=query_embeddings, n_results=n_results, include=include_list
-            )
+        try:
+            if where:
+                return self.collection.query(
+                    query_embeddings=query_embeddings, n_results=n_results, where=where, include=include_list
+                )
+            else:
+                return self.collection.query(
+                    query_embeddings=query_embeddings, n_results=n_results, include=include_list
+                )
+        except chromadb.errors.NotFoundError:
+            # Collection doesn't exist, reinitialize it
+            print("Collection not found during query, reinitializing...")
+            self.initialize()
+            if where:
+                return self.collection.query(
+                    query_embeddings=query_embeddings, n_results=n_results, where=where, include=include_list
+                )
+            else:
+                return self.collection.query(
+                    query_embeddings=query_embeddings, n_results=n_results, include=include_list
+                )
 
     def get_documents(self, where=None, include=None, limit=None):
         """Get documents from the collection"""
@@ -108,7 +129,13 @@ class ConversationModel(BaseModel):
         if limit:
             kwargs["limit"] = limit
 
-        return self.collection.get(**kwargs)
+        try:
+            return self.collection.get(**kwargs)
+        except chromadb.errors.NotFoundError:
+            # Collection doesn't exist, reinitialize it
+            print("Collection not found, reinitializing...")
+            self.initialize()
+            return self.collection.get(**kwargs)
 
     def search(self, query_text, n_results=5, date_range=None, keyword_search=False):
         """Unified search interface"""
@@ -243,7 +270,8 @@ class ConversationModel(BaseModel):
         # Get existing conversation IDs to avoid duplicates (only same format)
         existing_docs = self.get_documents(include=["metadatas"], limit=9999)
         existing_conv_ids = set()
-        for meta in existing_docs.get("metadatas", []):
+        metadatas = existing_docs.get("metadatas") if existing_docs else None
+        for meta in metadatas or []:
             # Only check for duplicates within the same source format
             if meta.get("source") == file_format.lower():
                 conv_id = meta.get("conversation_id") or meta.get("id")
