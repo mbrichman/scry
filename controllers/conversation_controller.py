@@ -63,12 +63,18 @@ class ConversationController:
             keyword_search = False
             date_range = None
 
+            # Get search parameters
+            search_type = "auto"  # Default
+            
             # Use form values if available (POST method)
             if request.method == "POST" and hasattr(search_form, "results_count"):
                 n_results = search_form.results_count.data or 50
 
             if request.method == "POST" and hasattr(search_form, "search_type"):
-                keyword_search = search_form.search_type.data == "keyword"
+                search_type = search_form.search_type.data or "auto"
+                keyword_search = search_form.search_type.data == "keyword"  # Keep for backward compatibility
+            elif request.args.get("search_type"):
+                search_type = request.args.get("search_type", "auto")
 
             if (
                 request.method == "POST"
@@ -78,15 +84,22 @@ class ConversationController:
                 if search_form.date_from.data and search_form.date_to.data:
                     date_range = (search_form.date_from.data, search_form.date_to.data)
 
-            # Perform search
-            search_method = "Keyword" if keyword_search else "Semantic"
+            # Perform search with new search type
+            search_method_names = {
+                "auto": "Auto (Smart)",
+                "fts": "Keyword (Fast)",
+                "semantic": "Semantic (AI)",
+                "hybrid": "Hybrid (Both)"
+            }
+            search_method = search_method_names.get(search_type, "Auto")
             print(f"DEBUG: Performing {search_method} search for: '{query}'")
             
             search_results = self.search_model.search_conversations(
                 query_text=query,
                 n_results=n_results,
                 date_range=date_range,
-                keyword_search=keyword_search,
+                keyword_search=keyword_search,  # Keep for backward compatibility
+                search_type=search_type
             )
             
             print(f"DEBUG: {search_method} search returned {len(search_results.get('documents', [[]])[0])} results")

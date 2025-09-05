@@ -1,5 +1,6 @@
 from models import BaseModel
 from models.conversation_model import ConversationModel
+from models.fts_model import FTSModel
 from models.search_utils import expand_query_with_stems
 
 
@@ -8,20 +9,129 @@ class SearchModel(BaseModel):
     
     def __init__(self):
         self.conversation_model = ConversationModel()
+        self.fts_model = FTSModel()
         self.initialize()
     
     def initialize(self):
         """Initialize the search model"""
         pass
     
-    def search_conversations(self, query_text, n_results=5, date_range=None, keyword_search=False):
-        """Search conversations using the conversation model"""
-        return self.conversation_model.search(
-            query_text=query_text,
-            n_results=n_results,
-            date_range=date_range,
-            keyword_search=keyword_search
-        )
+    def search_conversations(self, query_text, n_results=5, date_range=None, keyword_search=False, search_type="auto"):
+        """Search conversations using the appropriate search method"""
+        if search_type == "fts" or search_type == "keyword":
+            return self.fts_search_conversations(query_text, n_results)
+        elif search_type == "semantic":
+            return self.conversation_model.search(
+                query_text=query_text,
+                n_results=n_results,
+                date_range=date_range,
+                keyword_search=False
+            )
+        else:  # auto - choose best method
+            # For short queries or exact phrases, use FTS
+            if len(query_text.split()) <= 3 or '"' in query_text:
+                return self.fts_search_conversations(query_text, n_results)
+            else:
+                # For longer queries, use semantic search
+                return self.conversation_model.search(
+                    query_text=query_text,
+                    n_results=n_results,
+                    date_range=date_range,
+                    keyword_search=keyword_search
+                )
+    
+    def fts_search_conversations(self, query_text, n_results=5, source_filter=None):
+        """Search conversations using FTS5 for fast keyword search"""
+        # Get FTS results
+        fts_results = self.fts_model.search(query_text, limit=n_results, source_filter=source_filter)
+        
+        if not fts_results:
+            return {"documents": [[]], "metadatas": [[]], "distances": [[]]}
+        
+        # Convert FTS results to ChromaDB format for consistency
+        documents = []
+        metadatas = []
+        distances = []
+        
+        for result in fts_results:
+            documents.append(result['content'])
+            
+            # Build metadata similar to ChromaDB format
+            meta = {
+                'title': result['title'],
+                'source': result['source'],
+                'id': result['doc_id'],
+                'conversation_id': result.get('conversation_id', ''),
+                'search_type': 'fts',
+                'fts_rank': result['rank'],
+                'title_snippet': result.get('title_snippet', ''),
+                'content_snippet': result.get('content_snippet', ''),
+                'relevance_score': abs(result['rank']),  # Convert BM25 score to positive
+                'relevance_display': f"{abs(result['rank']):.2f}"
+            }
+            
+            # Add date info if available
+            if result['date_str'] and result['date_str'] != 'Unknown':
+                meta['earliest_ts'] = result['date_str']
+                meta['latest_ts'] = result['date_str']
+            
+            metadatas.append(meta)
+            
+            # Convert BM25 score to distance-like metric (lower = better)
+            # BM25 scores are typically negative, so we use abs and invert
+            distance = 1.0 / (abs(result['rank']) + 1) if result['rank'] != 0 else 0.0
+            distances.append(distance)
+        
+        return {
+            "documents": [documents], 
+            "metadatas": [metadatas], 
+            "distances": [distances]
+        }
+    
+    def hybrid_search_conversations(self, query_text, n_results=5, fts_weight=0.6):
+        """Combine FTS and semantic search results"""
+        # Get results from both methods
+        fts_results = self.fts_search_conversations(query_text, n_results)
+        semantic_results = self.conversation_model.search(query_text, n_results, keyword_search=False)
+        
+        # Combine and rank results (this is a simple implementation)
+        # In a production system, you'd want more sophisticated result fusion
+        combined_docs = []
+        combined_metas = []
+        combined_distances = []
+        
+        # Add FTS results with weight
+        if fts_results.get("documents") and fts_results["documents"][0]:
+            for i, doc in enumerate(fts_results["documents"][0]):
+                meta = fts_results["metadatas"][0][i].copy()
+                meta['search_type'] = 'hybrid_fts'
+                combined_docs.append(doc)
+                combined_metas.append(meta)
+                combined_distances.append(fts_results["distances"][0][i] * fts_weight)
+        
+        # Add semantic results with weight  
+        if semantic_results.get("documents") and semantic_results["documents"][0]:
+            for i, doc in enumerate(semantic_results["documents"][0]):
+                meta = semantic_results["metadatas"][0][i].copy()
+                meta['search_type'] = 'hybrid_semantic'
+                combined_docs.append(doc)
+                combined_metas.append(meta)
+                combined_distances.append(semantic_results["distances"][0][i] * (1 - fts_weight))
+        
+        # Sort by combined distance and take top results
+        combined = list(zip(combined_docs, combined_metas, combined_distances))
+        combined.sort(key=lambda x: x[2])  # Sort by distance (lower = better)
+        combined = combined[:n_results]
+        
+        if not combined:
+            return {"documents": [[]], "metadatas": [[]], "distances": [[]]}
+        
+        docs, metas, dists = zip(*combined)
+        return {
+            "documents": [list(docs)],
+            "metadatas": [list(metas)], 
+            "distances": [list(dists)]
+        }
     
     def get_all_conversations(self, include=None, limit=None):
         """Get all conversations"""

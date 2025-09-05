@@ -10,8 +10,13 @@ class SearchForm(FlaskForm):
     )
     search_type = SelectField(
         "Search Type",
-        choices=[("semantic", "Semantic Search"), ("keyword", "Keyword Search")],
-        default="semantic",
+        choices=[
+            ("auto", "Auto (Smart)"),
+            ("fts", "Keyword (Fast)"), 
+            ("semantic", "Semantic (AI)"),
+            ("hybrid", "Hybrid (Both)")
+        ],
+        default="auto",
     )
     date_from = StringField("From Date (YYYY-MM-DD)", validators=[Optional()])
     date_to = StringField("To Date (YYYY-MM-DD)", validators=[Optional()])
