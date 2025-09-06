@@ -266,6 +266,9 @@
     </div>
 </div>
 
+<!-- Copy success notification -->
+<div id="copySuccess" style="display: none; position: fixed; top: 20px; right: 20px; padding: 10px 20px; background-color: #28a745; color: white; border-radius: 4px; z-index: 1000; box-shadow: 0 2px 5px rgba(0,0,0,0.2);"></div>
+
 <div class="conversation-messages">
     {% for message in messages %}
         <div class="message {{ message.role }}-message">
@@ -377,30 +380,74 @@
                 markdown += content + '\n\n';
             });
             
-            // Copy to clipboard
-            navigator.clipboard.writeText(markdown).then(function() {
-                // Show success message
+            // Debug: Log the markdown content
+            console.log('Markdown content to copy:', markdown.substring(0, 200) + '...');
+            
+            // Function to show success message
+            function showSuccessMessage(text, isError = false) {
                 const successMessage = document.getElementById('copySuccess');
-                successMessage.textContent = 'Conversation copied to clipboard!';
-                successMessage.style.display = 'block';
+                if (successMessage) {
+                    successMessage.textContent = text;
+                    successMessage.style.backgroundColor = isError ? '#dc3545' : '#28a745';
+                    successMessage.style.display = 'block';
+                    
+                    setTimeout(function() {
+                        successMessage.style.display = 'none';
+                        successMessage.style.backgroundColor = '#28a745';
+                    }, 3000);
+                }
+            }
+            
+            // Function to fallback copy method
+            function fallbackCopy(text) {
+                // Create a temporary textarea
+                const textArea = document.createElement('textarea');
+                textArea.value = text;
+                textArea.style.position = 'fixed';
+                textArea.style.left = '-999999px';
+                textArea.style.top = '-999999px';
+                document.body.appendChild(textArea);
+                textArea.focus();
+                textArea.select();
                 
-                // Hide after 2 seconds
-                setTimeout(function() {
-                    successMessage.style.display = 'none';
-                }, 2000);
-            }).catch(function(err) {
-                console.error('Failed to copy: ', err);
-                // Fallback: show error message
-                const successMessage = document.getElementById('copySuccess');
-                successMessage.textContent = 'Failed to copy to clipboard';
-                successMessage.style.backgroundColor = '#dc3545';
-                successMessage.style.display = 'block';
-                
-                setTimeout(function() {
-                    successMessage.style.display = 'none';
-                    successMessage.style.backgroundColor = '#28a745';
-                }, 2000);
-            });
+                try {
+                    const successful = document.execCommand('copy');
+                    document.body.removeChild(textArea);
+                    return successful;
+                } catch (err) {
+                    console.error('Fallback copy failed:', err);
+                    document.body.removeChild(textArea);
+                    return false;
+                }
+            }
+            
+            // Try modern clipboard API first
+            if (navigator.clipboard && window.isSecureContext) {
+                navigator.clipboard.writeText(markdown).then(function() {
+                    console.log('Modern clipboard API succeeded');
+                    showSuccessMessage('Conversation copied to clipboard!');
+                }).catch(function(err) {
+                    console.error('Modern clipboard API failed:', err);
+                    // Try fallback method
+                    if (fallbackCopy(markdown)) {
+                        console.log('Fallback copy method succeeded');
+                        showSuccessMessage('Conversation copied to clipboard!');
+                    } else {
+                        console.error('Both clipboard methods failed');
+                        showSuccessMessage('Failed to copy to clipboard', true);
+                    }
+                });
+            } else {
+                console.log('Modern clipboard API not available, using fallback');
+                // Use fallback method directly
+                if (fallbackCopy(markdown)) {
+                    console.log('Fallback copy method succeeded');
+                    showSuccessMessage('Conversation copied to clipboard!');
+                } else {
+                    console.error('Fallback copy method failed');
+                    showSuccessMessage('Failed to copy to clipboard', true);
+                }
+            }
         } catch (err) {
             console.error('Error copying conversation:', err);
         }
