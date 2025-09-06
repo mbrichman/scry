@@ -166,9 +166,10 @@
 
 <style>
   .scrollable-conversation-list {
-    height: 100%;
+    flex: 1;
     overflow-y: auto;
     padding: 1rem;
+    min-height: 0;
   }
 
   .loading-state,

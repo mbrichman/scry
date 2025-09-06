@@ -75,54 +75,54 @@
     <header class="app-header">
       <div class="header-content">
         <h1 class="app-title">DovOS - Conversation Browser</h1>
-        <div class="header-actions">
-          {#if searchQuery}
-            <button class="clear-button" on:click={clearSearch}>
-              Clear Search
-            </button>
-          {/if}
-        </div>
       </div>
     </header>
     
     <!-- Two-pane Layout -->
     <div class="main-layout">
-      <!-- Left Pane: All Conversations -->
+      <!-- Left Pane: Search & Conversations List -->
       <aside class="left-pane">
-        <div class="pane-header">
-          <h2>All Conversations</h2>
-        </div>
-        <ScrollableConversationList on:select={handleConversationSelect} />
-      </aside>
-      
-      <!-- Right Pane: Search & Details -->
-      <main class="right-pane">
         <!-- Search Section -->
-        <section class="search-section">
+        <div class="search-header">
           <SearchBox on:search={handleSearch} />
-        </section>
+        </div>
         
         <!-- Error Message -->
         {#if errorMessage}
-          <div class="error-message">
+          <div class="error-message-left">
             <p>{errorMessage}</p>
           </div>
         {/if}
         
+        <!-- Conversations List (All or Search Results) -->
+        <div class="conversations-container">
+          {#if searchQuery}
+            <!-- Search Results in Left Pane -->
+            <div class="search-results-header">
+              <h3>Search Results for "{searchQuery}"</h3>
+              <button class="clear-search-btn" on:click={clearSearch}>Clear</button>
+            </div>
+            <ConversationList 
+              {conversations}
+              {isLoading}
+              {searchQuery}
+              on:conversationSelect={handleConversationSelect}
+            />
+          {:else}
+            <!-- All Conversations -->
+            <div class="pane-header">
+              <h2>All Conversations</h2>
+            </div>
+            <ScrollableConversationList on:select={handleConversationSelect} />
+          {/if}
+        </div>
+      </aside>
+      
+      <!-- Right Pane: Conversation Details -->
+      <main class="right-pane">
         <!-- Content Area -->
         <section class="content-section">
-          {#if searchQuery}
-            <!-- Search Results -->
-            <div class="search-results">
-              <h3>Search Results for "{searchQuery}"</h3>
-              <ConversationList 
-                {conversations}
-                {isLoading}
-                {searchQuery}
-                on:conversationSelect={handleConversationSelect}
-              />
-            </div>
-          {:else if selectedConversation}
+          {#if selectedConversation}
             <!-- Selected Conversation Details -->
             <div class="conversation-details">
               <h3>{selectedConversation.title}</h3>
@@ -174,9 +174,10 @@
   }
   
   .app-container {
-    min-height: 100vh;
+    height: 100vh;
     display: flex;
     flex-direction: column;
+    overflow: hidden;
   }
   
   .app-header {
@@ -189,7 +190,8 @@
   .main-layout {
     display: flex;
     flex: 1;
-    height: calc(100vh - 80px); /* Adjust based on header height */
+    min-height: 0; /* Allow flex children to shrink */
+    overflow: hidden;
   }
   
   .left-pane {
@@ -199,12 +201,28 @@
     display: flex;
     flex-direction: column;
     flex-shrink: 0;
+    overflow: hidden;
+  }
+  
+  .search-header {
+    padding: 1rem;
+    border-bottom: 1px solid #e5e7eb;
+    background: #f9fafb;
+    flex-shrink: 0;
+  }
+  
+  .conversations-container {
+    flex: 1;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
   }
   
   .pane-header {
     padding: 1rem;
     border-bottom: 1px solid #e5e7eb;
     background: #f9fafb;
+    flex-shrink: 0;
   }
   
   .pane-header h2 {
@@ -214,11 +232,54 @@
     color: #374151;
   }
   
+  .search-results-header {
+    padding: 1rem;
+    border-bottom: 1px solid #e5e7eb;
+    background: #f9fafb;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-shrink: 0;
+  }
+  
+  .search-results-header h3 {
+    margin: 0;
+    font-size: 1rem;
+    font-weight: 600;
+    color: #374151;
+  }
+  
+  .clear-search-btn {
+    padding: 0.25rem 0.75rem;
+    background: #f3f4f6;
+    border: 1px solid #d1d5db;
+    border-radius: 0.375rem;
+    color: #374151;
+    cursor: pointer;
+    font-size: 0.75rem;
+    transition: all 0.2s;
+  }
+  
+  .clear-search-btn:hover {
+    background: #e5e7eb;
+    border-color: #9ca3af;
+  }
+  
+  .error-message-left {
+    background: #fef2f2;
+    border-bottom: 1px solid #fecaca;
+    padding: 0.75rem 1rem;
+    color: #dc2626;
+    font-size: 0.875rem;
+    flex-shrink: 0;
+  }
+  
   .right-pane {
     flex: 1;
     display: flex;
     flex-direction: column;
     overflow: hidden;
+    min-height: 0;
   }
   
   .header-content {
@@ -248,12 +309,6 @@
   .clear-button:hover {
     background: #e5e7eb;
     border-color: #9ca3af;
-  }
-  
-  .search-section {
-    padding: 1.5rem;
-    border-bottom: 1px solid #e5e7eb;
-    background: white;
   }
   
   .content-section {
