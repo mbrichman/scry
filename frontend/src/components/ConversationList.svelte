@@ -51,7 +51,7 @@
       </div>
     {/if}
     
-    <ul class="conversation-list space-y-3" role="list" aria-label="Conversations list">
+    <ul class="conversation-list-inner" role="list" aria-label="Conversations list">
       {#each conversations as conversation (conversation.id)}
         <li role="listitem">
           <ConversationCard 
@@ -66,7 +66,16 @@
 
 <style>
   .conversation-list {
-    width: 100%;
+    flex: 1;
+    overflow-y: auto;
+    padding: 0.5rem;
+    min-height: 0;
+  }
+  
+  .conversation-list-inner {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
   }
   
   .loading-state {
@@ -89,8 +98,14 @@
     border-bottom: 1px solid #e5e7eb;
   }
   
-  .space-y-3 > * + * {
-    margin-top: 0.75rem;
+  ul.conversation-list-inner {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+  }
+  
+  ul.conversation-list-inner li {
+    padding: 0 0.25rem;
   }
   
   @keyframes spin {

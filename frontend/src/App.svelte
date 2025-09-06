@@ -3,6 +3,7 @@
   import SearchBox from './components/SearchBox.svelte'
   import ConversationList from './components/ConversationList.svelte'
   import ScrollableConversationList from './components/ScrollableConversationList.svelte'
+  import MessageView from './components/MessageView.svelte'
   import { searchConversations, getConversation } from './services/api.js'
   
   // App state
@@ -10,6 +11,8 @@
   let isLoading = false
   let searchQuery = ''
   let selectedConversation = null
+  let fullConversation = null
+  let loadingConversation = false
   let errorMessage = ''
   
   // Handle search from SearchBox component
@@ -47,16 +50,21 @@
     console.log('📄 Selected conversation:', conversation.title)
     
     try {
-      // For now, just log the selection
-      // Later we could navigate to a detail view or show in a modal
       selectedConversation = conversation
+      loadingConversation = true
+      fullConversation = null
       
-      // Optional: fetch full conversation details
-      // const fullConversation = await getConversation(conversation.id)
-      // console.log('Full conversation:', fullConversation)
+      // Fetch full conversation details with messages
+      const details = await getConversation(conversation.id)
+      console.log('✅ Loaded conversation details:', details)
+      
+      fullConversation = details
       
     } catch (error) {
       console.error('❌ Error loading conversation:', error)
+      fullConversation = null
+    } finally {
+      loadingConversation = false
     }
   }
   
@@ -65,6 +73,7 @@
     searchQuery = ''
     conversations = []
     selectedConversation = null
+    fullConversation = null
     errorMessage = ''
   }
 </script>
@@ -123,8 +132,16 @@
       <main class="right-pane">
         <!-- Content Area -->
         <section class="content-section">
-          {#if selectedConversation}
-            <!-- Selected Conversation Details -->
+          {#if fullConversation}
+            <!-- Full Message View -->
+            <MessageView conversation={fullConversation} />
+          {:else if loadingConversation}
+            <!-- Loading State -->
+            <div class="loading-state">
+              <div class="loading-spinner">Loading conversation...</div>
+            </div>
+          {:else if selectedConversation}
+            <!-- Selected Conversation Preview -->
             <div class="conversation-details">
               <h3>{selectedConversation.title}</h3>
               <p class="conversation-meta">
@@ -133,7 +150,7 @@
               </p>
               <div class="conversation-preview">
                 <p>{selectedConversation.preview}</p>
-                <p class="coming-soon">Full conversation view coming soon...</p>
+                <p class="coming-soon">Loading full conversation...</p>
               </div>
             </div>
           {:else}
@@ -323,8 +340,27 @@
   
   .content-section {
     flex: 1;
-    padding: 2rem;
     overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+  }
+  
+  .content-section :global(.messages) {
+    flex: 1;
+    overflow-y: auto;
+  }
+  
+  .loading-state {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex: 1;
+    padding: 2rem;
+  }
+  
+  .loading-spinner {
+    color: #6b7280;
+    font-size: 1rem;
   }
   
   
@@ -333,6 +369,7 @@
     border-radius: 0.5rem;
     padding: 1.5rem;
     box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    margin: 2rem;
   }
   
   .conversation-details h3 {
@@ -411,6 +448,7 @@
     background: white;
     border-radius: 0.5rem;
     box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    margin: 2rem;
   }
   
   .welcome-icon {

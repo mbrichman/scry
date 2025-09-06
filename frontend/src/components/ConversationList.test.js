@@ -140,6 +140,6 @@ describe('ConversationList', () => {
     render(ConversationList, { conversations: mockConversations })
     
     const container = screen.getByRole('list')
-    expect(container).toHaveClass('conversation-list')
+    expect(container).toHaveClass('conversation-list-inner')
   })
 })

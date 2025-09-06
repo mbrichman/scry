@@ -347,6 +347,154 @@ class ConversationController:
             
         except Exception as e:
             return jsonify({"error": str(e)}), 500
+    
+    def api_conversation(self, conversation_id):
+        """Get a single conversation by ID in JSON format for the frontend MessageView"""
+        try:
+            # Get the conversation data
+            doc_result = self.search_model.get_conversation_by_id(conversation_id)
+            
+            if not doc_result or not doc_result.get("documents"):
+                return jsonify({"error": "Conversation not found"}), 404
+            
+            document = doc_result["documents"][0]
+            metadata = doc_result["metadatas"][0] if doc_result.get("metadatas") else {}
+            
+            # Parse the conversation content into individual messages
+            messages = self._parse_conversation_messages(document, metadata)
+            
+            # Format response for MessageView component
+            conversation_data = {
+                "id": conversation_id,
+                "title": metadata.get("title", "Untitled Conversation"),
+                "source": metadata.get("source", "unknown"),
+                "date": metadata.get("earliest_ts") or metadata.get("date"),
+                "messages": messages
+            }
+            
+            return jsonify(conversation_data)
+            
+        except Exception as e:
+            return jsonify({"error": str(e)}), 500
+    
+    def _parse_conversation_messages(self, document, metadata):
+        """Parse conversation content into individual messages"""
+        messages = []
+        source = metadata.get("source", "").lower()
+        
+        
+        # Different patterns based on source
+        if source == "chatgpt":
+            # ChatGPT format: **You said** and **ChatGPT said**
+            parts = document.split("**You said**")
+            
+            for i, part in enumerate(parts[1:], 1):  # Skip first empty part
+                if "**ChatGPT said**" in part:
+                    user_content, ai_content = part.split("**ChatGPT said**", 1)
+                    
+                    # Extract timestamp if present
+                    user_timestamp = self._extract_timestamp(user_content)
+                    ai_timestamp = self._extract_timestamp(ai_content)
+                    
+                    # Clean content
+                    user_msg = self._clean_message_content(user_content)
+                    ai_msg = self._clean_message_content(ai_content)
+                    
+                    if user_msg.strip():
+                        messages.append({
+                            "id": f"user-{i}",
+                            "role": "user", 
+                            "content": user_msg,
+                            "timestamp": user_timestamp
+                        })
+                    
+                    if ai_msg.strip():
+                        messages.append({
+                            "id": f"assistant-{i}",
+                            "role": "assistant",
+                            "content": ai_msg,
+                            "timestamp": ai_timestamp
+                        })
+        
+        elif source == "claude":
+            # Claude format: **You said** and **Claude said**
+            parts = document.split("**You said**")
+            
+            for i, part in enumerate(parts[1:], 1):
+                if "**Claude said**" in part:
+                    user_content, ai_content = part.split("**Claude said**", 1)
+                    
+                    user_timestamp = self._extract_timestamp(user_content)
+                    ai_timestamp = self._extract_timestamp(ai_content)
+                    
+                    user_msg = self._clean_message_content(user_content)
+                    ai_msg = self._clean_message_content(ai_content)
+                    
+                    if user_msg.strip():
+                        messages.append({
+                            "id": f"user-{i}",
+                            "role": "user",
+                            "content": user_msg,
+                            "timestamp": user_timestamp
+                        })
+                    
+                    if ai_msg.strip():
+                        messages.append({
+                            "id": f"assistant-{i}", 
+                            "role": "assistant",
+                            "content": ai_msg,
+                            "timestamp": ai_timestamp
+                        })
+        
+        else:
+            # Generic format - try to split on common patterns
+            if "**You said**" in document and "**AI said**" in document:
+                parts = document.split("**You said**")
+                for i, part in enumerate(parts[1:], 1):
+                    if "**AI said**" in part:
+                        user_content, ai_content = part.split("**AI said**", 1)
+                        
+                        user_msg = self._clean_message_content(user_content)
+                        ai_msg = self._clean_message_content(ai_content)
+                        
+                        if user_msg.strip():
+                            messages.append({
+                                "id": f"user-{i}",
+                                "role": "user",
+                                "content": user_msg,
+                                "timestamp": None
+                            })
+                        
+                        if ai_msg.strip():
+                            messages.append({
+                                "id": f"assistant-{i}",
+                                "role": "assistant", 
+                                "content": ai_msg,
+                                "timestamp": None
+                            })
+        
+        return messages
+    
+    def _extract_timestamp(self, content):
+        """Extract timestamp from message content"""
+        import re
+        # Look for patterns like *(on 2025-04-05 02:20:02)*:
+        timestamp_match = re.search(r'\*\(on ([\d\-\s:]+)\)\*', content)
+        if timestamp_match:
+            return timestamp_match.group(1)
+        return None
+    
+    def _clean_message_content(self, content):
+        """Clean message content by removing timestamps and formatting"""
+        import re
+        # Remove timestamp patterns
+        content = re.sub(r'\*\(on [\d\-\s:]+\)\*', '', content)
+        # Remove leading/trailing whitespace and newlines
+        content = content.strip()
+        # Remove leading colon and whitespace
+        if content.startswith(':'):
+            content = content[1:].strip()
+        return content
 
 
 class UploadController:

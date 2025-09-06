@@ -32,6 +32,10 @@ def init_routes(app, archive):
     def api_conversations():
         return conversation_controller.api_conversations()
 
+    @app.route("/api/conversation/<conversation_id>", methods=["GET"])
+    def api_conversation(conversation_id):
+        return conversation_controller.api_conversation(conversation_id)
+
     @app.route("/stats")
     def stats():
         return conversation_controller.stats()
