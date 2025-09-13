@@ -38,6 +38,7 @@ network={
   const mockConversation = {
     id: 'conv-1',
     title: 'SSH and VNC on Raspberry Pi 5',
+    assistant_name: 'Claude',
     messages: [mockUserMessage, mockAIMessage]
   }
 
@@ -73,7 +74,9 @@ network={
     const aiMsg = aiContent.closest('.msg--ai')
     expect(aiMsg).toBeInTheDocument()
     
-    expect(screen.getByText('AI')).toBeInTheDocument()
+    // Check for Claude text in the AI message meta specifically
+    const aiMeta = aiContent.closest('.ai').querySelector('.ai__meta strong')
+    expect(aiMeta).toHaveTextContent('Claude')
     // Check that timestamp appears in AI content context  
     const aiContainer = aiContent.closest('.ai')
     expect(aiContainer.textContent).toMatch(/\d+h ago|now/)
@@ -127,5 +130,85 @@ network={
     
     expect(screen.getByText('Empty Chat')).toBeInTheDocument()
     // Should not crash with no messages
+  })
+
+  it('displays Claude as assistant name when specified', () => {
+    const claudeConversation = {
+      id: 'conv-claude',
+      title: 'Claude Chat',
+      assistant_name: 'Claude',
+      messages: [mockUserMessage, mockAIMessage]
+    }
+    
+    render(MessageView, { props: { conversation: claudeConversation } })
+    
+    // Check header badge specifically
+    const headerBadge = document.querySelector('.badge')
+    expect(headerBadge).toHaveTextContent('Claude')
+    // Check message meta specifically
+    const aiMeta = document.querySelector('.ai__meta strong')
+    expect(aiMeta).toHaveTextContent('Claude')
+    // Ensure no other assistant names appear
+    expect(screen.queryByText('AI')).not.toBeInTheDocument()
+    expect(screen.queryByText('ChatGPT')).not.toBeInTheDocument()
+  })
+
+  it('displays ChatGPT as assistant name when specified', () => {
+    const chatgptConversation = {
+      id: 'conv-chatgpt',
+      title: 'ChatGPT Chat',
+      assistant_name: 'ChatGPT',
+      messages: [mockUserMessage, mockAIMessage]
+    }
+    
+    render(MessageView, { props: { conversation: chatgptConversation } })
+    
+    // Check header badge specifically
+    const headerBadge = document.querySelector('.badge')
+    expect(headerBadge).toHaveTextContent('ChatGPT')
+    // Check message meta specifically
+    const aiMeta = document.querySelector('.ai__meta strong')
+    expect(aiMeta).toHaveTextContent('ChatGPT')
+    // Ensure no other assistant names appear
+    expect(screen.queryByText('Claude')).not.toBeInTheDocument()
+    expect(screen.queryByText('AI')).not.toBeInTheDocument()
+  })
+
+  it('falls back to AI when assistant_name is not provided', () => {
+    const genericConversation = {
+      id: 'conv-generic',
+      title: 'Generic Chat',
+      messages: [mockUserMessage, mockAIMessage]
+    }
+    
+    render(MessageView, { props: { conversation: genericConversation } })
+    
+    // Check header badge specifically
+    const headerBadge = document.querySelector('.badge')
+    expect(headerBadge).toHaveTextContent('AI')
+    // Check message meta specifically
+    const aiMeta = document.querySelector('.ai__meta strong')
+    expect(aiMeta).toHaveTextContent('AI')
+    // Ensure no other assistant names appear
+    expect(screen.queryByText('Claude')).not.toBeInTheDocument()
+    expect(screen.queryByText('ChatGPT')).not.toBeInTheDocument()
+  })
+
+  it('falls back to AI when assistant_name is empty', () => {
+    const emptyAssistantConversation = {
+      id: 'conv-empty-assistant',
+      title: 'Empty Assistant Chat',
+      assistant_name: '',
+      messages: [mockUserMessage, mockAIMessage]
+    }
+    
+    render(MessageView, { props: { conversation: emptyAssistantConversation } })
+    
+    // Check header badge specifically
+    const headerBadge = document.querySelector('.badge')
+    expect(headerBadge).toHaveTextContent('AI')
+    // Check message meta specifically
+    const aiMeta = document.querySelector('.ai__meta strong')
+    expect(aiMeta).toHaveTextContent('AI')
   })
 })

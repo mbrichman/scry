@@ -2,6 +2,7 @@ import pytest
 import json
 from unittest.mock import Mock, patch
 from app import app
+from controllers.conversation_controller import ConversationController
 
 
 @pytest.fixture
@@ -237,3 +238,172 @@ class TestConversationsAPI:
         
         # Should have CORS headers (assuming CORS is configured)
         assert 'Access-Control-Allow-Origin' in response.headers or response.status_code == 200
+
+
+class TestAssistantNameDetection:
+    """Test cases for assistant name detection functionality."""
+    
+    def test_determine_assistant_name_claude_source(self):
+        """Test assistant name detection with Claude source metadata."""
+        controller = ConversationController()
+        
+        document = "**You said**: Hello\n**Claude said**: Hi there!"
+        metadata = {"source": "claude"}
+        
+        result = controller._determine_assistant_name(document, metadata)
+        assert result == "Claude"
+    
+    def test_determine_assistant_name_chatgpt_source(self):
+        """Test assistant name detection with ChatGPT source metadata."""
+        controller = ConversationController()
+        
+        document = "**You said**: Hello\n**ChatGPT said**: Hi there!"
+        metadata = {"source": "chatgpt"}
+        
+        result = controller._determine_assistant_name(document, metadata)
+        assert result == "ChatGPT"
+    
+    def test_determine_assistant_name_from_claude_content(self):
+        """Test assistant name detection from Claude document content."""
+        controller = ConversationController()
+        
+        document = "**You said**: Hello\n**Claude said**: Hi there!"
+        metadata = {"source": "unknown"}
+        
+        result = controller._determine_assistant_name(document, metadata)
+        assert result == "Claude"
+    
+    def test_determine_assistant_name_from_chatgpt_content(self):
+        """Test assistant name detection from ChatGPT document content."""
+        controller = ConversationController()
+        
+        document = "**You said**: Hello\n**ChatGPT said**: Hi there!"
+        metadata = {"source": "unknown"}
+        
+        result = controller._determine_assistant_name(document, metadata)
+        assert result == "ChatGPT"
+    
+    def test_determine_assistant_name_fallback_to_ai(self):
+        """Test assistant name detection fallback to AI for generic content."""
+        controller = ConversationController()
+        
+        document = "**You said**: Hello\n**AI said**: Hi there!"
+        metadata = {"source": "unknown"}
+        
+        result = controller._determine_assistant_name(document, metadata)
+        assert result == "AI"
+    
+    def test_determine_assistant_name_empty_metadata(self):
+        """Test assistant name detection with empty metadata."""
+        controller = ConversationController()
+        
+        document = "**You said**: Hello\n**Claude said**: Hi there!"
+        metadata = {}
+        
+        result = controller._determine_assistant_name(document, metadata)
+        assert result == "Claude"
+
+
+class TestSingleConversationAPI:
+    """Test cases for the single conversation API endpoint."""
+    
+    @pytest.fixture
+    def mock_conversation_data(self):
+        """Mock single conversation data for testing."""
+        return {
+            'documents': ['**You said**: Hello\n**Claude said**: Hi there! How can I help you today?'],
+            'metadatas': [{
+                'id': 'conv-123',
+                'title': 'Test Conversation with Claude',
+                'source': 'claude',
+                'earliest_ts': '2024-01-01T10:00:00Z'
+            }]
+        }
+    
+    @patch('models.search_model.SearchModel.get_conversation_by_id')
+    def test_api_conversation_endpoint_success(self, mock_get_conversation, client, mock_conversation_data):
+        """Test successful retrieval of a single conversation."""
+        mock_get_conversation.return_value = mock_conversation_data
+        
+        response = client.get('/api/conversation/conv-123')
+        
+        assert response.status_code == 200
+        data = json.loads(response.data)
+        
+        # Check response structure
+        assert 'id' in data
+        assert 'title' in data
+        assert 'source' in data
+        assert 'assistant_name' in data  # New field
+        assert 'messages' in data
+        
+        # Check specific values
+        assert data['id'] == 'conv-123'
+        assert data['title'] == 'Test Conversation with Claude'
+        assert data['source'] == 'claude'
+        assert data['assistant_name'] == 'Claude'  # Should detect Claude
+        assert isinstance(data['messages'], list)
+    
+    @patch('models.search_model.SearchModel.get_conversation_by_id')
+    def test_api_conversation_chatgpt_detection(self, mock_get_conversation, client):
+        """Test ChatGPT assistant name detection in API response."""
+        mock_data = {
+            'documents': ['**You said**: Hello\n**ChatGPT said**: Hi! How can I assist you?'],
+            'metadatas': [{
+                'id': 'conv-456',
+                'title': 'Test Conversation with ChatGPT',
+                'source': 'chatgpt',
+                'earliest_ts': '2024-01-01T10:00:00Z'
+            }]
+        }
+        mock_get_conversation.return_value = mock_data
+        
+        response = client.get('/api/conversation/conv-456')
+        
+        assert response.status_code == 200
+        data = json.loads(response.data)
+        
+        assert data['assistant_name'] == 'ChatGPT'
+    
+    @patch('models.search_model.SearchModel.get_conversation_by_id')
+    def test_api_conversation_generic_ai_detection(self, mock_get_conversation, client):
+        """Test generic AI assistant name detection in API response."""
+        mock_data = {
+            'documents': ['**You said**: Hello\n**AI said**: Hello! How can I help?'],
+            'metadatas': [{
+                'id': 'conv-789',
+                'title': 'Test Conversation with AI',
+                'source': 'unknown',
+                'earliest_ts': '2024-01-01T10:00:00Z'
+            }]
+        }
+        mock_get_conversation.return_value = mock_data
+        
+        response = client.get('/api/conversation/conv-789')
+        
+        assert response.status_code == 200
+        data = json.loads(response.data)
+        
+        assert data['assistant_name'] == 'AI'
+    
+    @patch('models.search_model.SearchModel.get_conversation_by_id')
+    def test_api_conversation_not_found(self, mock_get_conversation, client):
+        """Test handling of conversation not found."""
+        mock_get_conversation.return_value = None
+        
+        response = client.get('/api/conversation/nonexistent')
+        
+        assert response.status_code == 404
+        data = json.loads(response.data)
+        assert 'error' in data
+    
+    @patch('models.search_model.SearchModel.get_conversation_by_id')
+    def test_api_conversation_database_error(self, mock_get_conversation, client):
+        """Test handling of database errors in single conversation endpoint."""
+        mock_get_conversation.side_effect = Exception("Database error")
+        
+        response = client.get('/api/conversation/conv-123')
+        
+        assert response.status_code == 500
+        data = json.loads(response.data)
+        assert 'error' in data

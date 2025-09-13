@@ -363,12 +363,16 @@ class ConversationController:
             # Parse the conversation content into individual messages
             messages = self._parse_conversation_messages(document, metadata)
             
+            # Determine assistant name based on source and document content
+            assistant_name = self._determine_assistant_name(document, metadata)
+            
             # Format response for MessageView component
             conversation_data = {
                 "id": conversation_id,
                 "title": metadata.get("title", "Untitled Conversation"),
                 "source": metadata.get("source", "unknown"),
                 "date": metadata.get("earliest_ts") or metadata.get("date"),
+                "assistant_name": assistant_name,
                 "messages": messages
             }
             
@@ -474,6 +478,24 @@ class ConversationController:
                             })
         
         return messages
+    
+    def _determine_assistant_name(self, document, metadata):
+        """Determine the assistant name based on source and document content"""
+        source = metadata.get("source", "").lower()
+        
+        if source == "claude":
+            return "Claude"
+        elif source == "chatgpt":
+            return "ChatGPT"
+        else:
+            # Try to detect from document content
+            if "**Claude said**" in document or "**Claude**:" in document:
+                return "Claude"
+            elif "**ChatGPT said**" in document or "**ChatGPT**:" in document:
+                return "ChatGPT"
+            else:
+                # Default fallback for generic AI responses
+                return "AI"
     
     def _extract_timestamp(self, content):
         """Extract timestamp from message content"""

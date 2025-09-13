@@ -362,8 +362,22 @@ class ConversationViewModel(BaseModel):
         # Parse the document to extract messages
         messages = parse_messages_from_document(document)
 
-        # Determine assistant name based on source
-        assistant_name = "Claude" if metadata.get("source") == "claude" else "ChatGPT"
+        # Determine assistant name based on source and document content
+        source = metadata.get("source", "").lower()
+        
+        if source == "claude":
+            assistant_name = "Claude"
+        elif source == "chatgpt":
+            assistant_name = "ChatGPT"
+        else:
+            # Try to detect from document content
+            if "**Claude said**" in document or "**Claude**:" in document:
+                assistant_name = "Claude"
+            elif "**ChatGPT said**" in document or "**ChatGPT**:" in document:
+                assistant_name = "ChatGPT"
+            else:
+                # Default fallback for generic AI responses
+                assistant_name = "AI"
         
         # Create conversation object
         conversation = {"meta": metadata, "document": document}

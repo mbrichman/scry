@@ -30,7 +30,7 @@
     <p class="main__sub">Last updated Sep 4</p>
   </div>
   <div class="main__actions">
-    <span class="badge badge--amber">Claude</span>
+    <span class="badge badge--amber">{conversation?.assistant_name || 'AI'}</span>
     <button class="btn">Copy</button>
     <button class="btn">Refresh</button>
   </div>
@@ -60,7 +60,7 @@
         <div class="avatar" role="img" aria-label="ai avatar">A</div>
         <div class="ai">
           <div class="ai__meta">
-            <strong>AI</strong>
+            <strong>{conversation?.assistant_name || 'AI'}</strong>
             <span class="ai__time">{formatTime(message.timestamp)}</span>
           </div>
           <div class="ai__content">
