@@ -39,6 +39,43 @@ def clean_message_content(content):
     return cleaned
 
 
+def extract_preview_content(document, max_length=200):
+    """Extract clean preview content from conversation document, removing formatting markers"""
+    if not document or not isinstance(document, str):
+        return ""
+    
+    # First, remove timestamp patterns completely
+    cleaned = re.sub(r'\*\(on [^)]+\)\*', '', document)
+    
+    # Pattern to match conversation markers with optional colons and surrounding text
+    pattern = r'\*\*(?:You said|Claude said|ChatGPT said|AI said|You|Claude|ChatGPT|AI)\*\*\s*:?'
+    
+    # Split the document by the patterns
+    parts = re.split(pattern, cleaned)
+    
+    # Filter out empty parts and strip whitespace  
+    content_parts = [part.strip() for part in parts if part.strip()]
+    
+    # Join all content parts with a space
+    preview_text = ' '.join(content_parts)
+    
+    # Remove excessive whitespace
+    preview_text = re.sub(r'\s+', ' ', preview_text)
+    preview_text = preview_text.strip()
+    
+    # Truncate to desired length
+    if len(preview_text) > max_length:
+        # Find the last space before the limit to avoid cutting words
+        truncated = preview_text[:max_length]
+        last_space = truncated.rfind(' ')
+        if last_space > max_length * 0.8:  # Only use the last space if it's reasonably close
+            preview_text = preview_text[:last_space] + '...'
+        else:
+            preview_text = truncated + '...'
+    
+    return preview_text
+
+
 def parse_messages_from_document(document):
     """Parse a document into individual messages with role, content, and timestamp"""
     messages = []
@@ -190,9 +227,9 @@ class ConversationViewModel(BaseModel):
             if not doc or not doc.strip():
                 continue
 
-            # Basic preview
-            preview = doc[:500] + "..." if len(doc) > 500 else doc
-            preview_html = markdown.markdown(preview, extensions=["extra", "tables"])
+            # Clean preview content
+            preview_text = extract_preview_content(doc, max_length=300)
+            preview_html = markdown.markdown(preview_text, extensions=["extra", "tables"])
 
             # Get a title - with fallbacks
             title = meta.get("title", "")
@@ -337,9 +374,9 @@ class ConversationViewModel(BaseModel):
                 else:
                     date_obj = datetime(1970, 1, 1)
 
-                # Basic preview
-                preview = doc[:500] + "..." if len(doc) > 500 else doc
-                preview_html = markdown.markdown(preview, extensions=["extra", "tables"])
+                # Clean preview content
+                preview_text = extract_preview_content(doc, max_length=300)
+                preview_html = markdown.markdown(preview_text, extensions=["extra", "tables"])
 
                 items.append({
                     "id": conv_id,

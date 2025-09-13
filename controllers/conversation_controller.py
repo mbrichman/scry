@@ -4,7 +4,7 @@ from datetime import datetime
 
 from forms import SearchForm
 from models.search_model import SearchModel
-from models.conversation_view_model import ConversationViewModel
+from models.conversation_view_model import ConversationViewModel, extract_preview_content
 
 
 class ConversationController:
@@ -322,7 +322,7 @@ class ConversationController:
                 conversation = {
                     "id": meta.get("id", f"conv-{i}"),
                     "title": meta.get("title", "Untitled Conversation"),
-                    "preview": doc[:200] + ("..." if len(doc) > 200 else "") if doc else "",
+                    "preview": extract_preview_content(doc, max_length=200) if doc else "",
                     "date": meta.get("earliest_ts", ""),
                     "source": meta.get("source", "unknown")
                 }

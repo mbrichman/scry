@@ -62,7 +62,7 @@ network={
     
     expect(screen.getByText('You')).toBeInTheDocument()
     // Check that timestamp appears in bubble context
-    expect(userBubble.textContent).toMatch(/\d+h ago|now/)
+    expect(userBubble.textContent).toMatch(/\d+[mhdw] ago|\d+[dw] \d+[hd] ago|now|\w{3} \d+, \d+/)
   })
 
   it('renders AI messages with content styling (no bubble)', () => {
@@ -79,7 +79,7 @@ network={
     expect(aiMeta).toHaveTextContent('Claude')
     // Check that timestamp appears in AI content context  
     const aiContainer = aiContent.closest('.ai')
-    expect(aiContainer.textContent).toMatch(/\d+h ago|now/)
+    expect(aiContainer.textContent).toMatch(/\d+[mhdw] ago|\d+[dw] \d+[hd] ago|now|\w{3} \d+, \d+/)
   })
 
   it('renders formatted AI content with headers, lists, and code blocks', () => {
@@ -210,5 +210,69 @@ network={
     // Check message meta specifically
     const aiMeta = document.querySelector('.ai__meta strong')
     expect(aiMeta).toHaveTextContent('AI')
+  })
+
+  it('formats time correctly for different durations', () => {
+    const now = new Date()
+    
+    // Test minutes ago
+    const fiveMinutesAgo = new Date(now - 5 * 60 * 1000)
+    const minuteConversation = {
+      ...mockConversation,
+      messages: [{
+        ...mockUserMessage,
+        timestamp: fiveMinutesAgo.toISOString()
+      }]
+    }
+    
+    render(MessageView, { props: { conversation: minuteConversation } })
+    expect(document.body.textContent).toMatch(/5m ago/)
+    
+    // The component is rendered once, so we need to clear and test other scenarios separately
+  })
+  
+  it('formats time correctly for hours ago', () => {
+    const now = new Date()
+    const threeHoursAgo = new Date(now - 3 * 60 * 60 * 1000)
+    const hourConversation = {
+      ...mockConversation,
+      messages: [{
+        ...mockUserMessage,
+        timestamp: threeHoursAgo.toISOString()
+      }]
+    }
+    
+    render(MessageView, { props: { conversation: hourConversation } })
+    expect(document.body.textContent).toMatch(/3h ago/)
+  })
+  
+  it('formats time correctly for days ago', () => {
+    const now = new Date()
+    const twoDaysAgo = new Date(now - 2 * 24 * 60 * 60 * 1000)
+    const dayConversation = {
+      ...mockConversation,
+      messages: [{
+        ...mockUserMessage,
+        timestamp: twoDaysAgo.toISOString()
+      }]
+    }
+    
+    render(MessageView, { props: { conversation: dayConversation } })
+    expect(document.body.textContent).toMatch(/2d ago/)
+  })
+  
+  it('formats time correctly for weeks ago', () => {
+    const now = new Date()
+    const twoWeeksAgo = new Date(now - 2 * 7 * 24 * 60 * 60 * 1000)
+    const weekConversation = {
+      ...mockConversation,
+      messages: [{
+        ...mockUserMessage,
+        timestamp: twoWeeksAgo.toISOString()
+      }]
+    }
+    
+    render(MessageView, { props: { conversation: weekConversation } })
+    expect(document.body.textContent).toMatch(/2w ago/)
   })
 })

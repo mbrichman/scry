@@ -8,11 +8,41 @@
     if (!timestamp) return ''
     const date = new Date(timestamp)
     const now = new Date()
-    const diffHours = Math.floor((now - date) / (1000 * 60 * 60))
+    const diffMs = now - date
+    const diffMinutes = Math.floor(diffMs / (1000 * 60))
+    const diffHours = Math.floor(diffMs / (1000 * 60 * 60))
+    const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24))
+    const diffWeeks = Math.floor(diffDays / 7)
     
-    if (diffHours < 1) return 'now'
-    if (diffHours === 1) return '1h ago'
-    return `${diffHours}h ago`
+    if (diffMinutes < 1) return 'now'
+    if (diffMinutes < 60) {
+      return diffMinutes === 1 ? '1m ago' : `${diffMinutes}m ago`
+    }
+    if (diffHours < 24) {
+      return diffHours === 1 ? '1h ago' : `${diffHours}h ago`
+    }
+    if (diffDays < 7) {
+      const remainingHours = diffHours % 24
+      if (diffDays === 1 && remainingHours === 0) return '1d ago'
+      if (remainingHours === 0) return `${diffDays}d ago`
+      return `${diffDays}d ${remainingHours}h ago`
+    }
+    if (diffWeeks < 5) {
+      const remainingDays = diffDays % 7
+      if (diffWeeks === 1 && remainingDays === 0) return '1w ago'
+      if (remainingDays === 0) return `${diffWeeks}w ago`
+      return `${diffWeeks}w ${remainingDays}d ago`
+    }
+    
+    // For anything older than 4 weeks, show full date/time
+    const options = {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    }
+    return date.toLocaleDateString(undefined, options)
   }
   
   function renderMarkdown(content) {

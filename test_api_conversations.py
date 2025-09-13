@@ -3,6 +3,7 @@ import json
 from unittest.mock import Mock, patch
 from app import app
 from controllers.conversation_controller import ConversationController
+from models.conversation_view_model import extract_preview_content
 
 
 @pytest.fixture
@@ -209,7 +210,7 @@ class TestConversationsAPI:
     def test_conversation_data_transformation(self, mock_get_all, client):
         """Test that conversation data is properly transformed for frontend."""
         mock_get_all.return_value = {
-            'documents': ['Full conversation content here...'],
+            'documents': ['**You said**: Hello there\n\n**ChatGPT said**: Hi! How can I help you?'],
             'metadatas': [{
                 'id': 'test-conv-1',
                 'title': 'Test Conversation',
@@ -230,7 +231,11 @@ class TestConversationsAPI:
         assert conv['source'] == 'chatgpt'
         assert conv['date'] == '2024-01-01T10:00:00Z'
         assert 'preview' in conv
-        assert len(conv['preview']) <= 200  # Should be truncated
+        assert len(conv['preview']) <= 203  # 200 + "..."
+        # Check that preview is cleaned of formatting markers
+        assert 'You said' not in conv['preview']
+        assert 'ChatGPT said' not in conv['preview']
+        assert conv['preview'] == 'Hello there Hi! How can I help you?'
     
     def test_cors_headers_present(self, client):
         """Test that CORS headers are present in the response."""
@@ -407,3 +412,85 @@ class TestSingleConversationAPI:
         assert response.status_code == 500
         data = json.loads(response.data)
         assert 'error' in data
+
+
+class TestPreviewCleaning:
+    """Test cases for conversation preview cleaning functionality."""
+    
+    def test_extract_preview_with_you_said_claude_said(self):
+        """Test preview extraction from Claude conversation format."""
+        document = """**You said** *(on 2025-09-05 00:16:52)*:
+
+how do I enable ssh and vnc on pi5
+
+**Claude said** *(on 2025-09-05 00:17:03)*:
+
+To enable SSH and VNC on your Raspberry Pi 5, you have several options depending on whether you have physical access to the Pi or not."""
+        
+        result = extract_preview_content(document, max_length=100)
+        expected = "how do I enable ssh and vnc on pi5 To enable SSH and VNC on your Raspberry Pi 5, you have several..."
+        assert result == expected
+    
+    def test_extract_preview_with_chatgpt_format(self):
+        """Test preview extraction from ChatGPT conversation format."""
+        document = """**You said** *(on 2025-09-05 10:30:00)*:
+
+What's the weather like today?
+
+**ChatGPT said** *(on 2025-09-05 10:30:15)*:
+
+I don't have access to real-time weather data, but I can suggest some ways to check the weather."""
+        
+        result = extract_preview_content(document, max_length=80)
+        expected = "What's the weather like today? I don't have access to real-time weather data,..."
+        assert result == expected
+    
+    def test_extract_preview_no_formatting_markers(self):
+        """Test preview extraction from document without conversation markers."""
+        document = "This is a simple document without any special formatting markers."
+        
+        result = extract_preview_content(document, max_length=50)
+        expected = "This is a simple document without any special..."
+        assert result == expected
+    
+    def test_extract_preview_empty_document(self):
+        """Test preview extraction from empty document."""
+        document = ""
+        
+        result = extract_preview_content(document)
+        assert result == ""
+    
+    def test_extract_preview_only_markers(self):
+        """Test preview extraction from document with only markers and timestamps."""
+        document = "**You said** *(on 2025-09-05 00:16:52)*:\n\n**Claude said** *(on 2025-09-05 00:17:03)*:"
+        
+        result = extract_preview_content(document)
+        assert result == ""
+    
+    def test_extract_preview_respects_max_length(self):
+        """Test that preview extraction respects max_length parameter."""
+        document = """**You said**:
+
+This is a very long question that goes on and on and contains many words that should be truncated when the maximum length is reached.
+
+**Claude said**:
+
+This is an equally long response."""
+        
+        result = extract_preview_content(document, max_length=50)
+        assert len(result) <= 53  # 50 + "..." = 53
+        assert result.endswith("...")
+    
+    def test_extract_preview_with_generic_ai_format(self):
+        """Test preview extraction from generic AI conversation format."""
+        document = """**You said**:
+
+Hello there
+
+**AI said**:
+
+Hello! How can I help you today?"""
+        
+        result = extract_preview_content(document, max_length=100)
+        expected = "Hello there Hello! How can I help you today?"
+        assert result == expected
