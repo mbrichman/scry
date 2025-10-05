@@ -317,18 +317,31 @@ class ConversationModel(BaseModel):
         if len(conversations) == 0:
             return False, "No conversations found in the JSON file"
 
-        # Get existing conversation IDs to avoid duplicates (only same format)
-        existing_docs = self.get_documents(include=["metadatas"], limit=9999)
-        existing_conv_ids = set()
+        # Get existing conversation IDs to handle duplicates properly
+        existing_docs = self.get_documents(include=["documents", "metadatas"], limit=9999)
+        existing_ids = self.collection.get(include=["metadatas"])  # Get all data including IDs
+        existing_conv_map = {}  # Map conversation_id -> {chroma_id, document, metadata}
         metadatas = existing_docs.get("metadatas") if existing_docs else None
-        for meta in metadatas or []:
-            # Only check for duplicates within the same source format
-            if meta.get("source") == file_format.lower():
-                conv_id = meta.get("conversation_id") or meta.get("id")
-                if conv_id:
-                    existing_conv_ids.add(conv_id)
+        all_metadatas = existing_ids.get("metadatas") if existing_ids else None
+        doc_ids = existing_ids.get("ids") if existing_ids else None
+        documents_data = existing_docs.get("documents") if existing_docs else None
         
-        print(f"Found {len(existing_conv_ids)} existing {file_format} conversation IDs")
+        if all_metadatas and doc_ids and documents_data:
+            # Make sure all arrays have the same length
+            min_length = min(len(all_metadatas), len(doc_ids), len(documents_data))
+            for i in range(min_length):
+                meta = all_metadatas[i]
+                # Only check for duplicates within the same source format
+                if meta.get("source") == file_format.lower():
+                    conv_id = meta.get("conversation_id") or meta.get("id")
+                    if conv_id and i < len(documents_data):
+                        existing_conv_map[conv_id] = {
+                            "chroma_id": doc_ids[i],
+                            "document": documents_data[i] if i < len(documents_data) else "",
+                            "metadata": meta
+                        }
+        
+        print(f"Found {len(existing_conv_map)} existing {file_format} conversations")
 
         documents, metadatas, ids = [], [], []
         skipped_duplicates = 0
@@ -350,9 +363,19 @@ class ConversationModel(BaseModel):
 
             # Check for duplicates using conversation ID
             conv_id = conv.get("id") or conv.get("uuid")
-            if conv_id and conv_id in existing_conv_ids:
-                skipped_duplicates += 1
-                continue
+            if conv_id and conv_id in existing_conv_map:
+                # Check if content has changed
+                existing_doc = existing_conv_map[conv_id]
+                full_text = "\n\n".join(messages)
+                
+                if full_text.strip() == existing_doc["document"].strip():
+                    # Content is identical, skip this duplicate
+                    skipped_duplicates += 1
+                    continue
+                else:
+                    # Content has changed, we'll update this conversation
+                    # Use the existing ChromaDB ID to update rather than create new
+                    pass
 
             # Skip empty conversations
             if not messages or not any(msg.strip() for msg in messages):
@@ -440,7 +463,12 @@ class ConversationModel(BaseModel):
                     metadata_dict["latest_ts"] = latest_ts_iso
 
                 metadatas.append(metadata_dict)
-                ids.append(f"{file_format.lower()}-chat-{idx}")
+                
+                # Use existing ChromaDB ID if this is an update, otherwise generate new ID
+                if conv_id and conv_id in existing_conv_map:
+                    ids.append(existing_conv_map[conv_id]["chroma_id"])
+                else:
+                    ids.append(f"{file_format.lower()}-chat-{idx}")
 
         if not documents:
             if skipped_duplicates > 0:

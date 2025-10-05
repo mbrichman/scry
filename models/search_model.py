@@ -60,7 +60,8 @@ class SearchModel(BaseModel):
             meta = {
                 'title': result['title'],
                 'source': result['source'],
-                'id': result['doc_id'],
+                # Use conversation_id as the primary ID for proper linking to view route
+                'id': result.get('conversation_id', result['doc_id']),
                 'conversation_id': result.get('conversation_id', ''),
                 'search_type': 'fts',
                 'fts_rank': result['rank'],
@@ -139,10 +140,36 @@ class SearchModel(BaseModel):
     
     def get_conversation_by_id(self, doc_id):
         """Get a specific conversation by ID"""
-        # Try to find the document by its actual ChromaDB ID
+        # Try multiple lookup methods in order of preference
+        
+        # 1. Try to find the document by its actual ChromaDB ID
+        try:
+            doc_result = self.conversation_model.get_documents(
+                where={"id": doc_id}, include=["documents", "metadatas"]
+            )
+            
+            if doc_result and doc_result.get("documents") and doc_result["documents"]:
+                return doc_result
+                
+        except Exception as e:
+            print(f"Error finding document by metadata id {doc_id}: {e}")
+        
+        # 2. Try to find the document by conversation_id field
+        try:
+            doc_result = self.conversation_model.get_documents(
+                where={"conversation_id": doc_id}, include=["documents", "metadatas"]
+            )
+            
+            if doc_result and doc_result.get("documents") and doc_result["documents"]:
+                return doc_result
+                
+        except Exception as e:
+            print(f"Error finding document by conversation_id {doc_id}: {e}")
+        
+        # 3. Try to find the document by its ChromaDB ID (exact match)
         try:
             # Get all documents with their IDs
-            all_docs = self.conversation_model.collection.get(include=["documents", "metadatas"])
+            all_docs = self.conversation_model.collection.get(include=["documents", "metadatas", "ids"])
             
             if all_docs.get("ids") and doc_id in all_docs["ids"]:
                 # Found the document by ID
@@ -152,29 +179,31 @@ class SearchModel(BaseModel):
                     "metadatas": [all_docs["metadatas"][idx]],
                     "ids": [doc_id]
                 }
-            else:
-                # Try other methods
-                pass
         except Exception as e:
-            print(f"Error finding document {doc_id}: {e}")
-        
-        # Try to get the document with the ID in the metadata 'id' field  
-        doc_result = self.conversation_model.get_documents(
-            where={"id": doc_id}, include=["documents", "metadatas"]
-        )
-        
-        if doc_result and doc_result.get("documents") and doc_result["documents"]:
-            return doc_result
+            print(f"Error finding document by ChromaDB id {doc_id}: {e}")
             
-        # Try other possible ID fields
-        where_conditions = [{"conversation_id": doc_id}, {"original_index": doc_id}]
-        for condition in where_conditions:
-            doc_result = self.conversation_model.get_documents(
-                where=condition, include=["documents", "metadatas"]
-            )
-            if doc_result and doc_result.get("documents") and doc_result["documents"]:
-                return doc_result
-                
+        # 4. Try fallback positional lookup for legacy IDs
+        if doc_id.startswith(("chat-", "docx-")):
+            try:
+                # Extract index from ID like "chat-123" or "docx-456"
+                idx_str = doc_id.split("-")[-1]
+                if idx_str.isdigit():
+                    idx = int(idx_str)
+                    # Get all documents and find the one with the matching index
+                    all_docs = self.conversation_model.get_documents(
+                        include=["documents", "metadatas", "ids"], limit=9999
+                    )
+                    
+                    # Check if we have enough documents
+                    if all_docs and all_docs.get("documents") and idx < len(all_docs["documents"]):
+                        return {
+                            "documents": [all_docs["documents"][idx]],
+                            "metadatas": [all_docs["metadatas"][idx]] if idx < len(all_docs.get("metadatas", [])) else [{}],
+                            "ids": [all_docs["ids"][idx]] if idx < len(all_docs.get("ids", [])) else [f"fallback-{idx}"]
+                        }
+            except (ValueError, IndexError) as e:
+                print(f"Error in fallback lookup for {doc_id}: {e}")
+        
         return None
     
     def get_statistics(self):
