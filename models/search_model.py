@@ -169,7 +169,7 @@ class SearchModel(BaseModel):
         # 3. Try to find the document by its ChromaDB ID (exact match)
         try:
             # Get all documents with their IDs
-            all_docs = self.conversation_model.collection.get(include=["documents", "metadatas", "ids"])
+            all_docs = self.conversation_model.collection.get(include=["documents", "metadatas"])
             
             if all_docs.get("ids") and doc_id in all_docs["ids"]:
                 # Found the document by ID
@@ -191,7 +191,7 @@ class SearchModel(BaseModel):
                     idx = int(idx_str)
                     # Get all documents and find the one with the matching index
                     all_docs = self.conversation_model.get_documents(
-                        include=["documents", "metadatas", "ids"], limit=9999
+                        include=["documents", "metadatas"], limit=9999
                     )
                     
                     # Check if we have enough documents
