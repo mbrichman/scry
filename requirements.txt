@@ -9,3 +9,5 @@ python-docx
 nltk
 requests
 uuid
+# API Contract validation
+pydantic>=2.0
