@@ -567,7 +567,28 @@ class ConversationController:
             }
             items.append(item)
         
-        # Apply filters (simplified - you could implement more sophisticated filtering)
+        # Apply filters
+        from datetime import datetime, timedelta, timezone
+        
+        # Calculate date threshold based on date_filter
+        # Use local time for user-friendly filtering
+        date_threshold = None
+        if date_filter != 'all':
+            # Get current time in local timezone
+            now_local = datetime.now()
+            
+            if date_filter == 'today':
+                # Start of today in local time, then convert to UTC for comparison
+                today_start = now_local.replace(hour=0, minute=0, second=0, microsecond=0)
+                # Convert to UTC-aware datetime
+                date_threshold = today_start.astimezone(timezone.utc)
+            elif date_filter == 'week':
+                date_threshold = (now_local - timedelta(days=7)).astimezone(timezone.utc)
+            elif date_filter == 'month':
+                date_threshold = (now_local - timedelta(days=30)).astimezone(timezone.utc)
+            elif date_filter == 'year':
+                date_threshold = (now_local - timedelta(days=365)).astimezone(timezone.utc)
+        
         filtered_items = []
         for item in items:
             # Source filter
@@ -575,6 +596,38 @@ class ConversationController:
                 item_source = item['meta']['source'].lower()
                 if source_filter.lower() not in item_source:
                     continue
+            
+            # Date filter
+            if date_threshold:
+                earliest_ts = item['meta'].get('earliest_ts', '')
+                if earliest_ts:
+                    try:
+                        # Parse the timestamp (could be ISO format or Unix epoch)
+                        if isinstance(earliest_ts, str):
+                            # Try ISO format first
+                            try:
+                                item_date = datetime.fromisoformat(earliest_ts.replace('Z', '+00:00'))
+                            except:
+                                # Try Unix epoch
+                                try:
+                                    item_date = datetime.fromtimestamp(float(earliest_ts), tz=timezone.utc)
+                                except:
+                                    continue  # Skip if can't parse
+                        elif isinstance(earliest_ts, (int, float)):
+                            item_date = datetime.fromtimestamp(earliest_ts, tz=timezone.utc)
+                        else:
+                            continue  # Skip if unexpected type
+                        
+                        # Ensure both datetimes are timezone-aware for comparison
+                        if item_date.tzinfo is None:
+                            item_date = item_date.replace(tzinfo=timezone.utc)
+                        
+                        # Filter out items older than threshold
+                        if item_date < date_threshold:
+                            continue
+                    except Exception as e:
+                        # If date parsing fails, skip this item when date filter is active
+                        continue
             
             filtered_items.append(item)
         
