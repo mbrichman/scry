@@ -82,4 +82,7 @@ temp_upload.*
 temp_docx_dir/
 
 # Logs
-*.log
+*.logchroma_db/
+extracted_attachments/
+data/
+scripts/archived/

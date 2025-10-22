@@ -380,6 +380,333 @@ class ConversationController:
         stats_data = self.search_model.get_statistics()
         return render_template("stats.html", stats=stats_data)
     
+    def api_stats(self):
+        """API endpoint for statistics in JSON format"""
+        try:
+            # Get statistics from the model
+            stats_data = self.search_model.get_statistics()
+            
+            # Format for API response matching the contract
+            return jsonify({
+                "status": "healthy",
+                "collection_name": stats_data.get("collection_name", "chat_history"),
+                "document_count": stats_data.get("document_count", 0),
+                "embedding_model": stats_data.get("embedding_model", "all-MiniLM-L6-v2")
+            })
+            
+        except Exception as e:
+            return jsonify({"error": str(e)}), 500
+    
+    # ===== PostgreSQL Adapter Methods =====
+    
+    def index_with_postgres_adapter(self, postgres_controller):
+        """Index page using PostgreSQL backend"""
+        # Reuse same logic but with postgres adapter for search
+        if request.args.get("q"):
+            return redirect(url_for("conversations", **request.args))
+        elif request.method == "POST":
+            search_form = SearchForm()
+            if search_form.validate_on_submit():
+                return redirect(url_for("conversations", q=search_form.query.data))
+        
+        return redirect(url_for("conversations"))
+    
+    def conversations_with_postgres_adapter(self, page, postgres_controller):
+        """Display conversations using PostgreSQL backend with legacy UI"""
+        per_page = 20
+        search_form = SearchForm()
+        search_triggered = False
+        query = None
+
+        # Handle search
+        if request.method == "POST":
+            if search_form.validate_on_submit():
+                query = search_form.query.data
+                search_triggered = True
+        elif request.method == "GET" and request.args.get("q"):
+            query = request.args.get("q")
+            search_form.query.data = query
+            search_triggered = True
+
+        # Get filter parameters
+        source_filter = request.args.get("source", "all")
+        date_filter = request.args.get("date", "all")
+        sort_order = request.args.get("sort", "newest")
+
+        if search_triggered and query:
+            # Use PostgreSQL search
+            try:
+                from werkzeug.datastructures import ImmutableMultiDict
+                
+                # Save original args
+                original_args = request.args
+                
+                # Create new args with search query
+                new_args = dict(original_args)
+                new_args['q'] = query
+                new_args['n'] = '20'  # Number of results
+                
+                # Temporarily replace request.args
+                request.args = ImmutableMultiDict(new_args)
+                
+                # Get search results from postgres controller
+                search_results = postgres_controller.api_search()
+                
+                # Restore original args
+                request.args = original_args
+                
+                # Format results for legacy UI
+                items = self._format_postgres_search_results(search_results.get('results', []))
+                
+            except Exception as e:
+                print(f"Error in PostgreSQL search: {e}")
+                items = []
+        else:
+            # Get all conversations from PostgreSQL
+            try:
+                all_docs = postgres_controller.get_conversations()
+                items = self._format_postgres_conversations_list(
+                    all_docs, source_filter, date_filter, sort_order
+                )
+            except Exception as e:
+                print(f"Error getting PostgreSQL conversations: {e}")
+                items = []
+
+        # Pagination
+        total_items = len(items)
+        page_count = (total_items + per_page - 1) // per_page if total_items > 0 else 1
+        page = max(1, min(page, page_count)) if page_count > 0 else 1
+        
+        start_idx = (page - 1) * per_page
+        end_idx = min(start_idx + per_page, total_items)
+        page_items = items[start_idx:end_idx]
+
+        return render_template(
+            "conversations.html",
+            conversations=page_items,
+            current_page=page,
+            page_count=page_count,
+            total_items=total_items,
+            source_filter=source_filter,
+            date_filter=date_filter,
+            sort_order=sort_order,
+            search_form=search_form,
+            search_triggered=search_triggered,
+            query=query,
+        )
+    
+    def view_conversation_with_postgres_adapter(self, doc_id, postgres_controller):
+        """View a single conversation using PostgreSQL backend"""
+        try:
+            # Get conversation from PostgreSQL
+            doc_result = postgres_controller.get_conversation(doc_id)
+            
+            if not doc_result or not doc_result.get("documents"):
+                return "Conversation not found", 404
+            
+            document = doc_result["documents"][0]
+            metadata = doc_result["metadatas"][0] if doc_result.get("metadatas") else {}
+            
+            # Format the conversation for detailed view
+            conversation, messages, assistant_name = self.view_model.format_conversation_view(document, metadata)
+            
+            return render_template("view.html", conversation=conversation, messages=messages, assistant_name=assistant_name, doc_id=doc_id)
+            
+        except Exception as e:
+            print(f"Error viewing PostgreSQL conversation: {e}")
+            return "Conversation not found", 404
+    
+    def _format_postgres_search_results(self, results):
+        """Format PostgreSQL search results for legacy UI"""
+        items = []
+        for result in results:
+            metadata = result.get('metadata', {})
+            
+            item = {
+                'id': metadata.get('conversation_id', metadata.get('id', 'unknown')),
+                'preview': result.get('content', ''),
+                'meta': {
+                    'title': result.get('title', metadata.get('title', 'Untitled')),
+                    'source': metadata.get('source', 'postgres'),
+                    'earliest_ts': result.get('date', metadata.get('earliest_ts', '')),
+                    'latest_ts': metadata.get('latest_ts', ''),
+                    'relevance_display': 'N/A'
+                }
+            }
+            items.append(item)
+        
+        return items
+    
+    def _format_postgres_conversations_list(self, all_docs, source_filter, date_filter, sort_order):
+        """Format PostgreSQL conversations for legacy UI list view"""
+        if not all_docs or not all_docs.get('documents'):
+            return []
+        
+        items = []
+        documents = all_docs.get('documents', [])
+        metadatas = all_docs.get('metadatas', [])
+        ids = all_docs.get('ids', [])
+        
+        for i, document in enumerate(documents):
+            metadata = metadatas[i] if i < len(metadatas) else {}
+            doc_id = ids[i] if i < len(ids) else f'doc-{i}'
+            
+            # Extract preview (first 300 chars)
+            preview = document[:300] + "..." if len(document) > 300 else document
+            
+            item = {
+                'id': doc_id,
+                'preview': preview,
+                'meta': {
+                    'title': metadata.get('title', 'Untitled Conversation'),
+                    'source': metadata.get('source', 'postgres'),
+                    'earliest_ts': metadata.get('earliest_ts', ''),
+                    'latest_ts': metadata.get('latest_ts', ''),
+                    'relevance_display': 'N/A'
+                }
+            }
+            items.append(item)
+        
+        # Apply filters
+        from datetime import datetime, timedelta, timezone
+        
+        # Calculate date threshold based on date_filter
+        # Use local time for user-friendly filtering
+        date_threshold = None
+        if date_filter != 'all':
+            # Get current time in local timezone
+            now_local = datetime.now()
+            
+            if date_filter == 'today':
+                # Start of today in local time, then convert to UTC for comparison
+                today_start = now_local.replace(hour=0, minute=0, second=0, microsecond=0)
+                # Convert to UTC-aware datetime
+                date_threshold = today_start.astimezone(timezone.utc)
+            elif date_filter == 'week':
+                date_threshold = (now_local - timedelta(days=7)).astimezone(timezone.utc)
+            elif date_filter == 'month':
+                date_threshold = (now_local - timedelta(days=30)).astimezone(timezone.utc)
+            elif date_filter == 'year':
+                date_threshold = (now_local - timedelta(days=365)).astimezone(timezone.utc)
+        
+        filtered_items = []
+        for item in items:
+            # Source filter
+            if source_filter != 'all':
+                item_source = item['meta']['source'].lower()
+                if source_filter.lower() not in item_source:
+                    continue
+            
+            # Date filter
+            if date_threshold:
+                earliest_ts = item['meta'].get('earliest_ts', '')
+                if earliest_ts:
+                    try:
+                        # Parse the timestamp (could be ISO format or Unix epoch)
+                        if isinstance(earliest_ts, str):
+                            # Try ISO format first
+                            try:
+                                item_date = datetime.fromisoformat(earliest_ts.replace('Z', '+00:00'))
+                            except:
+                                # Try Unix epoch
+                                try:
+                                    item_date = datetime.fromtimestamp(float(earliest_ts), tz=timezone.utc)
+                                except:
+                                    continue  # Skip if can't parse
+                        elif isinstance(earliest_ts, (int, float)):
+                            item_date = datetime.fromtimestamp(earliest_ts, tz=timezone.utc)
+                        else:
+                            continue  # Skip if unexpected type
+                        
+                        # Ensure both datetimes are timezone-aware for comparison
+                        if item_date.tzinfo is None:
+                            item_date = item_date.replace(tzinfo=timezone.utc)
+                        
+                        # Filter out items older than threshold
+                        if item_date < date_threshold:
+                            continue
+                    except Exception as e:
+                        # If date parsing fails, skip this item when date filter is active
+                        continue
+            
+            filtered_items.append(item)
+        
+        # Sort items
+        if sort_order == 'newest':
+            filtered_items.sort(key=lambda x: x['meta'].get('earliest_ts', ''), reverse=True)
+        elif sort_order == 'oldest':
+            filtered_items.sort(key=lambda x: x['meta'].get('earliest_ts', ''), reverse=False)
+        # 'original' keeps the original order
+        
+        return filtered_items
+    
+    def _get_source_breakdown(self, all_conversations):
+        """Count conversations by source (ChatGPT, Claude, etc.)"""
+        source_counts = {}
+        
+        if not all_conversations or not all_conversations.get('metadatas'):
+            return source_counts
+        
+        for metadata in all_conversations.get('metadatas', []):
+            # Get the original source if available, otherwise use the storage source
+            source = metadata.get('original_source', metadata.get('source', 'unknown')).lower()
+            
+            # Map postgres -> imported (since we don't know original type)
+            if source == 'postgres':
+                source = 'imported'
+            
+            if source not in source_counts:
+                source_counts[source] = 0
+            source_counts[source] += 1
+        
+        return source_counts
+    
+    def stats_with_postgres_adapter(self, postgres_controller):
+        """Display statistics using PostgreSQL backend with legacy UI"""
+        try:
+            # Get statistics from PostgreSQL backend
+            stats_data = postgres_controller.get_stats()
+            
+            # Get source breakdown - need to call a method that gets actual sources
+            all_conversations = postgres_controller.get_conversations()
+            source_counts = self._get_source_breakdown(all_conversations)
+            
+            # Format stats for legacy template
+            # The template expects: total, full, chunked, sources, date_range, collection_info
+            document_count = int(stats_data.get('document_count', 0))
+            
+            formatted_stats = {
+                'total': document_count,
+                'full': document_count,  # PostgreSQL stores full documents
+                'chunked': 0,  # Not chunked in PostgreSQL mode
+                'sources': source_counts,
+                'date_range': {
+                    'earliest': stats_data.get('earliest_ts', ''),
+                    'latest': stats_data.get('latest_ts', '')
+                } if stats_data.get('earliest_ts') else None,
+                'collection_info': {
+                    'dimensions': 384,  # MiniLM uses 384 dimensions
+                    'last_updated': stats_data.get('last_updated', '')
+                } if stats_data.get('last_updated') else None,
+                'collection_name': stats_data.get('collection_name', 'chat_history'),
+                'embedding_model': stats_data.get('embedding_model', 'all-MiniLM-L6-v2'),
+                'status': stats_data.get('status', 'healthy')
+            }
+            
+            return render_template("stats.html", stats=formatted_stats)
+        
+        except Exception as e:
+            print(f"Error getting PostgreSQL stats: {e}")
+            # Return empty stats rather than error
+            return render_template("stats.html", stats={
+                'total': 0,
+                'full': 0,
+                'chunked': 0,
+                'sources': {},
+                'collection_name': 'chat_history',
+                'embedding_model': 'all-MiniLM-L6-v2'
+            })
+    
     def clear_database(self):
         """Clear the entire database"""
         try:
