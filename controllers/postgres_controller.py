@@ -6,7 +6,7 @@ but uses the PostgreSQL backend through the LegacyAPIAdapter.
 """
 
 import logging
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Dict, List, Any, Optional, Tuple
 from flask import request
 
@@ -427,10 +427,53 @@ class PostgresController:
                         logger.info(f"Conversation exists with different content: {title} - skipping")
                         continue
                 
+                # Calculate earliest and latest timestamps from messages
+                timestamps = [msg.get('created_at') for msg in messages if msg.get('created_at')]
+                earliest_ts = min(timestamps) if timestamps else None
+                latest_ts = max(timestamps) if timestamps else None
+                
+                # If no message-level timestamps, fall back to conversation-level timestamps
+                # ChatGPT exports strip message timestamps, Claude uses ISO format
+                if not earliest_ts:
+                    if format_type.lower() == 'chatgpt':
+                        earliest_ts = conv_data.get('create_time')
+                    elif format_type.lower() == 'claude':
+                        earliest_ts = conv_data.get('created_at')
+                if not latest_ts:
+                    if format_type.lower() == 'chatgpt':
+                        latest_ts = conv_data.get('update_time') or conv_data.get('create_time')
+                    elif format_type.lower() == 'claude':
+                        latest_ts = conv_data.get('updated_at') or conv_data.get('created_at')
+                
                 # Import in a single transaction
                 with get_unit_of_work() as uow:
-                    # Create conversation
-                    conversation = uow.conversations.create(title=title)
+                    # Create conversation with original timestamps if available
+                    conv_kwargs = {'title': title}
+                    
+                    # Set original timestamps if available
+                    # ChatGPT uses Unix epoch (numeric), Claude uses ISO format (string)
+                    if earliest_ts:
+                        try:
+                            if isinstance(earliest_ts, (int, float)):
+                                # ChatGPT format: Unix epoch
+                                conv_kwargs['created_at'] = datetime.fromtimestamp(earliest_ts, tz=timezone.utc)
+                            elif isinstance(earliest_ts, str):
+                                # Claude format: ISO string
+                                conv_kwargs['created_at'] = datetime.fromisoformat(earliest_ts.replace('Z', '+00:00'))
+                        except (ValueError, TypeError, OSError):
+                            pass  # Use default if conversion fails
+                    if latest_ts:
+                        try:
+                            if isinstance(latest_ts, (int, float)):
+                                # ChatGPT format: Unix epoch
+                                conv_kwargs['updated_at'] = datetime.fromtimestamp(latest_ts, tz=timezone.utc)
+                            elif isinstance(latest_ts, str):
+                                # Claude format: ISO string
+                                conv_kwargs['updated_at'] = datetime.fromisoformat(latest_ts.replace('Z', '+00:00'))
+                        except (ValueError, TypeError, OSError):
+                            pass  # Use default if conversion fails
+                    
+                    conversation = uow.conversations.create(**conv_kwargs)
                     uow.session.flush()  # Get the ID
                     
                     # Add messages directly using repository instead of service
@@ -444,12 +487,36 @@ class PostgresController:
                                 'original_conversation_id': conv_id or str(conversation.id)
                             }
                             
-                            message = uow.messages.create(
-                                conversation_id=conversation.id,
-                                role=msg['role'],
-                                content=msg['content'],
-                                message_metadata=message_metadata
-                            )
+                            # Build kwargs for message creation, including timestamp if available
+                            msg_kwargs = {
+                                'conversation_id': conversation.id,
+                                'role': msg['role'],
+                                'content': msg['content'],
+                                'message_metadata': message_metadata
+                            }
+                            
+                            # Add original message timestamp if available
+                            # ChatGPT uses Unix epoch (numeric), Claude uses ISO format (string)
+                            msg_ts = msg.get('created_at')
+                            # Fall back to conversation timestamp if message timestamp is unavailable
+                            if not msg_ts:
+                                if format_type.lower() == 'chatgpt':
+                                    msg_ts = conv_data.get('create_time')
+                                elif format_type.lower() == 'claude':
+                                    msg_ts = conv_data.get('created_at')
+                            
+                            if msg_ts:
+                                try:
+                                    if isinstance(msg_ts, (int, float)):
+                                        # ChatGPT format: Unix epoch
+                                        msg_kwargs['created_at'] = datetime.fromtimestamp(msg_ts, tz=timezone.utc)
+                                    elif isinstance(msg_ts, str):
+                                        # Claude format: ISO string
+                                        msg_kwargs['created_at'] = datetime.fromisoformat(msg_ts.replace('Z', '+00:00'))
+                                except (ValueError, TypeError, OSError):
+                                    pass
+                            
+                            message = uow.messages.create(**msg_kwargs)
                             uow.session.flush()  # Get the message ID
                             
                             # Enqueue embedding job separately
@@ -496,10 +563,13 @@ class PostgresController:
         return f"Success: {completion_msg}"
     
     def _extract_chatgpt_messages(self, mapping: Dict) -> List[Dict]:
-        """Extract messages from ChatGPT format."""
+        """Extract messages from ChatGPT format, preserving timestamps."""
         messages = []
         
-        for node_id, node in mapping.items():
+        # Sort messages by create_time to maintain order, or by message id as fallback
+        ordered_nodes = sorted(mapping.items(), key=lambda x: x[1].get('create_time', 0))
+        
+        for node_id, node in ordered_nodes:
             message = node.get('message')
             if not message:
                 continue
@@ -507,8 +577,9 @@ class PostgresController:
             author = message.get('author', {})
             role = author.get('role', 'unknown')
             
-            # Skip system messages and empty content
-            if role == 'system':
+            # Skip non-conversation roles (system, tool, function, etc.)
+            # Only keep user and assistant messages
+            if role not in ('user', 'assistant'):
                 continue
             
             content_parts = message.get('content', {}).get('parts', [])
@@ -516,15 +587,18 @@ class PostgresController:
                 content = content_parts[0]
                 
                 if content.strip():
+                    # Try to get timestamp from message, then from node
+                    created_at = message.get('create_time') or node.get('create_time')
                     messages.append({
                         'role': role,
-                        'content': content
+                        'content': content,
+                        'created_at': created_at  # Unix epoch timestamp or None
                     })
         
         return messages
     
     def _extract_claude_messages(self, chat_messages: List) -> List[Dict]:
-        """Extract messages from Claude format."""
+        """Extract messages from Claude format, preserving timestamps."""
         messages = []
         
         for msg in chat_messages:
@@ -532,10 +606,17 @@ class PostgresController:
             content = msg.get('text', '')
             
             if content.strip():
-                messages.append({
+                msg_dict = {
                     'role': role,
                     'content': content
-                })
+                }
+                
+                # Preserve the original timestamp from Claude (ISO format string)
+                created_at = msg.get('created_at')
+                if created_at:
+                    msg_dict['created_at'] = created_at
+                
+                messages.append(msg_dict)
         
         return messages
     

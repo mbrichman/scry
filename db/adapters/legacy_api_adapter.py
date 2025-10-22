@@ -60,15 +60,26 @@ class LegacyAPIAdapter:
                 earliest_ts = None
                 latest_ts = None
                 
+                # Extract source from first message's metadata if available
+                source = "unknown"
+                if messages and messages[0].message_metadata:
+                    source = messages[0].message_metadata.get('source', 'unknown')
+                
                 for msg in messages:
                     # Format timestamp
                     timestamp_str = msg.created_at.strftime("%Y-%m-%d %H:%M:%S")
                     
-                    # Format message based on role
+                    # Format message based on role and source
                     if msg.role == 'user':
                         document_parts.append(f"**You said** *(on {timestamp_str})*:\n\n{msg.content}")
                     elif msg.role == 'assistant':
-                        document_parts.append(f"**Assistant said** *(on {timestamp_str})*:\n\n{msg.content}")
+                        # Use actual source name if available (ChatGPT, Claude, etc.)
+                        if source.lower() == 'chatgpt':
+                            document_parts.append(f"**ChatGPT said** *(on {timestamp_str})*:\n\n{msg.content}")
+                        elif source.lower() == 'claude':
+                            document_parts.append(f"**Claude said** *(on {timestamp_str})*:\n\n{msg.content}")
+                        else:
+                            document_parts.append(f"**Assistant said** *(on {timestamp_str})*:\n\n{msg.content}")
                     elif msg.role == 'system':
                         document_parts.append(f"**System** *(on {timestamp_str})*:\n\n{msg.content}")
                     else:
@@ -82,11 +93,6 @@ class LegacyAPIAdapter:
                 
                 # Build complete document
                 document = "\n\n---\n\n".join(document_parts)
-                
-                # Extract source from first message's metadata if available
-                source = "unknown"
-                if messages and messages[0].message_metadata:
-                    source = messages[0].message_metadata.get('source', 'unknown')
                 
                 # Build metadata in legacy format
                 metadata = {
@@ -136,13 +142,24 @@ class LegacyAPIAdapter:
             earliest_ts = None
             latest_ts = None
             
+            # Extract source from first message's metadata if available
+            source = "unknown"
+            if messages and messages[0].message_metadata:
+                source = messages[0].message_metadata.get('source', 'unknown')
+            
             for msg in messages:
                 timestamp_str = msg.created_at.strftime("%Y-%m-%d %H:%M:%S")
                 
                 if msg.role == 'user':
                     document_parts.append(f"**You said** *(on {timestamp_str})*:\n\n{msg.content}")
                 elif msg.role == 'assistant':
-                    document_parts.append(f"**Assistant said** *(on {timestamp_str})*:\n\n{msg.content}")
+                    # Use actual source name if available (ChatGPT, Claude, etc.)
+                    if source.lower() == 'chatgpt':
+                        document_parts.append(f"**ChatGPT said** *(on {timestamp_str})*:\n\n{msg.content}")
+                    elif source.lower() == 'claude':
+                        document_parts.append(f"**Claude said** *(on {timestamp_str})*:\n\n{msg.content}")
+                    else:
+                        document_parts.append(f"**Assistant said** *(on {timestamp_str})*:\n\n{msg.content}")
                 elif msg.role == 'system':
                     document_parts.append(f"**System** *(on {timestamp_str})*:\n\n{msg.content}")
                 else:
