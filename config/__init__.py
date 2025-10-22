@@ -1,3 +1,7 @@
+"""
+Configuration package for Dovos application.
+"""
+
 import os
 from dotenv import load_dotenv
 
@@ -24,3 +28,23 @@ EMBEDDING_DIM = int(os.getenv("EMBEDDING_DIM", "384"))
 # OpenWebUI Configuration
 OPENWEBUI_URL = "http://100.116.198.80:3000"
 OPENWEBUI_API_KEY = "sk-44016316021243d0b0a00ba36aa0c22e"
+
+# Import synonym functionality
+from .synonyms import SEARCH_SYNONYMS, get_synonyms, add_synonym_mapping
+
+__all__ = [
+    'SECRET_KEY',
+    'COLLECTION_NAME',
+    'PERSIST_DIR',
+    'DEFAULT_EMBEDDING_MODEL',
+    'USE_PG_SINGLE_STORE',
+    'DATABASE_URL',
+    'PGAPPNAME',
+    'EMBEDDING_MODEL',
+    'EMBEDDING_DIM',
+    'OPENWEBUI_URL',
+    'OPENWEBUI_API_KEY',
+    'SEARCH_SYNONYMS',
+    'get_synonyms',
+    'add_synonym_mapping'
+]

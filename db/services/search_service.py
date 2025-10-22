@@ -14,6 +14,7 @@ import math
 
 from db.repositories.unit_of_work import get_unit_of_work
 from db.workers.embedding_worker import EmbeddingGenerator
+from config.synonyms import SEARCH_SYNONYMS
 
 logger = logging.getLogger(__name__)
 
@@ -418,23 +419,44 @@ class SearchService:
         expanded_terms = []
         words = query.lower().split()
         
-        # Basic synonym mapping
-        synonyms = {
-            'search': ['find', 'lookup', 'query'],
-            'message': ['text', 'content', 'chat'],
-            'conversation': ['chat', 'discussion', 'dialogue'],
-            'database': ['db', 'storage', 'data'],
-            'postgresql': ['postgres', 'pg', 'psql'],
-            'embedding': ['vector', 'similarity', 'semantic']
-        }
+        # Use centralized synonym dictionary
+        synonyms = SEARCH_SYNONYMS
         
+        # First check for multi-word phrases in the original query
+        query_lower = query.lower()
+        matched_phrases = set()
+        
+        for phrase in synonyms.keys():
+            if ' ' in phrase and phrase in query_lower:
+                matched_phrases.add(phrase)
+                # Add synonyms for matched phrase
+                expanded_terms.extend(synonyms[phrase])
+        
+        # Then process individual words not part of matched phrases
         for word in words:
+            # Skip if this word is part of a matched phrase
+            if any(word in phrase.split() for phrase in matched_phrases):
+                continue
+            
             expanded_terms.append(word)
             if word in synonyms:
                 expanded_terms.extend(synonyms[word][:1])  # Add one synonym
         
+        # If no expansion occurred, return original query
+        if not expanded_terms:
+            return query
+        
         # Join with OR for PostgreSQL FTS
-        expanded_query = ' | '.join(expanded_terms) if len(expanded_terms) > len(words) else query
+        # Quote multi-word terms for proper FTS matching
+        formatted_terms = []
+        for term in expanded_terms:
+            if ' ' in term:
+                # For phrases, use proper FTS syntax
+                formatted_terms.append(term.replace(' ', ' & '))
+            else:
+                formatted_terms.append(term)
+        
+        expanded_query = ' | '.join(formatted_terms) if len(expanded_terms) > 0 else query
         
         logger.debug(f"Query expansion: '{query}' → '{expanded_query}'")
         return expanded_query
