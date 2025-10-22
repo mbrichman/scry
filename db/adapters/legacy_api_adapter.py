@@ -83,11 +83,16 @@ class LegacyAPIAdapter:
                 # Build complete document
                 document = "\n\n---\n\n".join(document_parts)
                 
+                # Extract source from first message's metadata if available
+                source = "unknown"
+                if messages and messages[0].message_metadata:
+                    source = messages[0].message_metadata.get('source', 'unknown')
+                
                 # Build metadata in legacy format
                 metadata = {
                     "id": str(conv.id),
                     "title": conv.title,
-                    "source": "postgres",  # Mark as coming from postgres
+                    "source": source,  # Use actual source from import
                     "message_count": message_count,
                     "earliest_ts": earliest_ts.isoformat() if earliest_ts else conv.created_at.isoformat(),
                     "latest_ts": latest_ts.isoformat() if latest_ts else conv.updated_at.isoformat(),
@@ -429,12 +434,126 @@ class LegacyAPIAdapter:
     
     def export_to_openwebui(self, doc_id: str) -> Dict[str, Any]:
         """Export conversation to OpenWebUI format."""
-        # This would integrate with the existing export functionality
-        # For now, return a success response
-        return {
-            "success": True,
-            "message": "Conversation exported to OpenWebUI successfully"
-        }
+        import requests
+        import os
+        
+        try:
+            # Get the conversation
+            doc_result = self.get_conversation_by_id(doc_id)
+            if not doc_result or not doc_result.get("documents"):
+                return {
+                    "success": False,
+                    "error": "Conversation not found"
+                }
+            
+            document = doc_result["documents"][0]
+            metadata = doc_result["metadatas"][0] if doc_result.get("metadatas") else {}
+            
+            # Parse into messages
+            messages = self._parse_conversation_messages(document, metadata)
+            
+            # Create chat_messages for OpenWebUI
+            chat_messages = []
+            for msg in messages:
+                chat_msg = {
+                    "sender": msg["role"],
+                    "text": msg["content"],
+                    "created_at": msg.get("timestamp", "")
+                }
+                chat_messages.append(chat_msg)
+            
+            # Build conversation object
+            conversation = {
+                "name": metadata.get("title", "Untitled Conversation"),
+                "created_at": metadata.get("earliest_ts", ""),
+                "updated_at": metadata.get("latest_ts", ""),
+                "chat_messages": chat_messages
+            }
+            
+            # Check if OpenWebUI is configured
+            openwebui_url = os.getenv("OPENWEBUI_URL", "")
+            openwebui_api_key = os.getenv("OPENWEBUI_API_KEY", "")
+            
+            if not openwebui_url or not openwebui_api_key:
+                return {
+                    "success": False,
+                    "error": "OpenWebUI not configured. Set OPENWEBUI_URL and OPENWEBUI_API_KEY environment variables."
+                }
+            
+            # Send to OpenWebUI
+            headers = {
+                "Authorization": f"Bearer {openwebui_api_key}",
+                "Content-Type": "application/json"
+            }
+            
+            response = requests.post(
+                f"{openwebui_url}/api/v1/chats",
+                headers=headers,
+                json={"title": conversation["name"], "messages": chat_messages},
+                timeout=30
+            )
+            
+            if response.status_code in [200, 201]:
+                return {
+                    "success": True,
+                    "message": "Conversation exported to OpenWebUI successfully"
+                }
+            else:
+                return {
+                    "success": False,
+                    "error": f"OpenWebUI API error: {response.status_code}",
+                    "detail": response.text
+                }
+        
+        except requests.exceptions.RequestException as e:
+            return {
+                "success": False,
+                "error": f"Failed to connect to OpenWebUI: {str(e)}"
+            }
+        except Exception as e:
+            logger.error(f"Export to OpenWebUI failed: {e}")
+            return {
+                "success": False,
+                "error": str(e)
+            }
+    
+    def _parse_conversation_messages(self, document: str, metadata: Dict) -> List[Dict]:
+        """Parse conversation document into messages."""
+        messages = []
+        
+        # Split by message separators (both formats use ** for role markers)
+        lines = document.split("\n")
+        current_role = None
+        current_content = []
+        
+        for line in lines:
+            if "**" in line and "said**" in line.lower():
+                # This is a role marker line
+                if current_content and current_role:
+                    messages.append({
+                        "role": current_role,
+                        "content": "\n".join(current_content).strip()
+                    })
+                    current_content = []
+                
+                # Extract role
+                if "You said" in line or "user" in line.lower():
+                    current_role = "user"
+                elif "ChatGPT said" in line or "Claude said" in line or "assistant" in line.lower():
+                    current_role = "assistant"
+                else:
+                    current_role = "system"
+            elif current_role and line.strip():  # Only add non-empty lines
+                current_content.append(line)
+        
+        # Add final message
+        if current_content and current_role:
+            messages.append({
+                "role": current_role,
+                "content": "\n".join(current_content).strip()
+            })
+        
+        return messages
 
 
 # Global adapter instance 
