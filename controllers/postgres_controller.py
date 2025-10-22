@@ -337,9 +337,9 @@ class PostgresController:
                     conversations_data = json.loads(content)
                     
                     # Import conversations into PostgreSQL
-                    imported_count = self._import_conversations_json(conversations_data)
+                    import_result = self._import_conversations_json(conversations_data)
                     
-                    return f"Success: Imported {imported_count} conversations into PostgreSQL backend", 200
+                    return import_result, 200
                 
                 except json.JSONDecodeError as e:
                     return f"Error: Invalid JSON format - {str(e)}", 400
@@ -356,9 +356,10 @@ class PostgresController:
             logger.error(f"Upload failed: {e}")
             return f"Error: Upload failed - {str(e)}", 500
     
-    def _import_conversations_json(self, data: Dict[str, Any]) -> int:
-        """Import conversations from JSON data into PostgreSQL."""
+    def _import_conversations_json(self, data: Dict[str, Any]) -> str:
+        """Import conversations from JSON data into PostgreSQL. Returns message string."""
         from db.repositories.unit_of_work import get_unit_of_work
+        import hashlib
         
         # Detect format (Claude vs ChatGPT) using proper detection method
         conversations, format_type = self._detect_json_format(data)
@@ -370,7 +371,26 @@ class PostgresController:
         logger.info(f"📥 Importing {len(conversations)} conversations from {format_type} format into PostgreSQL")
         print(f"📥 Importing {len(conversations)} conversations from {format_type} format into PostgreSQL")
         
+        # Build map of existing conversations for duplicate detection
+        existing_conv_map = {}  # Map conversation_id -> (content_hash, db_id)
+        with get_unit_of_work() as uow:
+            existing_conversations = uow.conversations.get_all()
+            for conv in existing_conversations:
+                messages = uow.messages.get_by_conversation(conv.id)
+                # Concatenate all message content for duplicate detection
+                full_content = "\n\n".join(msg.content for msg in messages if msg.content)
+                content_hash = hashlib.sha256(full_content.encode()).hexdigest()
+                
+                # Store by original conversation ID if available in metadata
+                if messages and messages[0].message_metadata:
+                    original_id = messages[0].message_metadata.get('original_conversation_id')
+                    if original_id:
+                        existing_conv_map[original_id] = (content_hash, conv.id)
+        
+        print(f"Found {len(existing_conv_map)} existing conversations for duplicate checking")
+        
         imported_count = 0
+        skipped_duplicates = 0
         
         # Process each conversation in its own transaction
         for conv_data in conversations:
@@ -389,6 +409,24 @@ class PostgresController:
                 if not messages:
                     continue
                 
+                # Check for duplicates using conversation ID
+                conv_id = conv_data.get('id') or conv_data.get('uuid')
+                full_content = "\n\n".join(msg['content'] for msg in messages if msg['content'].strip())
+                content_hash = hashlib.sha256(full_content.encode()).hexdigest()
+                
+                if conv_id and conv_id in existing_conv_map:
+                    existing_hash, existing_db_id = existing_conv_map[conv_id]
+                    if content_hash == existing_hash:
+                        # Content is identical, skip this duplicate
+                        skipped_duplicates += 1
+                        logger.info(f"Skipping duplicate conversation: {title}")
+                        continue
+                    else:
+                        # Content changed - for now we skip (update logic would go here)
+                        skipped_duplicates += 1
+                        logger.info(f"Conversation exists with different content: {title} - skipping")
+                        continue
+                
                 # Import in a single transaction
                 with get_unit_of_work() as uow:
                     # Create conversation
@@ -403,7 +441,7 @@ class PostgresController:
                             message_metadata = {
                                 'source': format_type.lower(),
                                 'conversation_title': title,
-                                'original_conversation_id': conv_data.get('id') or conv_data.get('uuid') or str(conversation.id)
+                                'original_conversation_id': conv_id or str(conversation.id)
                             }
                             
                             message = uow.messages.create(
@@ -441,10 +479,21 @@ class PostgresController:
                 logger.error(error_msg)
                 continue
         
+        if imported_count == 0:
+            if skipped_duplicates > 0:
+                message = f"All {skipped_duplicates} conversations already indexed (no new content)"
+            else:
+                message = "No valid conversations found to index"
+            print(f"ℹ️ {message}")
+            logger.info(message)
+            return f"Success: {message}"
+        
         completion_msg = f"✅ Successfully imported {imported_count} conversations into PostgreSQL"
+        if skipped_duplicates > 0:
+            completion_msg += f" (skipped {skipped_duplicates} duplicates)"
         print(completion_msg)
         logger.info(completion_msg)
-        return imported_count
+        return f"Success: {completion_msg}"
     
     def _extract_chatgpt_messages(self, mapping: Dict) -> List[Dict]:
         """Extract messages from ChatGPT format."""
