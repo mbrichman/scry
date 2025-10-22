@@ -3,7 +3,6 @@ flask-cors
 flask-wtf
 wtforms
 sentence-transformers
-chromadb
 markdown
 python-docx
 nltk
