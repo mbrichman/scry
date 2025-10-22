@@ -193,16 +193,18 @@ def generate_test_report():
         }
         
         # Read pytest JSON report if available
-        if os.path.exists("test-results.json"):
-            with open("test-results.json", 'r') as f:
+        test_results_path = os.path.join("tests", "fixtures", "test-results.json")
+        if os.path.exists(test_results_path):
+            with open(test_results_path, 'r') as f:
                 pytest_results = json.load(f)
                 report["pytest_summary"] = pytest_results.get("summary", {})
         
-        # Save report
-        with open("contract_test_report.json", 'w') as f:
+        # Save report to fixtures
+        report_path = os.path.join("tests", "fixtures", "contract_test_report.json")
+        with open(report_path, 'w') as f:
             json.dump(report, f, indent=2)
         
-        print("✅ Test report generated: contract_test_report.json")
+        print(f"✅ Test report generated: {report_path}")
         return True
         
     except Exception as e:

@@ -12,8 +12,9 @@ from scripts.utils.chat_archive import ChatArchive
 def import_test_data():
     """Import synthetic test data into the database"""
     
-    # Load the test data
-    with open('synthetic_test_data.json', 'r') as f:
+    # Load the test data from tests/fixtures
+    fixture_path = os.path.join(os.path.dirname(__file__), '..', '..', 'tests', 'fixtures', 'synthetic_test_data.json')
+    with open(fixture_path, 'r') as f:
         test_data = json.load(f)
     
     # Initialize ChatArchive
