@@ -44,10 +44,17 @@ class EmbeddingGenerator:
         """Lazy load the embedding model."""
         if self._model is None:
             try:
+                import torch
                 from sentence_transformers import SentenceTransformer
+                
+                # Force CPU to avoid MPS tensor bug on Apple Silicon
+                os.environ['PYTORCH_ENABLE_MPS_FALLBACK'] = '1'
+                device = 'cpu'
+                
                 logger.info(f"Loading embedding model: {self.model_name}")
-                self._model = SentenceTransformer(self.model_name)
-                logger.info(f"✅ Model loaded successfully")
+                logger.info(f"Forcing device: {device} (avoiding MPS bug)")
+                self._model = SentenceTransformer(self.model_name, device=device)
+                logger.info(f"✅ Model loaded successfully on {device}")
             except ImportError:
                 logger.error("sentence-transformers not installed. Install with: pip install sentence-transformers")
                 raise
