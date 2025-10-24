@@ -3,15 +3,17 @@ import os
 from datetime import datetime
 
 from forms import SearchForm
-from models.search_model import SearchModel
+# NOTE: SearchModel removed - legacy ChromaDB code
+# from models.search_model import SearchModel  
 from models.conversation_view_model import ConversationViewModel, extract_preview_content
 
 
 class ConversationController:
-    """Controller for handling conversation-related routes"""
+    """Controller for handling conversation-related routes (LEGACY - not used with PostgreSQL)"""
     
     def __init__(self):
-        self.search_model = SearchModel()
+        # Legacy SearchModel no longer available
+        self.search_model = None
         self.view_model = ConversationViewModel()
     
     def index(self):
@@ -954,10 +956,11 @@ class ConversationController:
 
 
 class UploadController:
-    """Controller for handling upload-related routes"""
+    """Controller for handling upload-related routes (LEGACY - not used with PostgreSQL)"""
     
     def __init__(self):
-        self.search_model = SearchModel()
+        # Legacy SearchModel no longer available
+        self.search_model = None
     
     def upload(self):
         if request.method == "POST":

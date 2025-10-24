@@ -11,15 +11,7 @@ load_dotenv()
 # === CONFIG ===
 SECRET_KEY = "your-secret-key-change-this-in-production"
 
-# Legacy config (kept for backward compatibility during migration)
-COLLECTION_NAME = "chat_history"  # unused
-PERSIST_DIR = "./chroma_storage"  # unused
-DEFAULT_EMBEDDING_MODEL = "all-MiniLM-L6-v2"  # unused
-
-# Feature Flags
-USE_PG_SINGLE_STORE = True  # PostgreSQL is now the only supported backend
-
-# PostgreSQL Configuration (for new single-store architecture)
+# PostgreSQL Configuration
 DATABASE_URL = os.getenv("DATABASE_URL", "postgresql+psycopg://user:pass@localhost:5432/dovos_dev")
 PGAPPNAME = os.getenv("PGAPPNAME", "dovos-api")
 EMBEDDING_MODEL = os.getenv("EMBEDDING_MODEL", "sentence-transformers/all-MiniLM-L6-v2")
@@ -44,10 +36,6 @@ from .synonyms import SEARCH_SYNONYMS, get_synonyms, add_synonym_mapping
 
 __all__ = [
     'SECRET_KEY',
-    'COLLECTION_NAME',
-    'PERSIST_DIR',
-    'DEFAULT_EMBEDDING_MODEL',
-    'USE_PG_SINGLE_STORE',
     'DATABASE_URL',
     'PGAPPNAME',
     'EMBEDDING_MODEL',

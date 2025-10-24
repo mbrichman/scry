@@ -7,15 +7,15 @@ import markdown
 from forms import SearchForm
 from controllers.conversation_controller import ConversationController, UploadController
 from controllers.postgres_controller import get_postgres_controller
-from config import COLLECTION_NAME, DEFAULT_EMBEDDING_MODEL, SECRET_KEY, USE_PG_SINGLE_STORE
+from config import SECRET_KEY
 import os
 
 
-def init_routes(app, archive):
+def init_routes(app):
     """Initialize all Flask routes using MVC pattern"""
     
-    # Check feature flag for PostgreSQL backend
-    use_postgres = USE_PG_SINGLE_STORE
+    # PostgreSQL is now the only backend
+    use_postgres = True
     
     if use_postgres:
         # Use PostgreSQL controller for API endpoints

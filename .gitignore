@@ -74,16 +74,12 @@ instance/
 ehthumbs.db
 Thumbs.db
 
-# ChromaDB storage
-chroma_storage/
-
 # Temporary uploads
 temp_upload.*
 temp_docx_dir/
 
 # Logs
 *.log
-chroma_db/
 extracted_attachments/
 data/
 scripts/archived/
