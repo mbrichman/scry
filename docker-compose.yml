@@ -1,0 +1,39 @@
+version: '3.8'
+
+services:
+  dovos-rag:
+    build: .
+    container_name: dovos-rag-api
+    ports:
+      - "5001:5001"
+    environment:
+      - USE_PG_SINGLE_STORE=${USE_PG_SINGLE_STORE:-true}
+      - DATABASE_URL=${DATABASE_URL}
+      - PGAPPNAME=${PGAPPNAME:-dovos-api}
+      - EMBEDDING_MODEL=${EMBEDDING_MODEL:-sentence-transformers/all-MiniLM-L6-v2}
+      - EMBEDDING_DIM=${EMBEDDING_DIM:-384}
+      - OPENWEBUI_URL=${OPENWEBUI_URL}
+      - OPENWEBUI_API_KEY=${OPENWEBUI_API_KEY}
+      - RAG_WINDOW_SIZE=${RAG_WINDOW_SIZE:-3}
+      - RAG_MAX_WINDOW_SIZE=${RAG_MAX_WINDOW_SIZE:-10}
+      - RAG_ADAPTIVE_WINDOWING=${RAG_ADAPTIVE_WINDOWING:-true}
+      - RAG_DEDUPLICATE_MESSAGES=${RAG_DEDUPLICATE_MESSAGES:-true}
+      - RAG_DEFAULT_TOP_K_WINDOWS=${RAG_DEFAULT_TOP_K_WINDOWS:-8}
+      - RAG_DEFAULT_MAX_TOKENS=${RAG_DEFAULT_MAX_TOKENS:-0}
+      - RAG_PROXIMITY_DECAY_LAMBDA=${RAG_PROXIMITY_DECAY_LAMBDA:-0.3}
+      - RAG_APPLY_RECENCY_BONUS=${RAG_APPLY_RECENCY_BONUS:-false}
+      - SECRET_KEY=${SECRET_KEY:-change-this-secret-key-in-production}
+    volumes:
+      - ./logs:/app/logs
+    restart: unless-stopped
+    # Use host networking to access PostgreSQL on host machine
+    # Comment this out if PostgreSQL is also in Docker
+    network_mode: host
+    
+    # Uncomment healthcheck if needed
+    # healthcheck:
+    #   test: ["CMD", "curl", "-f", "http://localhost:5001/api/stats"]
+    #   interval: 30s
+    #   timeout: 10s
+    #   retries: 3
+    #   start_period: 40s
