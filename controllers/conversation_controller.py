@@ -524,14 +524,24 @@ class ConversationController:
         for result in results:
             metadata = result.get('metadata', {})
             
+            # Extract source, checking multiple possible locations
+            source = metadata.get('source') or result.get('source') or 'unknown'
+            # Normalize source to match expected values
+            if source and isinstance(source, str):
+                source_lower = source.lower()
+                if 'claude' in source_lower:
+                    source = 'claude'
+                elif 'chatgpt' in source_lower or 'gpt' in source_lower:
+                    source = 'chatgpt'
+            
             item = {
                 'id': metadata.get('conversation_id', metadata.get('id', 'unknown')),
                 'preview': result.get('content', ''),
                 'meta': {
                     'title': result.get('title', metadata.get('title', 'Untitled')),
-                    'source': metadata.get('source', 'postgres'),
+                    'source': source,
                     'earliest_ts': result.get('date', metadata.get('earliest_ts', '')),
-                    'latest_ts': metadata.get('latest_ts', ''),
+                    'latest_ts': metadata.get('latest_ts', result.get('date', '')),
                     'relevance_display': 'N/A'
                 }
             }

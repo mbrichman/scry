@@ -102,6 +102,9 @@ class PostgresController:
                 # Extract preview content (first 300 characters)
                 cleaned_preview = result.content[:300] + "..." if len(result.content) > 300 else result.content
                 
+                # Get the actual source for this conversation
+                source = self._get_conversation_source(result.conversation_id)
+                
                 formatted_results.append({
                     "title": result.conversation_title,
                     "date": result.created_at,
@@ -109,7 +112,7 @@ class PostgresController:
                     "metadata": {
                         "id": result.conversation_id,
                         "title": result.conversation_title,
-                        "source": "postgres",
+                        "source": source,
                         "earliest_ts": result.created_at,
                         "latest_ts": result.created_at,
                         "message_count": 1,  # Individual message result
@@ -269,6 +272,33 @@ class PostgresController:
                 "error": str(e),
                 "count": 0
             }
+    
+    def _get_conversation_source(self, conversation_id: str) -> str:
+        """
+        Get the source (ChatGPT, Claude, etc.) for a conversation.
+        Looks up the first message's metadata to find the original source.
+        """
+        try:
+            from uuid import UUID
+            from db.repositories.unit_of_work import get_unit_of_work
+            
+            conv_uuid = UUID(conversation_id)
+            with get_unit_of_work() as uow:
+                messages = uow.messages.get_by_conversation(conv_uuid)
+                if messages and messages[0].message_metadata:
+                    source = messages[0].message_metadata.get('source', 'unknown')
+                    # Normalize to expected values
+                    if source and isinstance(source, str):
+                        source_lower = source.lower()
+                        if 'claude' in source_lower:
+                            return 'claude'
+                        elif 'chatgpt' in source_lower or 'gpt' in source_lower:
+                            return 'chatgpt'
+                    return source
+            return 'unknown'
+        except Exception as e:
+            logger.error(f"Failed to get source for conversation {conversation_id}: {e}")
+            return 'unknown'
     
     # ===== MANAGEMENT ENDPOINTS =====
     

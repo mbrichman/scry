@@ -359,6 +359,28 @@ body {
   margin-bottom: 1.5rem;
 }
 
+.search-section .alert {
+  background-color: hsl(var(--accent));
+  border: 1px solid hsl(var(--primary) / 0.2);
+  border-radius: var(--radius);
+  color: hsl(var(--foreground));
+  padding: 1rem 1.25rem;
+  margin-top: 1rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.search-section .alert strong {
+  color: hsl(var(--primary));
+  font-weight: 600;
+}
+
+.search-section .alert .btn {
+  padding: 0.375rem 0.75rem;
+  font-size: 0.875rem;
+}
+
 .search-wrapper {
   display: flex;
   gap: 1rem;
@@ -469,8 +491,16 @@ body {
 }
 
 .filters-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
   color: hsl(var(--muted-foreground));
   transition: transform 0.2s;
+}
+
+.filters-toggle svg {
+  width: 20px;
+  height: 20px;
 }
 
 .filters-toggle.expanded {
