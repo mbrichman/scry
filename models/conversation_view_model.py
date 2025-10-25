@@ -76,6 +76,15 @@ def extract_preview_content(document, max_length=200):
     return preview_text
 
 
+def remove_trailing_hr(html_content):
+    """Remove trailing horizontal rules from HTML content"""
+    if not html_content:
+        return html_content
+    # Remove trailing <hr> and <hr /> tags (with optional whitespace)
+    html_content = re.sub(r'<hr\s*/?>\s*$', '', html_content.strip(), flags=re.IGNORECASE)
+    return html_content
+
+
 def parse_messages_from_document(document):
     """Parse a document into individual messages with role, content, and timestamp"""
     messages = []
@@ -100,12 +109,14 @@ def parse_messages_from_document(document):
                 # Clean and join content
                 raw_content = "\n".join(current_content)
                 cleaned_content = clean_message_content(raw_content)
+                html_content = markdown.markdown(
+                    cleaned_content, extensions=["extra", "tables"]
+                )
+                html_content = remove_trailing_hr(html_content)
                 messages.append(
                     {
                         "role": current_role,
-                        "content": markdown.markdown(
-                            cleaned_content, extensions=["extra", "tables"]
-                        ),
+                        "content": html_content,
                         "timestamp": current_timestamp,
                     }
                 )
@@ -128,12 +139,14 @@ def parse_messages_from_document(document):
                 # Clean and join content
                 raw_content = "\n".join(current_content)
                 cleaned_content = clean_message_content(raw_content)
+                html_content = markdown.markdown(
+                    cleaned_content, extensions=["extra", "tables"]
+                )
+                html_content = remove_trailing_hr(html_content)
                 messages.append(
                     {
                         "role": current_role,
-                        "content": markdown.markdown(
-                            cleaned_content, extensions=["extra", "tables"]
-                        ),
+                        "content": html_content,
                         "timestamp": current_timestamp,
                     }
                 )
@@ -156,12 +169,14 @@ def parse_messages_from_document(document):
                 # Clean and join content
                 raw_content = "\n".join(current_content)
                 cleaned_content = clean_message_content(raw_content)
+                html_content = markdown.markdown(
+                    cleaned_content, extensions=["extra", "tables"]
+                )
+                html_content = remove_trailing_hr(html_content)
                 messages.append(
                     {
                         "role": current_role,
-                        "content": markdown.markdown(
-                            cleaned_content, extensions=["extra", "tables"]
-                        ),
+                        "content": html_content,
                         "timestamp": current_timestamp,
                     }
                 )
@@ -180,12 +195,14 @@ def parse_messages_from_document(document):
         # Clean and join content
         raw_content = "\n".join(current_content)
         cleaned_content = clean_message_content(raw_content)
+        html_content = markdown.markdown(
+            cleaned_content, extensions=["extra", "tables"]
+        )
+        html_content = remove_trailing_hr(html_content)
         messages.append(
             {
                 "role": current_role,
-                "content": markdown.markdown(
-                    cleaned_content, extensions=["extra", "tables"]
-                ),
+                "content": html_content,
                 "timestamp": current_timestamp,
             }
         )
