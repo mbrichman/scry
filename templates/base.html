@@ -37,8 +37,10 @@
         {% block header %}
         <div class="page-header">
             <div class="page-header-left">
-                <img src="{{ url_for('static', filename='images/logo.png') }}" alt="DovOS" class="logo">
-                <h1 class="page-title">{% block page_title %}Page Title{% endblock %}</h1>
+                <a href="/conversations" style="display: flex; align-items: center; gap: 1rem; text-decoration: none; color: inherit;">
+                    <img src="{{ url_for('static', filename='images/logo.png') }}" alt="DovOS" class="logo" style="cursor: pointer;">
+                    <h1 class="page-title" style="cursor: pointer;">{% block page_title %}Page Title{% endblock %}</h1>
+                </a>
             </div>
             <ul class="nav nav-pills">
                 <li class="nav-item">
