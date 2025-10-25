@@ -36,7 +36,14 @@
             
             <input type="hidden" name="search_type" id="searchType" value="{{ search_form.search_type.data or 'auto' }}">
             
-            <button type="submit" class="btn-search">Search</button>
+            <button type="submit" class="btn-search" id="searchButton">
+                <span class="btn-search-text">Search</span>
+                <span class="btn-search-spinner" style="display: none;">
+                    <svg class="spinner" viewBox="0 0 50 50">
+                        <circle class="spinner-path" cx="25" cy="25" r="20" fill="none" stroke-width="5"></circle>
+                    </svg>
+                </span>
+            </button>
         </div>
         
         {% if search_triggered %}
@@ -178,6 +185,19 @@
 
 {% block page_scripts %}
 <script>
+// Search form loading state
+const searchForm = document.getElementById('searchForm');
+const searchButton = document.getElementById('searchButton');
+const searchButtonText = searchButton.querySelector('.btn-search-text');
+const searchButtonSpinner = searchButton.querySelector('.btn-search-spinner');
+
+searchForm.addEventListener('submit', function(e) {
+    // Show loading state
+    searchButton.disabled = true;
+    searchButtonText.style.display = 'none';
+    searchButtonSpinner.style.display = 'inline-block';
+});
+
 // Search type pills
 document.querySelectorAll('.pill').forEach(pill => {
     pill.addEventListener('click', function(e) {
@@ -348,6 +368,50 @@ document.querySelectorAll('.date-to-format').forEach(element => {
         transform: translateX(0);
         opacity: 1;
     }
+}
+
+/* Spinner animation */
+.btn-search-spinner {
+    display: inline-block;
+    vertical-align: middle;
+}
+
+.spinner {
+    animation: rotate 1s linear infinite;
+    width: 18px;
+    height: 18px;
+}
+
+.spinner-path {
+    stroke: currentColor;
+    stroke-linecap: round;
+    animation: dash 1.5s ease-in-out infinite;
+}
+
+@keyframes rotate {
+    100% {
+        transform: rotate(360deg);
+    }
+}
+
+@keyframes dash {
+    0% {
+        stroke-dasharray: 1, 150;
+        stroke-dashoffset: 0;
+    }
+    50% {
+        stroke-dasharray: 90, 150;
+        stroke-dashoffset: -35;
+    }
+    100% {
+        stroke-dasharray: 90, 150;
+        stroke-dashoffset: -124;
+    }
+}
+
+.btn-search:disabled {
+    opacity: 0.7;
+    cursor: not-allowed;
 }
 </style>
 {% endblock %}
