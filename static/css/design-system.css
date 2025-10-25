@@ -347,6 +347,18 @@ body {
   margin-bottom: 2rem;
 }
 
+.page-header-left {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.logo {
+  width: 40px;
+  height: 40px;
+  flex-shrink: 0;
+}
+
 .page-title {
   font-size: 1.75rem;
   font-weight: 600;

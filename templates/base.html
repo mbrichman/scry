@@ -22,7 +22,10 @@
     <div class="container">
         {% block header %}
         <div class="page-header">
-            <h1 class="page-title">{% block page_title %}Page Title{% endblock %}</h1>
+            <div class="page-header-left">
+                <img src="{{ url_for('static', filename='images/logo.svg') }}" alt="DovOS" class="logo">
+                <h1 class="page-title">{% block page_title %}Page Title{% endblock %}</h1>
+            </div>
             <ul class="nav nav-pills">
                 <li class="nav-item">
                     <a class="nav-link {% if request.endpoint == 'conversations' %}active{% endif %}" href="/conversations">Conversations</a>
