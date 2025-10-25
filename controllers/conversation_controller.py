@@ -553,8 +553,8 @@ class ConversationController:
             metadata = metadatas[i] if i < len(metadatas) else {}
             doc_id = ids[i] if i < len(ids) else f'doc-{i}'
             
-            # Extract preview (first 300 chars)
-            preview = document[:300] + "..." if len(document) > 300 else document
+            # Extract preview using the same function as legacy to clean role markers
+            preview = extract_preview_content(document, max_length=300)
             
             item = {
                 'id': doc_id,
