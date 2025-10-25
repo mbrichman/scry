@@ -438,8 +438,27 @@ class PostgresController:
             
             # Handle DOCX files  
             elif file.filename.endswith('.docx'):
-                # For now, return not implemented for DOCX in PostgreSQL mode
-                return "DOCX import not yet implemented for PostgreSQL backend", 400
+                try:
+                    import tempfile
+                    import os
+                    
+                    # Save to temporary file
+                    with tempfile.NamedTemporaryFile(delete=False, suffix='.docx') as temp_file:
+                        file.save(temp_file.name)
+                        temp_path = temp_file.name
+                    
+                    try:
+                        # Import the DOCX file
+                        import_result = self._import_docx_file(temp_path, file.filename)
+                        return import_result, 200
+                    finally:
+                        # Clean up temp file
+                        if os.path.exists(temp_path):
+                            os.remove(temp_path)
+                
+                except Exception as e:
+                    logger.error(f"DOCX import failed: {e}")
+                    return f"Error: DOCX import failed - {str(e)}", 400
             
         except Exception as e:
             logger.error(f"Upload failed: {e}")
@@ -736,6 +755,70 @@ class PostgresController:
             return conversations, "ChatGPT"
             
         return conversations, "Unknown"
+    
+    def _import_docx_file(self, file_path: str, filename: str) -> str:
+        """Import a Word document conversation into PostgreSQL. Returns message string."""
+        from db.repositories.unit_of_work import get_unit_of_work
+        from utils.docx_parser import parse_docx_file
+        from datetime import datetime
+        import os
+        
+        try:
+            # Parse the DOCX file
+            messages, timestamps, title = parse_docx_file(file_path)
+            
+            if not messages:
+                raise ValueError("No messages found in Word document")
+            
+            logger.info(f"📄 Importing Word document: {title} with {len(messages)} messages")
+            print(f"📄 Importing Word document: {title} with {len(messages)} messages")
+            
+            # Determine timestamps
+            if timestamps:
+                earliest_ts = datetime.fromisoformat(min(timestamps))
+                latest_ts = datetime.fromisoformat(max(timestamps))
+            else:
+                # Use file creation time as fallback
+                file_create_time = datetime.fromtimestamp(os.path.getctime(file_path))
+                earliest_ts = file_create_time
+                latest_ts = file_create_time
+            
+            # Create conversation and messages in database
+            with get_unit_of_work() as uow:
+                # Create conversation
+                conversation = uow.conversations.create(
+                    title=title,
+                    created_at=earliest_ts,
+                    updated_at=latest_ts
+                )
+                
+                # Create messages
+                for msg_data in messages:
+                    # Store source and filename in metadata
+                    metadata = {
+                        'source': 'docx',
+                        'filename': filename,
+                        'original_conversation_id': None  # DOCX files don't have IDs
+                    }
+                    
+                    uow.messages.create(
+                        conversation_id=conversation.id,
+                        role=msg_data['role'],
+                        content=msg_data['content'],
+                        message_metadata=metadata,
+                        created_at=earliest_ts  # Use conversation timestamp for all messages
+                    )
+                
+                uow.commit()
+                
+                logger.info(f"✅ Successfully imported Word document: {title}")
+                print(f"✅ Successfully imported Word document: {title}")
+                
+                return f"Successfully imported '{title}' with {len(messages)} messages"
+        
+        except Exception as e:
+            logger.error(f"DOCX import failed: {e}")
+            raise ValueError(f"Failed to import Word document: {str(e)}")
     
     # ===== SETTINGS ENDPOINTS =====
     
