@@ -945,12 +945,14 @@ body {
   
   .search-type-pills {
     width: 100%;
-    overflow-x: auto;
-    flex-wrap: wrap;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.5rem;
   }
   
   .pill {
-    flex: 0 0 auto;
+    width: 100%;
+    text-align: center;
   }
   
   .filters-grid {
