@@ -33,16 +33,61 @@ class LegacyAPIAdapter:
     
     # ===== CONVERSATION METHODS =====
     
-    def get_conversations_summary(self, limit: int = 9999, offset: int = 0) -> Dict[str, Any]:
+    def get_conversations_summary(self, limit: int = 9999, offset: int = 0, 
+                                  source_filter: str = 'all', date_filter: str = 'all',
+                                  sort_order: str = 'newest') -> Dict[str, Any]:
         """
         Get conversations with summary data only (optimized for list view).
         Uses the conversation_summaries view instead of loading all messages.
         
         This is much faster than get_all_conversations() for displaying lists.
+        
+        Args:
+            limit: Max number of results
+            offset: Number of results to skip
+            source_filter: Filter by source (all, chatgpt, claude, docx)
+            date_filter: Filter by date (all, today, week, month, year)
+            sort_order: Sort order (newest, oldest, alphabetical)
         """
         with get_unit_of_work() as uow:
+            # Build dynamic WHERE and ORDER BY clauses
+            where_clauses = []
+            params = {'limit': limit, 'offset': offset}
+            
+            # Source filter
+            if source_filter != 'all':
+                where_clauses.append("""
+                    (SELECT m.metadata->>'source' 
+                     FROM messages m 
+                     WHERE m.conversation_id = c.id 
+                     ORDER BY m.created_at LIMIT 1) = :source
+                """)
+                params['source'] = source_filter
+            
+            # Date filter
+            if date_filter != 'all':
+                date_map = {
+                    'today': "COALESCE(cs.latest_message_at, c.updated_at) >= CURRENT_DATE",
+                    'week': "COALESCE(cs.latest_message_at, c.updated_at) >= CURRENT_DATE - INTERVAL '7 days'",
+                    'month': "COALESCE(cs.latest_message_at, c.updated_at) >= CURRENT_DATE - INTERVAL '30 days'",
+                    'year': "COALESCE(cs.latest_message_at, c.updated_at) >= CURRENT_DATE - INTERVAL '365 days'"
+                }
+                if date_filter in date_map:
+                    where_clauses.append(date_map[date_filter])
+            
+            # Sort order
+            order_map = {
+                'newest': 'COALESCE(cs.latest_message_at, c.updated_at) DESC',
+                'oldest': 'COALESCE(cs.earliest_message_at, c.created_at) ASC',
+                'alphabetical': 'c.title ASC'
+            }
+            order_by = order_map.get(sort_order, order_map['newest'])
+            
+            # Build WHERE clause
+            where_sql = ' AND ' + ' AND '.join(where_clauses) if where_clauses else ''
+            
             # Use raw SQL to query the conversation_summaries view
-            query = text("""
+            query = text(f"""
                 SELECT 
                     c.id,
                     c.title,
@@ -59,11 +104,12 @@ class LegacyAPIAdapter:
                      ORDER BY m.created_at LIMIT 1) as source
                 FROM conversations c
                 LEFT JOIN conversation_summaries cs ON c.id = cs.id
-                ORDER BY COALESCE(cs.latest_message_at, c.updated_at) DESC
+                WHERE 1=1 {where_sql}
+                ORDER BY {order_by}
                 LIMIT :limit OFFSET :offset
             """)
             
-            result = uow.session.execute(query, {'limit': limit, 'offset': offset})
+            result = uow.session.execute(query, params)
             
             documents = []
             metadatas = []

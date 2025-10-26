@@ -474,8 +474,28 @@ class ConversationController:
         else:
             # Load initial page only (lazy loading will fetch more)
             try:
+                # Save original args and create filtered args
+                from werkzeug.datastructures import ImmutableMultiDict
+                original_args = request.args
+                
+                # Build args with filters
+                new_args = {
+                    'page': '1',
+                    'limit': '30',
+                    'source': source_filter,
+                    'date': date_filter,
+                    'sort': sort_order
+                }
+                
+                # Temporarily replace request.args
+                request.args = ImmutableMultiDict(new_args)
+                
                 # Only load first 30 items initially for lazy loading
                 result = postgres_controller.get_conversations_paginated()
+                
+                # Restore original args
+                request.args = original_args
+                
                 items = self._format_postgres_search_results_for_list(result.get('conversations', []))
             except Exception as e:
                 print(f"Error getting PostgreSQL conversations: {e}")

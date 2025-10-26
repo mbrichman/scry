@@ -385,6 +385,15 @@ const loadingIndicator = document.getElementById('loadingIndicator');
 const scrollSentinel = document.getElementById('scrollSentinel');
 const conversationList = document.querySelector('.conversation-list');
 
+// Get current filter parameters from URL or form
+function getFilterParams() {
+    const params = new URLSearchParams(window.location.search);
+    const source = params.get('source') || 'all';
+    const date = params.get('date') || 'all';
+    const sort = params.get('sort') || 'newest';
+    return { source, date, sort };
+}
+
 async function loadMoreConversations() {
     if (isLoading || !hasMore) return;
     
@@ -393,7 +402,15 @@ async function loadMoreConversations() {
     
     try {
         currentPage++;
-        const response = await fetch(`/api/conversations/list?page=${currentPage}&limit=30`);
+        const filters = getFilterParams();
+        const params = new URLSearchParams({
+            page: currentPage,
+            limit: 30,
+            source: filters.source,
+            date: filters.date,
+            sort: filters.sort
+        });
+        const response = await fetch(`/api/conversations/list?${params.toString()}`);
         const data = await response.json();
         
         if (data.conversations && data.conversations.length > 0) {

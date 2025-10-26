@@ -50,17 +50,28 @@ class PostgresController:
     
     def get_conversations_paginated(self) -> Dict[str, Any]:
         """
-        GET /api/conversations/list?page=1&limit=30
+        GET /api/conversations/list?page=1&limit=30&source=chatgpt&date=month&sort=newest
         
-        Returns paginated conversations for lazy loading.
+        Returns paginated conversations for lazy loading with filters.
         """
         try:
             page = int(request.args.get('page', 1))
             limit = int(request.args.get('limit', 30))
             offset = (page - 1) * limit
             
-            # Get one extra to check if there are more
-            result = self.adapter.get_conversations_summary(limit=limit + 1, offset=offset)
+            # Get filter parameters
+            source_filter = request.args.get('source', 'all')
+            date_filter = request.args.get('date', 'all')
+            sort_order = request.args.get('sort', 'newest')
+            
+            # Get conversations with filters applied
+            result = self.adapter.get_conversations_summary(
+                limit=limit + 1, 
+                offset=offset,
+                source_filter=source_filter,
+                date_filter=date_filter,
+                sort_order=sort_order
+            )
             
             # Check if there are more items
             has_more = len(result['documents']) > limit
