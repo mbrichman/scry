@@ -56,6 +56,14 @@ def init_routes(app):
             return jsonify(postgres_controller.get_conversations())
         else:
             return conversation_controller.api_conversations()
+    
+    @app.route("/api/conversations/list", methods=["GET"])
+    def api_conversations_paginated():
+        """Paginated conversations endpoint for lazy loading"""
+        if use_postgres:
+            return jsonify(postgres_controller.get_conversations_paginated())
+        else:
+            return jsonify({"error": "Paginated conversations not available in legacy mode"}), 501
 
     @app.route("/api/conversation/<conversation_id>", methods=["GET"])
     def api_conversation(conversation_id):

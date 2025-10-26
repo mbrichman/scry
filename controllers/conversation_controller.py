@@ -472,31 +472,21 @@ class ConversationController:
                 print(f"Error in PostgreSQL search: {e}")
                 items = []
         else:
-            # Get all conversations from PostgreSQL
+            # Load initial page only (lazy loading will fetch more)
             try:
-                all_docs = postgres_controller.get_conversations()
-                items = self._format_postgres_conversations_list(
-                    all_docs, source_filter, date_filter, sort_order
-                )
+                # Only load first 30 items initially for lazy loading
+                result = postgres_controller.get_conversations_paginated()
+                items = self._format_postgres_search_results_for_list(result.get('conversations', []))
             except Exception as e:
                 print(f"Error getting PostgreSQL conversations: {e}")
                 items = []
 
-        # Pagination
-        total_items = len(items)
-        page_count = (total_items + per_page - 1) // per_page if total_items > 0 else 1
-        page = max(1, min(page, page_count)) if page_count > 0 else 1
-        
-        start_idx = (page - 1) * per_page
-        end_idx = min(start_idx + per_page, total_items)
-        page_items = items[start_idx:end_idx]
+        # No server-side pagination needed - client handles lazy loading
+        page_items = items
 
         return render_template(
             "conversations.html",
             conversations=page_items,
-            current_page=page,
-            page_count=page_count,
-            total_items=total_items,
             source_filter=source_filter,
             date_filter=date_filter,
             sort_order=sort_order,
@@ -596,6 +586,24 @@ class ConversationController:
             import traceback
             traceback.print_exc()
             return "Conversation not found", 404
+    
+    def _format_postgres_search_results_for_list(self, conversations):
+        """Format paginated conversation results for list view"""
+        items = []
+        for conv in conversations:
+            item = {
+                'id': conv['id'],
+                'preview': conv['preview'],
+                'meta': {
+                    'title': conv['title'],
+                    'source': conv['source'],
+                    'earliest_ts': conv['latest_ts'],
+                    'latest_ts': conv['latest_ts'],
+                    'relevance_display': 'N/A'
+                }
+            }
+            items.append(item)
+        return items
     
     def _format_postgres_search_results(self, results):
         """Format PostgreSQL search results for legacy UI"""

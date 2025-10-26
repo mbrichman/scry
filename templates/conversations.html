@@ -153,33 +153,16 @@
     {% endfor %}
 </div>
 
-{% if page_count > 1 %}
-<div class="page-navigation mt-4">
-    <nav aria-label="Page navigation">
-        <ul class="pagination justify-content-center">
-            <li class="page-item {% if current_page == 1 %}disabled{% endif %}">
-                <a class="page-link" href="{{ url_for('conversations', page=current_page-1, source=source_filter, date=date_filter, sort=sort_order) }}" aria-label="Previous">
-                    <span aria-hidden="true">&laquo;</span>
-                </a>
-            </li>
-            {% for p in range(1, page_count + 1) %}
-                {% if p == current_page or (p <= 3 or p >= page_count - 2 or (p >= current_page - 1 and p <= current_page + 1)) %}
-                    <li class="page-item {% if p == current_page %}active{% endif %}">
-                        <a class="page-link" href="{{ url_for('conversations', page=p, source=source_filter, date=date_filter, sort=sort_order) }}">{{ p }}</a>
-                    </li>
-                {% elif p == 4 or p == page_count - 3 %}
-                    <li class="page-item disabled"><span class="page-link">...</span></li>
-                {% endif %}
-            {% endfor %}
-            <li class="page-item {% if current_page == page_count %}disabled{% endif %}">
-                <a class="page-link" href="{{ url_for('conversations', page=current_page+1, source=source_filter, date=date_filter, sort=sort_order) }}" aria-label="Next">
-                    <span aria-hidden="true">&raquo;</span>
-                </a>
-            </li>
-        </ul>
-    </nav>
+<!-- Loading indicator for lazy load -->
+<div id="loadingIndicator" style="display: none; text-align: center; padding: 2rem;">
+    <svg class="spinner" viewBox="0 0 50 50" style="width: 40px; height: 40px;">
+        <circle class="spinner-path" cx="25" cy="25" r="20" fill="none" stroke-width="5"></circle>
+    </svg>
+    <p style="margin-top: 1rem; color: hsl(var(--muted-foreground));">Loading more conversations...</p>
 </div>
-{% endif %}
+
+<!-- Intersection observer target for infinite scroll -->
+<div id="scrollSentinel" style="height: 1px;"></div>
 
 {% else %}
 <div class="empty-state">
@@ -393,8 +376,77 @@ function showNotification(message, type = 'success') {
     }, 5000);
 }
 
-// Format dates
-document.querySelectorAll('.date-to-format').forEach(element => {
+// Lazy loading / infinite scroll
+let currentPage = 1;
+let isLoading = false;
+let hasMore = true;
+
+const loadingIndicator = document.getElementById('loadingIndicator');
+const scrollSentinel = document.getElementById('scrollSentinel');
+const conversationList = document.querySelector('.conversation-list');
+
+async function loadMoreConversations() {
+    if (isLoading || !hasMore) return;
+    
+    isLoading = true;
+    loadingIndicator.style.display = 'block';
+    
+    try {
+        currentPage++;
+        const response = await fetch(`/api/conversations/list?page=${currentPage}&limit=30`);
+        const data = await response.json();
+        
+        if (data.conversations && data.conversations.length > 0) {
+            data.conversations.forEach(conv => {
+                const item = createConversationElement(conv);
+                conversationList.appendChild(item);
+            });
+            
+            // Format new dates
+            document.querySelectorAll('.date-to-format').forEach(formatDateElement);
+        }
+        
+        hasMore = data.has_more;
+        if (!hasMore) {
+            scrollSentinel.remove();
+        }
+    } catch (error) {
+        console.error('Failed to load more conversations:', error);
+        showNotification('Failed to load more conversations', 'error');
+    } finally {
+        isLoading = false;
+        loadingIndicator.style.display = 'none';
+    }
+}
+
+function createConversationElement(conv) {
+    const div = document.createElement('div');
+    div.className = 'conversation-item';
+    div.onclick = () => window.location.href = `/view/${conv.id}`;
+    
+    const badgeClass = conv.source.toLowerCase() === 'claude' ? 'badge-claude' : 
+                       conv.source.toLowerCase() === 'chatgpt' ? 'badge-chatgpt' :
+                       conv.source.toLowerCase() === 'docx' ? 'badge-word' : '';
+    const badgeText = conv.source.toLowerCase() === 'docx' ? 'Word' : 
+                     conv.source.charAt(0).toUpperCase() + conv.source.slice(1);
+    
+    div.innerHTML = `
+        <div class="conversation-item-header">
+            <h2 class="conversation-title">
+                <a href="/view/${conv.id}">${conv.title}</a>
+            </h2>
+        </div>
+        <div class="conversation-meta">
+            <span class="badge ${badgeClass}">${badgeText}</span>
+            <span class="conversation-date date-to-format">${conv.latest_ts}</span>
+        </div>
+        <div class="conversation-preview">${conv.preview}</div>
+    `;
+    
+    return div;
+}
+
+function formatDateElement(element) {
     const dateStr = element.textContent.trim();
     if (dateStr && dateStr !== 'Unknown date') {
         try {
@@ -413,7 +465,25 @@ document.querySelectorAll('.date-to-format').forEach(element => {
             console.warn('Date parsing failed:', dateStr, e);
         }
     }
-});
+}
+
+// Setup intersection observer for infinite scroll
+if (scrollSentinel && conversationList) {
+    const observer = new IntersectionObserver((entries) => {
+        entries.forEach(entry => {
+            if (entry.isIntersecting) {
+                loadMoreConversations();
+            }
+        });
+    }, {
+        rootMargin: '200px' // Start loading before reaching the bottom
+    });
+    
+    observer.observe(scrollSentinel);
+}
+
+// Format initial dates
+document.querySelectorAll('.date-to-format').forEach(formatDateElement);
 </script>
 
 <style>

@@ -48,6 +48,55 @@ class PostgresController:
                 "ids": []
             }
     
+    def get_conversations_paginated(self) -> Dict[str, Any]:
+        """
+        GET /api/conversations/list?page=1&limit=30
+        
+        Returns paginated conversations for lazy loading.
+        """
+        try:
+            page = int(request.args.get('page', 1))
+            limit = int(request.args.get('limit', 30))
+            offset = (page - 1) * limit
+            
+            # Get one extra to check if there are more
+            result = self.adapter.get_conversations_summary(limit=limit + 1, offset=offset)
+            
+            # Check if there are more items
+            has_more = len(result['documents']) > limit
+            
+            # Trim to actual limit
+            if has_more:
+                result['documents'] = result['documents'][:limit]
+                result['metadatas'] = result['metadatas'][:limit]
+                result['ids'] = result['ids'][:limit]
+            
+            return {
+                'conversations': [
+                    {
+                        'id': result['ids'][i],
+                        'title': result['metadatas'][i].get('title', 'Untitled'),
+                        'source': result['metadatas'][i].get('source', 'unknown'),
+                        'preview': result['documents'][i],
+                        'latest_ts': result['metadatas'][i].get('latest_ts', ''),
+                        'message_count': result['metadatas'][i].get('message_count', 0)
+                    }
+                    for i in range(len(result['documents']))
+                ],
+                'page': page,
+                'limit': limit,
+                'has_more': has_more
+            }
+        
+        except Exception as e:
+            logger.error(f"Failed to get conversations: {e}")
+            return {
+                "error": str(e),
+                "documents": [],
+                "metadatas": [],
+                "ids": []
+            }
+    
     def get_conversation(self, doc_id: str) -> Dict[str, Any]:
         """
         GET /api/conversation/<id>
