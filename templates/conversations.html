@@ -133,6 +133,8 @@
                 <span class="badge badge-claude">Claude</span>
             {% elif conversation.meta.source|lower == 'chatgpt' %}
                 <span class="badge badge-chatgpt">ChatGPT</span>
+            {% elif conversation.meta.source|lower == 'docx' %}
+                <span class="badge badge-word">Word</span>
             {% else %}
                 <span class="badge">{{ conversation.meta.source|capitalize }}</span>
             {% endif %}

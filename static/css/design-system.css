@@ -403,6 +403,13 @@ body {
   font-weight: 500;
 }
 
+.badge-word {
+  color: white;
+  background-color: hsl(211 100% 50%);  /* Microsoft blue */
+  border: none;
+  font-weight: 500;
+}
+
 /* Tables */
 .table {
   color: hsl(var(--foreground));

@@ -500,22 +500,93 @@ class ConversationController:
     def view_conversation_with_postgres_adapter(self, doc_id, postgres_controller):
         """View a single conversation using PostgreSQL backend"""
         try:
-            # Get conversation from PostgreSQL
-            doc_result = postgres_controller.get_conversation(doc_id)
+            from uuid import UUID
+            from db.repositories.unit_of_work import get_unit_of_work
+            import markdown
             
-            if not doc_result or not doc_result.get("documents"):
-                return "Conversation not found", 404
+            # Parse UUID
+            try:
+                conv_uuid = UUID(doc_id)
+            except ValueError:
+                return "Invalid conversation ID", 400
             
-            document = doc_result["documents"][0]
-            metadata = doc_result["metadatas"][0] if doc_result.get("metadatas") else {}
-            
-            # Format the conversation for detailed view
-            conversation, messages, assistant_name = self.view_model.format_conversation_view(document, metadata)
-            
-            return render_template("view.html", conversation=conversation, messages=messages, assistant_name=assistant_name, doc_id=doc_id)
+            # Get conversation and messages directly from database
+            with get_unit_of_work() as uow:
+                conversation = uow.conversations.get_by_id(conv_uuid)
+                if not conversation:
+                    return "Conversation not found", 404
+                
+                db_messages = uow.messages.get_by_conversation(conv_uuid)
+                if not db_messages:
+                    return "No messages found in conversation", 404
+                
+                # Sort by sequence if available in metadata, otherwise by created_at
+                db_messages.sort(key=lambda m: (
+                    m.message_metadata.get('sequence', 999999) if m.message_metadata else 999999,
+                    m.created_at
+                ))
+                
+                # Extract source from first message metadata
+                source = "unknown"
+                if db_messages and db_messages[0].message_metadata:
+                    source = db_messages[0].message_metadata.get('source', 'unknown')
+                
+                # Determine assistant name
+                if source.lower() == 'claude':
+                    assistant_name = "Claude"
+                elif source.lower() == 'chatgpt':
+                    assistant_name = "ChatGPT"
+                else:
+                    assistant_name = "Assistant"
+                
+                # Format messages for view template (convert markdown to HTML)
+                messages = []
+                for msg in db_messages:
+                    # Convert markdown content to HTML
+                    # Use 'nl2br' extension to preserve line breaks
+                    html_content = markdown.markdown(
+                        msg.content,
+                        extensions=["extra", "tables", "fenced_code", "codehilite", "nl2br"]
+                    )
+                    
+                    messages.append({
+                        "role": msg.role,
+                        "content": html_content,
+                        "timestamp": msg.created_at.strftime("%Y-%m-%d %H:%M:%S") if msg.created_at else None
+                    })
+                
+                # Build conversation metadata
+                conversation_meta = {
+                    "title": conversation.title,
+                    "source": source,
+                    "message_count": len(messages),
+                    "earliest_ts": conversation.created_at.strftime("%Y-%m-%d %H:%M:%S") if conversation.created_at else None
+                }
+                
+                conversation_obj = {"meta": conversation_meta}
+                
+                # Use document view for DOCX imports (cleaner, no role labels)
+                if source.lower() == 'docx':
+                    return render_template(
+                        "view_document.html",
+                        conversation=conversation_obj,
+                        messages=messages,
+                        doc_id=doc_id
+                    )
+                else:
+                    # Use conversation view for JSON imports (has clear roles)
+                    return render_template(
+                        "view.html",
+                        conversation=conversation_obj,
+                        messages=messages,
+                        assistant_name=assistant_name,
+                        doc_id=doc_id
+                    )
             
         except Exception as e:
             print(f"Error viewing PostgreSQL conversation: {e}")
+            import traceback
+            traceback.print_exc()
             return "Conversation not found", 404
     
     def _format_postgres_search_results(self, results):

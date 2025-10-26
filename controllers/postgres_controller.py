@@ -764,8 +764,8 @@ class PostgresController:
         import os
         
         try:
-            # Parse the DOCX file
-            messages, timestamps, title = parse_docx_file(file_path)
+            # Parse the DOCX file, passing original filename for title extraction
+            messages, timestamps, title = parse_docx_file(file_path, original_filename=filename)
             
             if not messages:
                 raise ValueError("No messages found in Word document")
@@ -792,13 +792,14 @@ class PostgresController:
                     updated_at=latest_ts
                 )
                 
-                # Create messages
-                for msg_data in messages:
-                    # Store source and filename in metadata
+                # Create messages with sequence tracking
+                for idx, msg_data in enumerate(messages):
+                    # Store source, filename, and sequence in metadata
                     metadata = {
                         'source': 'docx',
                         'filename': filename,
-                        'original_conversation_id': None  # DOCX files don't have IDs
+                        'original_conversation_id': None,  # DOCX files don't have IDs
+                        'sequence': idx  # Track message order within conversation
                     }
                     
                     uow.messages.create(

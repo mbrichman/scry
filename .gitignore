@@ -89,3 +89,4 @@ Source Files/
 *.json
 !tests/**/*.json
 !api/**/*.json
+sampe_word_docs/

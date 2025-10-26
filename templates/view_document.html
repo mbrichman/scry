@@ -1,0 +1,268 @@
+{% extends "base.html" %}
+
+{% block title %}{{ conversation.meta.title }} - Document View{% endblock %}
+
+{% block page_title %}
+<a href="/conversations" class="back-arrow">
+    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+    </svg>
+</a>
+{{ conversation.meta.title }}
+{% endblock %}
+
+{% block page_styles %}
+    .back-arrow {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 40px;
+        height: 40px;
+        margin-right: 1rem;
+        border-radius: var(--radius);
+        color: hsl(var(--muted-foreground));
+        transition: var(--transition-base);
+        text-decoration: none;
+        cursor: pointer;
+    }
+    .back-arrow:hover,
+    .back-arrow:active {
+        background-color: hsl(var(--secondary));
+        color: hsl(var(--foreground));
+    }
+    .back-arrow svg {
+        width: 24px;
+        height: 24px;
+    }
+    
+    .document-header {
+        margin-bottom: 2rem;
+        padding-bottom: 1.5rem;
+        border-bottom: 1px solid hsl(var(--border));
+    }
+    .document-title {
+        font-size: 2rem;
+        font-weight: 600;
+        color: hsl(var(--foreground));
+        margin-bottom: 0.75rem;
+        line-height: 1.3;
+    }
+    .document-metadata {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+        color: hsl(var(--muted-foreground));
+        font-size: 0.875rem;
+    }
+    .document-metadata > div {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+    
+    /* Document content - clean, readable formatting */
+    .document-content {
+        max-width: 800px;
+        margin: 0 auto;
+        padding: 2rem;
+        background: white;
+        border-radius: var(--radius);
+        border: 1px solid hsl(var(--border));
+        line-height: 1.8;
+        font-size: 1rem;
+    }
+    
+    .document-section {
+        margin-bottom: 1.5rem;
+        padding-bottom: 1.5rem;
+        border-bottom: 1px solid hsl(var(--border) / 0.3);
+    }
+    
+    .document-section:last-child {
+        border-bottom: none;
+        margin-bottom: 0;
+        padding-bottom: 0;
+    }
+    
+    /* Typography */
+    .document-content h1 {
+        font-size: 1.75rem;
+        font-weight: 700;
+        margin-top: 2rem;
+        margin-bottom: 1rem;
+        line-height: 1.2;
+    }
+    .document-content h2 {
+        font-size: 1.5rem;
+        font-weight: 600;
+        margin-top: 1.75rem;
+        margin-bottom: 0.875rem;
+        line-height: 1.3;
+    }
+    .document-content h3 {
+        font-size: 1.25rem;
+        font-weight: 600;
+        margin-top: 1.5rem;
+        margin-bottom: 0.75rem;
+        line-height: 1.3;
+    }
+    .document-content p {
+        margin-bottom: 1rem;
+    }
+    .document-content ul, .document-content ol {
+        margin-bottom: 1rem;
+        padding-left: 2rem;
+    }
+    .document-content li {
+        margin-bottom: 0.5rem;
+    }
+    .document-content pre {
+        background-color: hsl(var(--secondary));
+        padding: 1rem;
+        border-radius: var(--radius);
+        overflow-x: auto;
+        margin-bottom: 1rem;
+        border: 1px solid hsl(var(--border));
+    }
+    .document-content code {
+        padding: 0.2rem 0.4rem;
+        background-color: hsl(var(--secondary));
+        border-radius: 0.25rem;
+        font-size: 0.875em;
+    }
+    .document-content blockquote {
+        padding: 0.5rem 1rem;
+        margin: 1rem 0;
+        border-left: 4px solid hsl(var(--border));
+        color: hsl(var(--muted-foreground));
+        font-style: italic;
+    }
+    .document-content table {
+        width: 100%;
+        margin-bottom: 1rem;
+        border-collapse: collapse;
+    }
+    .document-content th,
+    .document-content td {
+        padding: 0.75rem;
+        border: 1px solid hsl(var(--border));
+        text-align: left;
+    }
+    .document-content th {
+        background-color: hsl(var(--secondary));
+        font-weight: 600;
+    }
+    
+    .action-buttons {
+        margin-top: 2rem;
+        display: flex;
+        gap: 0.75rem;
+        flex-wrap: wrap;
+        justify-content: center;
+    }
+    .copy-button {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        padding: 0.625rem 1.25rem;
+        background-color: hsl(var(--secondary));
+        border: 1px solid hsl(var(--border));
+        color: hsl(var(--foreground));
+        border-radius: var(--radius);
+        font-size: 0.875rem;
+        font-weight: 500;
+        cursor: pointer;
+        transition: var(--transition-base);
+    }
+    .copy-button:hover {
+        background-color: hsl(var(--secondary) / 0.8);
+    }
+    .copy-button svg {
+        width: 16px;
+        height: 16px;
+    }
+    
+    @media (max-width: 768px) {
+        .document-content {
+            padding: 1rem;
+        }
+        .document-title {
+            font-size: 1.5rem;
+        }
+    }
+{% endblock %}
+
+{% block content %}
+<div class="document-header">
+    <div class="d-flex align-items-start justify-content-between mb-3">
+        <h1 class="document-title">{{ conversation.meta.title }}</h1>
+        <button class="copy-button" onclick="copyDocumentContent()">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+            </svg>
+            Copy
+        </button>
+    </div>
+    <div class="document-metadata">
+        <div><strong>Source:</strong> Word Document</div>
+        {% if conversation.meta.earliest_ts %}
+            <div><strong>Date:</strong> {{ conversation.meta.earliest_ts }}</div>
+        {% endif %}
+        <div><strong>Sections:</strong> {{ messages|length }}</div>
+    </div>
+</div>
+
+<div class="document-content" id="documentContent">
+    {% for message in messages %}
+        <div class="document-section">
+            {{ message.content|safe }}
+        </div>
+    {% endfor %}
+</div>
+
+<div class="action-buttons">
+    <a href="/conversations" class="btn btn-secondary">Back to Conversations</a>
+    {% if doc_id %}
+        <a href="/export/{{ doc_id }}" class="btn btn-secondary">Export as Markdown</a>
+    {% endif %}
+</div>
+
+<!-- Copy success notification -->
+<div id="copySuccess" style="display: none; position: fixed; top: 20px; right: 20px; padding: 10px 20px; background-color: #28a745; color: white; border-radius: 4px; z-index: 1000; box-shadow: 0 2px 5px rgba(0,0,0,0.2);"></div>
+{% endblock %}
+
+{% block page_scripts %}
+<script>
+    function copyDocumentContent() {
+        const content = document.getElementById('documentContent');
+        const title = document.querySelector('.document-title').textContent;
+        
+        // Convert HTML to plain text
+        let text = `${title}\n${'='.repeat(title.length)}\n\n`;
+        
+        const sections = content.querySelectorAll('.document-section');
+        sections.forEach((section, index) => {
+            text += section.innerText + '\n\n';
+        });
+        
+        // Copy to clipboard
+        navigator.clipboard.writeText(text).then(() => {
+            showSuccessMessage('Document copied to clipboard!');
+        }).catch(err => {
+            console.error('Failed to copy:', err);
+            showSuccessMessage('Failed to copy to clipboard', true);
+        });
+    }
+    
+    function showSuccessMessage(message, isError = false) {
+        const successDiv = document.getElementById('copySuccess');
+        successDiv.textContent = message;
+        successDiv.style.backgroundColor = isError ? '#dc3545' : '#28a745';
+        successDiv.style.display = 'block';
+        
+        setTimeout(() => {
+            successDiv.style.display = 'none';
+        }, 3000);
+    }
+</script>
+{% endblock %}
