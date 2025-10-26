@@ -83,12 +83,19 @@ class PostgresController:
                 return {"error": "No query provided"}
             
             n_results = int(request.args.get("n", 5))
+            
+            # Get search type from parameters (new way) or keyword flag (legacy way)
+            search_type = request.args.get("search_type", "auto")
             keyword = request.args.get("keyword", "false").lower() == "true"
             
-            # Use SearchService based on keyword flag
-            if keyword:
+            # Use SearchService based on search type
+            if search_type in ("fts", "keyword") or keyword:
                 results = self.adapter.search_service.search_fts_only(query, limit=n_results)
-            else:
+            elif search_type == "semantic":
+                results = self.adapter.search_service.search_vector_only(query, limit=n_results)
+            elif search_type == "hybrid":
+                results = self.adapter.search_service.search(query, limit=n_results)
+            else:  # auto
                 # Auto mode: hybrid if available, otherwise FTS
                 stats = self.adapter.search_service.get_search_stats()
                 if stats["hybrid_search_available"]:

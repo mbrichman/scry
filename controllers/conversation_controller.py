@@ -448,6 +448,14 @@ class ConversationController:
                 new_args['q'] = query
                 new_args['n'] = '20'  # Number of results
                 
+                # Get search_type from form if POST, otherwise from URL args
+                if request.method == "POST" and search_form.search_type.data:
+                    search_type = search_form.search_type.data
+                else:
+                    search_type = request.args.get('search_type', 'auto')
+                
+                new_args['search_type'] = search_type
+                
                 # Temporarily replace request.args
                 request.args = ImmutableMultiDict(new_args)
                 
