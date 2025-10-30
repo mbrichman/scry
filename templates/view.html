@@ -80,6 +80,35 @@ View Conversation
         align-items: center;
         border-bottom: 1px solid hsl(var(--border));
     }
+    .message-header-left {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+    }
+    .copy-message-btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 28px;
+        height: 28px;
+        padding: 0;
+        background-color: transparent;
+        border: 1px solid hsl(var(--border));
+        border-radius: var(--radius);
+        color: hsl(var(--muted-foreground));
+        cursor: pointer;
+        transition: var(--transition-base);
+        opacity: 0.7;
+    }
+    .copy-message-btn:hover {
+        opacity: 1;
+        background-color: hsl(var(--secondary));
+        color: hsl(var(--foreground));
+    }
+    .copy-message-btn svg {
+        width: 16px;
+        height: 16px;
+    }
     .message-body {
         padding: 1.25rem;
         line-height: 1.7;
@@ -279,7 +308,11 @@ View Conversation
             padding: 0.75rem 1rem;
             flex-direction: column;
             align-items: flex-start;
-            gap: 0.25rem;
+            gap: 0.5rem;
+        }
+        .message-header-left {
+            width: 100%;
+            justify-content: space-between;
         }
         .message-body {
             padding: 1rem;
@@ -410,14 +443,21 @@ View Conversation
     {% for message in messages %}
         <div class="message {{ message.role }}-message">
             <div class="message-header">
-                <div class="role-name">
-                    {% if message.role == 'user' %}
-                        You
-                    {% elif message.role == 'assistant' %}
-                        {{ assistant_name }}
-                    {% else %}
-                        {{ message.role|capitalize }}
-                    {% endif %}
+                <div class="message-header-left">
+                    <div class="role-name">
+                        {% if message.role == 'user' %}
+                            You
+                        {% elif message.role == 'assistant' %}
+                            {{ assistant_name }}
+                        {% else %}
+                            {{ message.role|capitalize }}
+                        {% endif %}
+                    </div>
+                    <button class="copy-message-btn" onclick="copyMessageContent(this)" aria-label="Copy message" title="Copy message">
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                        </svg>
+                    </button>
                 </div>
                 {% if message.timestamp %}
                     <div class="timestamp date-to-format">{{ message.timestamp }}</div>
@@ -837,6 +877,57 @@ View Conversation
                 copySuccess.style.backgroundColor = '#28a745';
             }, 5000);
         }
+    }
+    
+    // Copy individual message content
+    function copyMessageContent(button) {
+        // Find the message container
+        const messageDiv = button.closest('.message');
+        if (!messageDiv) return;
+        
+        // Get the message content element
+        const contentElement = messageDiv.querySelector('.message-content');
+        if (!contentElement) return;
+        
+        // Clone and convert to markdown
+        const clonedContent = contentElement.cloneNode(true);
+        const markdown = htmlToMarkdown(clonedContent);
+        
+        // Function to copy text
+        function copyText(text) {
+            // Try modern clipboard API first
+            if (navigator.clipboard && window.isSecureContext) {
+                return navigator.clipboard.writeText(text).then(() => true).catch(() => false);
+            } else {
+                // Fallback method
+                const textArea = document.createElement('textarea');
+                textArea.value = text;
+                textArea.style.position = 'fixed';
+                textArea.style.left = '-999999px';
+                textArea.style.top = '-999999px';
+                document.body.appendChild(textArea);
+                textArea.focus();
+                textArea.select();
+                
+                try {
+                    const successful = document.execCommand('copy');
+                    document.body.removeChild(textArea);
+                    return Promise.resolve(successful);
+                } catch (err) {
+                    document.body.removeChild(textArea);
+                    return Promise.resolve(false);
+                }
+            }
+        }
+        
+        // Copy the text and show feedback
+        copyText(markdown).then(success => {
+            if (success) {
+                showNotification('Message copied to clipboard!');
+            } else {
+                showNotification('Failed to copy message', 'error');
+            }
+        });
     }
 </script>
 {% endblock %}
