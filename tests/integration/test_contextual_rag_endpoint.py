@@ -4,9 +4,30 @@ Integration tests for contextual RAG endpoint.
 Tests the /api/rag/query endpoint with contextual window expansion.
 """
 import pytest
+import os
 from datetime import datetime, timezone, timedelta
+from flask import Flask
+from flask.testing import FlaskClient
 
+from app import create_app
 from tests.utils.seed import seed_conversation_with_messages
+
+
+@pytest.fixture(scope="module")
+def app_postgres() -> Flask:
+    """Flask app configured for PostgreSQL mode."""
+    app = create_app()
+    app.config.update({
+        "TESTING": True,
+        "USE_PG_SINGLE_STORE": True
+    })
+    return app
+
+
+@pytest.fixture(scope="module")
+def client(app_postgres) -> FlaskClient:
+    """Test client with PostgreSQL mode enabled."""
+    return app_postgres.test_client()
 
 
 @pytest.mark.integration

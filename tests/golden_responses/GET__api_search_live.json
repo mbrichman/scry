@@ -98,6 +98,22 @@
       "title": "Writing programs in assembly language"
     },
     {
+      "content": "No one knows how the python interpreter actually works. We know how to write python. Same thing. Way more efficient.",
+      "date": "2025-11-04T22:06:58.379507-06:00",
+      "metadata": {
+        "conversation_id": "526645af-79cc-4f33-9cd5-2eba5c4554b7",
+        "earliest_ts": "2025-11-04T22:06:58.379507-06:00",
+        "id": "526645af-79cc-4f33-9cd5-2eba5c4554b7",
+        "latest_ts": "2025-11-04T22:06:58.379507-06:00",
+        "message_count": 1,
+        "message_id": "edc3313f-1b9f-426d-aacf-084b1a00b6d8",
+        "role": "user",
+        "source": "claude",
+        "title": "Writing programs in assembly language"
+      },
+      "title": "Writing programs in assembly language"
+    },
+    {
       "content": "I think about this in programming too. Python vs Ruby.",
       "date": "2025-10-18T18:12:43.812863-05:00",
       "metadata": {
@@ -130,36 +146,20 @@
       "title": "\ud83d\udcbb Sovereign AI Models"
     },
     {
-      "content": "Can use ruby instead of python",
-      "date": "2025-02-26T22:54:13.298342-06:00",
+      "content": "I mean AI writing python is just fucking stupid",
+      "date": "2025-11-05T02:08:45.264861-06:00",
       "metadata": {
-        "conversation_id": "52f9b1fc-8959-4662-9228-9f1798879e09",
-        "earliest_ts": "2025-02-26T22:54:13.298342-06:00",
-        "id": "52f9b1fc-8959-4662-9228-9f1798879e09",
-        "latest_ts": "2025-02-26T22:54:13.298342-06:00",
+        "conversation_id": "c7cf5770-1d64-4f72-b627-7699cb8ca70f",
+        "earliest_ts": "2025-11-05T02:08:45.264861-06:00",
+        "id": "c7cf5770-1d64-4f72-b627-7699cb8ca70f",
+        "latest_ts": "2025-11-05T02:08:45.264861-06:00",
         "message_count": 1,
-        "message_id": "6b76413c-f53d-4ae6-9d85-cf4141c84746",
+        "message_id": "921bf191-d441-49d2-94ae-c3a6ffa50e0e",
         "role": "user",
-        "source": "chatgpt",
-        "title": "Postgres Data Export Methods"
+        "source": "claude",
+        "title": "HTTP protocol on circuit boards"
       },
-      "title": "Postgres Data Export Methods"
-    },
-    {
-      "content": " **EXACTLY. That's the answer.**\n## The Reframe\n\"If you can't write assembly yourself, you're dependent on AI\"\n\"Can you understand and work with the OUTPUT, even if you can't generate it from scratch?\"\n## The Python Interpreter Parallel\n- 400,000+ lines of C\n- Garbage collector internals\n- JIT compi...",
-      "date": "2025-11-04T20:38:38-06:00",
-      "metadata": {
-        "conversation_id": "5d98bb82-cd5e-4733-888d-d2a99ae43da8",
-        "earliest_ts": "2025-11-04T20:38:38-06:00",
-        "id": "5d98bb82-cd5e-4733-888d-d2a99ae43da8",
-        "latest_ts": "2025-11-04T20:38:38-06:00",
-        "message_count": 1,
-        "message_id": "dcc57025-f46d-474c-8d25-e92b3969239e",
-        "role": "assistant",
-        "source": "openwebui",
-        "title": "Writing programs in assembly language"
-      },
-      "title": "Writing programs in assembly language"
+      "title": "HTTP protocol on circuit boards"
     }
   ]
 }

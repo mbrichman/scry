@@ -182,7 +182,14 @@ def init_routes(app):
             
             # Check if contextual retrieval is requested (new behavior)
             context_window = data.get('context_window')
-            use_contextual = context_window is not None or data.get('use_contextual', False)
+            asymmetric_before = data.get('asymmetric_before')
+            asymmetric_after = data.get('asymmetric_after')
+            use_contextual = (
+                context_window is not None or 
+                asymmetric_before is not None or 
+                asymmetric_after is not None or 
+                data.get('use_contextual', False)
+            )
             
             if use_postgres and use_contextual:
                 # New contextual retrieval with window expansion
@@ -203,8 +210,7 @@ def init_routes(app):
                 top_k_windows = min(data.get('n_results', RAG_DEFAULT_TOP_K_WINDOWS), RAG_DEFAULT_TOP_K_WINDOWS * 2)
                 context_window = min(context_window or RAG_DEFAULT_WINDOW_SIZE, RAG_MAX_WINDOW_SIZE)
                 adaptive_context = data.get('adaptive_context', RAG_ADAPTIVE_WINDOWING)
-                asymmetric_before = data.get('asymmetric_before')
-                asymmetric_after = data.get('asymmetric_after')
+                # asymmetric_before and asymmetric_after already extracted above
                 deduplicate = data.get('deduplicate', RAG_DEDUPLICATE_MESSAGES)
                 max_tokens = data.get('max_tokens', RAG_DEFAULT_MAX_TOKENS)
                 include_markers = data.get('include_markers', True)
