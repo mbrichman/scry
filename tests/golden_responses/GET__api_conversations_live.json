@@ -1,5 +1,7 @@
 {
   "documents": [
+    "Testing concurrent embedding workers.",
+    "This conversation is for testing the embedding worker.",
     "This is a test message from the repository pattern.",
     "No messages yet.",
     "This is a test message for the outbox pattern.",
@@ -3379,6 +3381,8 @@
     "what do you know about me"
   ],
   "ids": [
+    "6bdd29d2-8fc1-4801-99e9-89bea9282709",
+    "68ec241f-2941-4dfc-9f2a-424dbef8b88e",
     "528d8190-1faf-40bf-ba04-17b0287d1ef7",
     "91c69027-fc8a-40cb-ab43-1a9656860b93",
     "a152981e-17a4-47fa-bf99-354cc1def119",
@@ -6758,6 +6762,26 @@
     "3db6e49f-71b7-4a8e-91c8-a4933c92d586"
   ],
   "metadatas": [
+    {
+      "conversation_id": "6bdd29d2-8fc1-4801-99e9-89bea9282709",
+      "earliest_ts": "2025-11-24T04:51:33.322979-06:00",
+      "id": "6bdd29d2-8fc1-4801-99e9-89bea9282709",
+      "is_chunk": false,
+      "latest_ts": "2025-11-24T04:51:33.379033-06:00",
+      "message_count": 11,
+      "source": "unknown",
+      "title": "Concurrent Worker Test"
+    },
+    {
+      "conversation_id": "68ec241f-2941-4dfc-9f2a-424dbef8b88e",
+      "earliest_ts": "2025-11-24T04:51:21.967309-06:00",
+      "id": "68ec241f-2941-4dfc-9f2a-424dbef8b88e",
+      "is_chunk": false,
+      "latest_ts": "2025-11-24T04:51:22.069419-06:00",
+      "message_count": 6,
+      "source": "unknown",
+      "title": "Embedding Worker Test"
+    },
     {
       "conversation_id": "528d8190-1faf-40bf-ba04-17b0287d1ef7",
       "earliest_ts": "2025-11-24T04:43:14.550322-06:00",

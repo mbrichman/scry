@@ -114,6 +114,22 @@
       "title": "Exploring identity and idempotency"
     },
     {
+      "content": "Python and javascript",
+      "date": "2025-10-04T17:03:36-05:00",
+      "metadata": {
+        "conversation_id": "1c0fa617-4859-499f-969c-f84e9c137a01",
+        "earliest_ts": "2025-10-04T17:03:36-05:00",
+        "id": "1c0fa617-4859-499f-969c-f84e9c137a01",
+        "latest_ts": "2025-10-04T17:03:36-05:00",
+        "message_count": 1,
+        "message_id": "0408ec50-4abc-4dcd-bfcf-e7179515c5f0",
+        "role": "user",
+        "source": "openwebui",
+        "title": "\ud83d\udcbb Sovereign AI Models"
+      },
+      "title": "\ud83d\udcbb Sovereign AI Models"
+    },
+    {
       "content": "Can use ruby instead of python",
       "date": "2025-02-26T22:54:13.298342-06:00",
       "metadata": {
@@ -144,22 +160,6 @@
         "title": "Writing programs in assembly language"
       },
       "title": "Writing programs in assembly language"
-    },
-    {
-      "content": "I also bristle at python's only one way to do something rigidity",
-      "date": "2025-09-18T23:13:35.078005-05:00",
-      "metadata": {
-        "conversation_id": "0039b338-54dd-4c97-b55a-e06f725de7f7",
-        "earliest_ts": "2025-09-18T23:13:35.078005-05:00",
-        "id": "0039b338-54dd-4c97-b55a-e06f725de7f7",
-        "latest_ts": "2025-09-18T23:13:35.078005-05:00",
-        "message_count": 1,
-        "message_id": "329daaf4-0632-4217-98c6-89068a46a1a9",
-        "role": "user",
-        "source": "claude",
-        "title": "Best programming language for most tasks"
-      },
-      "title": "Best programming language for most tasks"
     }
   ]
 }

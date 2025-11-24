@@ -42,64 +42,64 @@
       "title": "Install Python on M3"
     },
     {
-      "content": " ```python\n# 1_crawl_all.py\nimport requests\nimport json\nfrom datetime import datetime\n# HARDCODED CONFIG\nTOKEN = \"H1qQ0oLO-NUfbWp41TLqsGs6rRW6vMMUQzim-cPtjV0\"\nCUSTOMER_ID = \"188\"\nLIBRARY = \"chicagoactive\"\nBASE_URL = \"https://cloudimanage.com/work/api/v2\"\ndef crawl_library():\n    \"\"\"Crawl entire library using pagination.\"\"\"\n    all_docs = []\n    cursor = None\n    page = 1\n    while True:\n        print(f\"\ud83d\udce5 Page {page}...\", end=\" \")\n        # Build request payload\n        payload = {\"limit\": 1000}\n        if cursor:\n            payload[\"cursor\"] = cursor\n        # Make request\n        response = requests.post(\n            f\"{BASE_URL}/customers/{CUSTOMER_ID}/libraries/{LIBRARY}/sync/documents/crawl\",\n            json=payload,\n            headers={\n                \"Content-Type\": \"application/json\",\n                \"X-Auth-Token\": TOKEN\n            }\n        )\n        # Check for errors\n        if response.status_code != 200:\n            print(f\"\\n\u274c Error: {response.status_code}\")\n            print(f\"Response: {response.text}\")\n            break\n        # Parse response\n        data = response.json()\n        docs = data.get('data', [])\n        all_docs.extend(docs)\n        print(f\"\u2705 Got {len(docs)} docs (Total: {len(all_docs)})\")\n        # Check for more pages\n        cursor = data.get('cursor')\n        if not cursor:\n            print(f\"\\n\ud83c\udfc1 Complete: {len(all_docs)} documents\")\n            break\n        page += 1\n    return all_docs\n# Main execution\nprint(\"\ud83d\ude80 Starting crawl of chicagoactive library...\\n\")\ntry:\n    documents = crawl_library()\n    # Save with timestamp\n    timestamp = datetime.now().strftime(\"%Y%m%d_%H%M%S\")\n    filename = f\"imanage_crawl_{timestamp}.json\"\n    with open(filename, 'w') as f:\n        json.dump(documents, f, indent=2)\n    print(f\"\\n\ud83d\udcbe Saved to {filename}\")\n    print(f\"\ud83d\udcc8 File size: {len(json.dumps(documents)) / 1024 / 1024:.2f} MB\")\n    print(f\"\ud83d\udcca Total documents: {len(documents)}\")\n    # Print sample doc structure\n    if documents:\n        print(\"\\n\ud83d\udccb Sample document structure:\")\n        print(json.dumps(documents[0], indent=2)[:500] + \"...\")\nexcept Exception as e:\n    print(f\"\\n\u274c Error: {e}\")\n    import traceback\n    traceback.print_exc()\n```\nCommon issues:\n- Token expired? (try regenerating)\n- Library name wrong? (case sensitive: \"chicagoactive\" vs \"ChicagoActive\")\n- Permission issue? (did the god-mode permission actually get applied?)\n- Rate limiting?",
-      "distance": 0.48466042141304944,
-      "id": "a00541ea-8870-4c64-9be6-130dce1d8cae",
+      "content": "Python and javascript",
+      "distance": 0.4537766089971843,
+      "id": "1c0fa617-4859-499f-969c-f84e9c137a01",
       "metadata": {
-        "conversation_id": "a00541ea-8870-4c64-9be6-130dce1d8cae",
-        "earliest_ts": "2025-10-03T15:30:03.534888-05:00",
-        "id": "a00541ea-8870-4c64-9be6-130dce1d8cae",
-        "latest_ts": "2025-10-03T15:30:03.534888-05:00",
+        "conversation_id": "1c0fa617-4859-499f-969c-f84e9c137a01",
+        "earliest_ts": "2025-10-04T17:03:36-05:00",
+        "id": "1c0fa617-4859-499f-969c-f84e9c137a01",
+        "latest_ts": "2025-10-04T17:03:36-05:00",
         "message_count": 1,
-        "message_id": "1df11085-cc68-4d88-a209-62525248a5c5",
+        "message_id": "0408ec50-4abc-4dcd-bfcf-e7179515c5f0",
+        "role": "user",
+        "source": "postgres",
+        "title": "\ud83d\udcbb Sovereign AI Models"
+      },
+      "preview": "Python and javascript",
+      "relevance": 0.5462233910028157,
+      "source": "postgres",
+      "title": "\ud83d\udcbb Sovereign AI Models"
+    },
+    {
+      "content": "```python\n# 1_crawl_all.py\nimport requests\nimport json\nfrom datetime import datetime\n# HARDCODED CONFIG\nTOKEN = \"H1qQ0oLO-NUfbWp41TLqsGs6rRW6vMMUQzim-cPtjV0\"\nCUSTOMER_ID = \"188\"\nLIBRARY = \"chicagoactive\"\nBASE_URL = \"https://cloudimanage.com/work/api/v2\"\ndef crawl_library():\n\"\"\"Crawl entire library using pagination.\"\"\"\nall_docs = []\ncursor = None\npage = 1\nwhile True:\nprint(f\"\ud83d\udce5 Page {page}...\", end=\" \")\n# Build request payload\npayload = {\"limit\": 1000}\nif cursor:\npayload[\"cursor\"] = cursor\n# Make request\nresponse = requests.post(\nf\"{BASE_URL}/customers/{CUSTOMER_ID}/libraries/{LIBRARY}/sync/documents/crawl\",\njson=payload,\nheaders={\n\"Content-Type\": \"application/json\",\n\"X-Auth-Token\": TOKEN\n}\n)\n# Check for errors\nif response.status_code != 200:\nprint(f\"\\n\u274c Error: {response.status_code}\")\nprint(f\"Response: {response.text}\")\nbreak\n# Parse response\ndata = response.json()\ndocs = data.get('data', [])\nall_docs.extend(docs)\nprint(f\"\u2705 Got {len(docs)} docs (Total: {len(all_docs)})\")\n# Check for more pages\ncursor = data.get('cursor')\nif not cursor:\nprint(f\"\\n\ud83c\udfc1 Complete: {len(all_docs)} documents\")\nbreak\npage += 1\nreturn all_docs\n# Main execution\nprint(\"\ud83d\ude80 Starting crawl of chicagoactive library...\\n\")\ntry:\ndocuments = crawl_library()\n# Save with timestamp\ntimestamp = datetime.now().strftime(\"%Y%m%d_%H%M%S\")\nfilename = f\"imanage_crawl_{timestamp}.json\"\nwith open(filename, 'w') as f:\njson.dump(documents, f, indent=2)\nprint(f\"\\n\ud83d\udcbe Saved to {filename}\")\nprint(f\"\ud83d\udcc8 File size: {len(json.dumps(documents)) / 1024 / 1024:.2f} MB\")\nprint(f\"\ud83d\udcca Total documents: {len(documents)}\")\n# Print sample doc structure\nif documents:\nprint(\"\\n\ud83d\udccb Sample document structure:\")\nprint(json.dumps(documents[0], indent=2)[:500] + \"...\")\nexcept Exception as e:\nprint(f\"\\n\u274c Error: {e}\")\nimport traceback\ntraceback.print_exc()\n```\nCommon issues:\n- Token expired? (try regenerating)\n- Library name wrong? (case sensitive: \"chicagoactive\" vs \"ChicagoActive\")\n- Permission issue? (did the god-mode permission actually get applied?)\n- Rate limiting?",
+      "distance": 0.4846604023974499,
+      "id": "b2689afa-1fa0-4ccc-8467-ed5d139a64df",
+      "metadata": {
+        "conversation_id": "b2689afa-1fa0-4ccc-8467-ed5d139a64df",
+        "earliest_ts": "2025-10-03T21:30:03-05:00",
+        "id": "b2689afa-1fa0-4ccc-8467-ed5d139a64df",
+        "latest_ts": "2025-10-03T21:30:03-05:00",
+        "message_count": 1,
+        "message_id": "3b550b08-ac60-4f21-9ba7-dbed41788564",
         "role": "assistant",
         "source": "postgres",
         "title": "Imanage MCP server integration"
       },
-      "preview": " ```python\n# 1_crawl_all.py\nimport requests\nimport json\nfrom datetime import datetime\n# HARDCODED CONFIG\nTOKEN = \"H1qQ0oLO-NUfbWp41TLqsGs6rRW6vMMUQzim-cPtjV0\"\nCUSTOMER_ID = \"188\"\nLIBRARY = \"chicagoactive\"\nBASE_URL = \"https://cloudimanage.com/work/api/v2\"\ndef crawl_library():\n    \"\"\"Crawl entire library using pagination.\"\"\"\n    all_docs = []\n    cursor = None\n    page = 1\n    while True:\n        print(f\"\ud83d\udce5 Page {page}...\", end=\" \")\n        # Build request payload\n        payload = {\"limit\": 1000}\n...",
-      "relevance": 0.5153395785869506,
+      "preview": "```python\n# 1_crawl_all.py\nimport requests\nimport json\nfrom datetime import datetime\n# HARDCODED CONFIG\nTOKEN = \"H1qQ0oLO-NUfbWp41TLqsGs6rRW6vMMUQzim-cPtjV0\"\nCUSTOMER_ID = \"188\"\nLIBRARY = \"chicagoactive\"\nBASE_URL = \"https://cloudimanage.com/work/api/v2\"\ndef crawl_library():\n\"\"\"Crawl entire library using pagination.\"\"\"\nall_docs = []\ncursor = None\npage = 1\nwhile True:\nprint(f\"\ud83d\udce5 Page {page}...\", end=\" \")\n# Build request payload\npayload = {\"limit\": 1000}\nif cursor:\npayload[\"cursor\"] = cursor\n# Make ...",
+      "relevance": 0.5153395976025501,
       "source": "postgres",
       "title": "Imanage MCP server integration"
     },
     {
-      "content": " That error is from OpenWebUI trying to load your Function. OpenWebUI expects a specific class structure.\nHere's the corrected version:\n```python\n\"\"\"\ntitle: DovOS Corpus Query\nauthor: Dov\nversion: 0.1.0\nrequired_open_webui_version: 0.3.9\n\"\"\"\nimport requests\nfrom typing import Optional, Callable, Awaitable\nfrom pydantic import BaseModel, Field\nclass Tools:\n    def __init__(self):\n        self.valves = self.Valves()\n    class Valves(BaseModel):\n        RAG_API_URL: str = Field(\n            default=\"http://localhost:9000\",\n            description=\"Base URL for your RAG API service\"\n        )\n        DEFAULT_RESULTS: int = Field(\n            default=3,\n            description=\"Number of results to retrieve\"\n        )\n    def query_corpus(\n        self, \n        query: str,\n        __user__: dict = {},\n        __event_emitter__: Callable[[dict], Awaitable[None]] = None\n    ) -> str:\n        \"\"\"\n        Query your DovOS corpus for relevant past conversations and context.\n        Use this when you need to search through your conversation history.\n        :param query: The search query to find relevant content in your corpus\n        :return: Formatted results from your corpus\n        \"\"\"\n        try:\n            response = requests.post(\n                f\"{self.valves.RAG_API_URL}/rag/search\",\n                json={\n                    \"query\": query,\n                    \"n_results\": self.valves.DEFAULT_RESULTS,\n                    \"semantic_weight\": 0.7\n                },\n                timeout=10\n            )\n            if response.status_code == 200:\n                data = response.json()\n                results = data.get(\"results\", [])\n                if not results:\n                    return f\"No results found in corpus for: '{query}'\"\n                # Format results\n                formatted = [f\"Found {len(results)} results for '{query}':\\n\"]\n                for i, result in enumerate(results, 1):\n                    meta = result.get(\"metadata\", {})\n                    score = result.get(\"combined_score\", 0)\n                    preview = result.get(\"preview\", \"\")\n                    formatted.append(f\"\"\"\n- Source: {meta.get('source', 'Unknown')}\n- Date: {meta.get('create_time', 'Unknown')}\n{preview}\n---\n\"\"\")\n                return \"\\n\".join(formatted)\n            else:\n                return f\"Error querying corpus: HTTP {response.status_code}\"\n        except Exception as e:\n            return f\"Error querying corpus: {str(e)}\"\n```\n1. Class must be named `Tools` (not `Filter`)\n2. Each method becomes a callable tool\n3. Use `__user__` and `__event_emitter__` parameters for OpenWebUI integration\n4. Return a string that becomes the tool's output\n1. OpenWebUI \u2192 Workspace \u2192 Tools\n2. Click \"+\" \n3. Paste the code above\n4. Save\n5. Configure the RAG_API_URL in Valves if needed\nJust ask naturally and OpenWebUI will offer to call the tool:\n```\nUser: Search my corpus for conversations about attachment patterns\n[OpenWebUI will show: \"Use query_corpus tool?\"]\n```\nOr the LLM will automatically decide to call it when relevant.\n- **Tools**: Explicit, LLM decides when to search corpus\n- **Filter**: Automatic, injects context before LLM sees the message",
-      "distance": 0.5263846390797429,
-      "id": "48d60430-2d69-4083-a2fe-188ed6f613cc",
+      "content": "```python\n# 1_crawl_all.py\nimport requests\nimport json\nfrom datetime import datetime\n# HARDCODED CONFIG\nTOKEN = \"H1qQ0oLO-NUfbWp41TLqsGs6rRW6vMMUQzim-cPtjV0\"\nCUSTOMER_ID = \"188\"\nLIBRARY = \"chicagoactive\"\nBASE_URL = \"https://cloudimanage.com/work/api/v2\"\ndef crawl_library():\n\"\"\"Crawl entire library using pagination.\"\"\"\nall_docs = []\ncursor = None\npage = 1\nwhile True:\nprint(f\"\ud83d\udce5 Page {page}...\", end=\" \")\n# Build request payload\npayload = {\"limit\": 1000}\nif cursor:\npayload[\"cursor\"] = cursor\n# Make request\nresponse = requests.post(\nf\"{BASE_URL}/customers/{CUSTOMER_ID}/libraries/{LIBRARY}/sync/documents/crawl\",\njson=payload,\nheaders={\n\"Content-Type\": \"application/json\",\n\"X-Auth-Token\": TOKEN\n}\n)\n# Check for errors\nif response.status_code != 200:\nprint(f\"\\n\u274c Error: {response.status_code}\")\nprint(f\"Response: {response.text}\")\nbreak\n# Parse response\ndata = response.json()\ndocs = data.get('data', [])\nall_docs.extend(docs)\nprint(f\"\u2705 Got {len(docs)} docs (Total: {len(all_docs)})\")\n# Check for more pages\ncursor = data.get('cursor')\nif not cursor:\nprint(f\"\\n\ud83c\udfc1 Complete: {len(all_docs)} documents\")\nbreak\npage += 1\nreturn all_docs\n# Main execution\nprint(\"\ud83d\ude80 Starting crawl of chicagoactive library...\\n\")\ntry:\ndocuments = crawl_library()\n# Save with timestamp\ntimestamp = datetime.now().strftime(\"%Y%m%d_%H%M%S\")\nfilename = f\"imanage_crawl_{timestamp}.json\"\nwith open(filename, 'w') as f:\njson.dump(documents, f, indent=2)\nprint(f\"\\n\ud83d\udcbe Saved to {filename}\")\nprint(f\"\ud83d\udcc8 File size: {len(json.dumps(documents)) / 1024 / 1024:.2f} MB\")\nprint(f\"\ud83d\udcca Total documents: {len(documents)}\")\n# Print sample doc structure\nif documents:\nprint(\"\\n\ud83d\udccb Sample document structure:\")\nprint(json.dumps(documents[0], indent=2)[:500] + \"...\")\nexcept Exception as e:\nprint(f\"\\n\u274c Error: {e}\")\nimport traceback\ntraceback.print_exc()\n```\nCommon issues:\n- Token expired? (try regenerating)\n- Library name wrong? (case sensitive: \"chicagoactive\" vs \"ChicagoActive\")\n- Permission issue? (did the god-mode permission actually get applied?)\n- Rate limiting?",
+      "distance": 0.4846604023974499,
+      "id": "b694421d-d095-4f33-b317-bad7c884b5fa",
       "metadata": {
-        "conversation_id": "48d60430-2d69-4083-a2fe-188ed6f613cc",
-        "earliest_ts": "2025-10-05T22:45:38.211672-05:00",
-        "id": "48d60430-2d69-4083-a2fe-188ed6f613cc",
-        "latest_ts": "2025-10-05T22:45:38.211672-05:00",
+        "conversation_id": "b694421d-d095-4f33-b317-bad7c884b5fa",
+        "earliest_ts": "2025-10-03T21:30:03-05:00",
+        "id": "b694421d-d095-4f33-b317-bad7c884b5fa",
+        "latest_ts": "2025-10-03T21:30:03-05:00",
         "message_count": 1,
-        "message_id": "e67593e6-e08b-4d6f-8fab-f03d39f4ff08",
+        "message_id": "e929c66c-adf9-41bc-b546-2467b18b90ac",
         "role": "assistant",
         "source": "postgres",
-        "title": "RAG API service architecture"
+        "title": "Imanage MCP server integration"
       },
-      "preview": " That error is from OpenWebUI trying to load your Function. OpenWebUI expects a specific class structure.\nHere's the corrected version:\n```python\n\"\"\"\ntitle: DovOS Corpus Query\nauthor: Dov\nversion: 0.1.0\nrequired_open_webui_version: 0.3.9\n\"\"\"\nimport requests\nfrom typing import Optional, Callable, Awaitable\nfrom pydantic import BaseModel, Field\nclass Tools:\n    def __init__(self):\n        self.valves = self.Valves()\n    class Valves(BaseModel):\n        RAG_API_URL: str = Field(\n            default...",
-      "relevance": 0.47361536092025713,
+      "preview": "```python\n# 1_crawl_all.py\nimport requests\nimport json\nfrom datetime import datetime\n# HARDCODED CONFIG\nTOKEN = \"H1qQ0oLO-NUfbWp41TLqsGs6rRW6vMMUQzim-cPtjV0\"\nCUSTOMER_ID = \"188\"\nLIBRARY = \"chicagoactive\"\nBASE_URL = \"https://cloudimanage.com/work/api/v2\"\ndef crawl_library():\n\"\"\"Crawl entire library using pagination.\"\"\"\nall_docs = []\ncursor = None\npage = 1\nwhile True:\nprint(f\"\ud83d\udce5 Page {page}...\", end=\" \")\n# Build request payload\npayload = {\"limit\": 1000}\nif cursor:\npayload[\"cursor\"] = cursor\n# Make ...",
+      "relevance": 0.5153395976025501,
       "source": "postgres",
-      "title": "RAG API service architecture"
-    },
-    {
-      "content": "No available formula with the name \"python-requests\". Did you mean python-yq?",
-      "distance": 0.528946778492092,
-      "id": "097bf57c-d555-4adc-b90d-f9e6551eb25d",
-      "metadata": {
-        "conversation_id": "097bf57c-d555-4adc-b90d-f9e6551eb25d",
-        "earliest_ts": "2025-03-04T12:25:46.473868-06:00",
-        "id": "097bf57c-d555-4adc-b90d-f9e6551eb25d",
-        "latest_ts": "2025-03-04T12:25:46.473868-06:00",
-        "message_count": 1,
-        "message_id": "95d7cff2-9d12-4917-9998-9e89f63f2603",
-        "role": "user",
-        "source": "postgres",
-        "title": "Install Python on M3"
-      },
-      "preview": "No available formula with the name \"python-requests\". Did you mean python-yq?",
-      "relevance": 0.47105322150790796,
-      "source": "postgres",
-      "title": "Install Python on M3"
+      "title": "Imanage MCP server integration"
     }
   ],
   "search_type": "semantic"
