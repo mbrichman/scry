@@ -1,16 +1,11 @@
 import pytest
 import json
-from app import app
 from controllers.conversation_controller import ConversationController
 from models.conversation_view_model import extract_preview_content
 
-
-@pytest.fixture
-def client():
-    """Create a test client for the Flask app."""
-    app.config['TESTING'] = True
-    with app.test_client() as client:
-        yield client
+# TODO: This test file uses Flask client which connects to production DB,
+# while seed_conversations seeds test DB. Need to configure Flask app to use
+# test DB when running tests. For now, using >= assertions.
 
 
 @pytest.fixture
@@ -42,7 +37,7 @@ class TestConversationsAPI:
         assert 'ids' in data
         
         # Check we got results (at least the 100 conversations we seeded)
-        # NOTE: Uses production DB, not test DB, so sees all data
+        # TODO: Change to == 100 after fixing test/prod DB configuration
         assert len(data['documents']) >= 100
         assert len(data['metadatas']) >= 100
         assert len(data['ids']) >= 100
