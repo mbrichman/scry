@@ -2,6 +2,15 @@
   "documents": [
     "Testing concurrent embedding workers.",
     "This conversation is for testing the embedding worker.",
+    "This is a test message from the repository pattern.",
+    "No messages yet.",
+    "This is a test message for the outbox pattern.",
+    "Testing concurrent embedding workers.",
+    "This conversation is for testing the embedding worker.",
+    "No messages yet.",
+    "This is a test message for the outbox pattern.",
+    "Testing concurrent embedding workers.",
+    "This conversation is for testing the embedding worker.",
     "No messages yet.",
     "This is a test message for the outbox pattern.",
     "Testing concurrent embedding workers.",
@@ -3367,6 +3376,15 @@
     "what do you know about me"
   ],
   "ids": [
+    "6bd2d558-06b7-4290-a98d-bb735be3d347",
+    "35abf342-3aeb-41ec-a2b6-83ec69b65102",
+    "283ebe9c-44c3-4c19-8aa4-7b1f233eebc5",
+    "438d2dde-3e86-43fd-bdd2-c6ac85236b9d",
+    "691627c7-17a4-407a-a707-39bebfee1ebc",
+    "3c54cfb6-b471-4377-8056-fe7ec20792f4",
+    "16b5beaf-9949-4390-a669-bfa86dadd3dc",
+    "a91d8837-246a-4d85-8387-1ee33789947b",
+    "d5eff423-3683-4495-b228-05a769bd3f61",
     "929da209-300c-4121-bfc0-f40194c626e0",
     "b36555fa-2160-4d31-9887-27dc580fd55e",
     "3c824be4-3f28-4be9-9020-24cfea9706ce",
@@ -3916,8 +3934,8 @@
     "6c2bea0d-3b7c-4d96-b066-2e3c32d97138",
     "eb1267c3-1e60-4153-8bcb-f97546526872",
     "57b4f2cc-8fed-4833-b237-d67923409b0f",
-    "b694421d-d095-4f33-b317-bad7c884b5fa",
     "b2689afa-1fa0-4ccc-8467-ed5d139a64df",
+    "b694421d-d095-4f33-b317-bad7c884b5fa",
     "ae5370cb-d745-4191-a7c4-dc67f4475014",
     "ff564780-6c01-4477-908a-eda2e2e2ed40",
     "d20e3f3e-4c11-44e0-8209-06302c37ac45",
@@ -6734,6 +6752,96 @@
     "3db6e49f-71b7-4a8e-91c8-a4933c92d586"
   ],
   "metadatas": [
+    {
+      "conversation_id": "6bd2d558-06b7-4290-a98d-bb735be3d347",
+      "earliest_ts": "2025-11-24T04:42:26.554296-06:00",
+      "id": "6bd2d558-06b7-4290-a98d-bb735be3d347",
+      "is_chunk": false,
+      "latest_ts": "2025-11-24T04:42:26.603947-06:00",
+      "message_count": 11,
+      "source": "unknown",
+      "title": "Concurrent Worker Test"
+    },
+    {
+      "conversation_id": "35abf342-3aeb-41ec-a2b6-83ec69b65102",
+      "earliest_ts": "2025-11-24T04:42:15.989958-06:00",
+      "id": "35abf342-3aeb-41ec-a2b6-83ec69b65102",
+      "is_chunk": false,
+      "latest_ts": "2025-11-24T04:42:16.185625-06:00",
+      "message_count": 6,
+      "source": "unknown",
+      "title": "Embedding Worker Test"
+    },
+    {
+      "conversation_id": "283ebe9c-44c3-4c19-8aa4-7b1f233eebc5",
+      "earliest_ts": "2025-11-24T04:29:52.727561-06:00",
+      "id": "283ebe9c-44c3-4c19-8aa4-7b1f233eebc5",
+      "is_chunk": false,
+      "latest_ts": "2025-11-24T04:29:52.727561-06:00",
+      "message_count": 1,
+      "source": "unknown",
+      "title": "Test Conversation from Repository"
+    },
+    {
+      "conversation_id": "438d2dde-3e86-43fd-bdd2-c6ac85236b9d",
+      "earliest_ts": "2025-11-24T04:29:52.621580-06:00",
+      "id": "438d2dde-3e86-43fd-bdd2-c6ac85236b9d",
+      "is_chunk": false,
+      "latest_ts": "2025-11-24T04:29:52.621586-06:00",
+      "message_count": 0,
+      "source": "unknown",
+      "title": "Rollback Test"
+    },
+    {
+      "conversation_id": "691627c7-17a4-407a-a707-39bebfee1ebc",
+      "earliest_ts": "2025-11-24T04:29:52.577027-06:00",
+      "id": "691627c7-17a4-407a-a707-39bebfee1ebc",
+      "is_chunk": false,
+      "latest_ts": "2025-11-24T04:29:52.577027-06:00",
+      "message_count": 1,
+      "source": "unknown",
+      "title": "Test Outbox Pattern"
+    },
+    {
+      "conversation_id": "3c54cfb6-b471-4377-8056-fe7ec20792f4",
+      "earliest_ts": "2025-11-24T04:29:08.725743-06:00",
+      "id": "3c54cfb6-b471-4377-8056-fe7ec20792f4",
+      "is_chunk": false,
+      "latest_ts": "2025-11-24T04:29:08.769040-06:00",
+      "message_count": 11,
+      "source": "unknown",
+      "title": "Concurrent Worker Test"
+    },
+    {
+      "conversation_id": "16b5beaf-9949-4390-a669-bfa86dadd3dc",
+      "earliest_ts": "2025-11-24T04:28:57.302981-06:00",
+      "id": "16b5beaf-9949-4390-a669-bfa86dadd3dc",
+      "is_chunk": false,
+      "latest_ts": "2025-11-24T04:28:57.399126-06:00",
+      "message_count": 6,
+      "source": "unknown",
+      "title": "Embedding Worker Test"
+    },
+    {
+      "conversation_id": "a91d8837-246a-4d85-8387-1ee33789947b",
+      "earliest_ts": "2025-11-24T04:04:04.871960-06:00",
+      "id": "a91d8837-246a-4d85-8387-1ee33789947b",
+      "is_chunk": false,
+      "latest_ts": "2025-11-24T04:04:04.871966-06:00",
+      "message_count": 0,
+      "source": "unknown",
+      "title": "Rollback Test"
+    },
+    {
+      "conversation_id": "d5eff423-3683-4495-b228-05a769bd3f61",
+      "earliest_ts": "2025-11-24T04:04:04.817460-06:00",
+      "id": "d5eff423-3683-4495-b228-05a769bd3f61",
+      "is_chunk": false,
+      "latest_ts": "2025-11-24T04:04:04.817460-06:00",
+      "message_count": 1,
+      "source": "unknown",
+      "title": "Test Outbox Pattern"
+    },
     {
       "conversation_id": "929da209-300c-4121-bfc0-f40194c626e0",
       "earliest_ts": "2025-11-24T04:03:32.761924-06:00",
@@ -12225,9 +12333,9 @@
       "title": "Count word documents on mac"
     },
     {
-      "conversation_id": "b694421d-d095-4f33-b317-bad7c884b5fa",
+      "conversation_id": "b2689afa-1fa0-4ccc-8467-ed5d139a64df",
       "earliest_ts": "2025-10-03T00:13:57-05:00",
-      "id": "b694421d-d095-4f33-b317-bad7c884b5fa",
+      "id": "b2689afa-1fa0-4ccc-8467-ed5d139a64df",
       "is_chunk": false,
       "latest_ts": "2025-10-03T21:40:28-05:00",
       "message_count": 56,
@@ -12235,9 +12343,9 @@
       "title": "Imanage MCP server integration"
     },
     {
-      "conversation_id": "b2689afa-1fa0-4ccc-8467-ed5d139a64df",
+      "conversation_id": "b694421d-d095-4f33-b317-bad7c884b5fa",
       "earliest_ts": "2025-10-03T00:13:57-05:00",
-      "id": "b2689afa-1fa0-4ccc-8467-ed5d139a64df",
+      "id": "b694421d-d095-4f33-b317-bad7c884b5fa",
       "is_chunk": false,
       "latest_ts": "2025-10-03T21:40:28-05:00",
       "message_count": 56,
