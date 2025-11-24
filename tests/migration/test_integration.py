@@ -99,7 +99,7 @@ def integrated_system(db_session):
     return {
         'conversations': conversations,
         'total_conversations': 4,
-        'total_messages': 14,  # 6 + 4 + 4 + 2
+        'total_messages': 16,  # 6 + 4 + 4 + 2
         'session': db_session
     }
 
@@ -156,7 +156,6 @@ class TestCompleteImportWorkflow:
             assert len(results) > 0, "Should find the imported conversation via search"
             assert any("machine learning" in r.content.lower() for r in results)
     
-    @pytest.mark.skip(reason="Test isolation issue: counts include data from other tests in same session")
     def test_bulk_import_maintains_relationships(self, integrated_system):
         """Verify bulk import maintains all relationships correctly."""
         session = integrated_system['session']
@@ -463,7 +462,6 @@ class TestDataConsistency:
 
 
 @pytest.mark.integration
-@pytest.mark.skip(reason="Test isolation issue: counts include data from other tests in same session")
 def test_integration_summary(integrated_system):
     """
     Summary integration test: validate complete system functionality.
