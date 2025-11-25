@@ -3,7 +3,7 @@ Repository for message embedding operations and vector similarity search.
 """
 
 from typing import List, Optional, Dict, Any, Tuple
-from datetime import datetime
+from datetime import datetime, timezone
 from uuid import UUID
 from sqlalchemy import desc, func, text
 from sqlalchemy.orm import Session, joinedload
@@ -31,7 +31,7 @@ class EmbeddingRepository(BaseRepository[MessageEmbedding]):
             # Update existing embedding
             existing.embedding = embedding
             existing.model = model
-            existing.updated_at = datetime.utcnow()
+            existing.updated_at = datetime.now(timezone.utc)
             self.session.flush()
             return existing
         else:

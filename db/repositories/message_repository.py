@@ -3,7 +3,7 @@ Repository for message operations with full-text search capabilities.
 """
 
 from typing import List, Optional, Dict, Any
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from uuid import UUID
 from sqlalchemy import desc, func, text, or_
 from sqlalchemy.orm import Session, joinedload
@@ -241,7 +241,7 @@ class MessageRepository(BaseRepository[Message]):
     
     def get_recent_activity(self, hours: int = 24) -> List[Message]:
         """Get recent messages for activity tracking."""
-        cutoff_time = datetime.utcnow() - timedelta(hours=hours)
+        cutoff_time = datetime.now(timezone.utc) - timedelta(hours=hours)
         return self.session.query(Message)\
             .filter(Message.created_at >= cutoff_time)\
             .order_by(desc(Message.created_at))\
@@ -262,7 +262,7 @@ class MessageRepository(BaseRepository[Message]):
         embedded_count = self.session.query(func.count(MessageEmbedding.message_id)).scalar() or 0
         
         # Recent activity (last 24 hours)
-        recent_cutoff = datetime.utcnow() - timedelta(hours=24)
+        recent_cutoff = datetime.now(timezone.utc) - timedelta(hours=24)
         recent_messages = self.session.query(func.count(Message.id))\
             .filter(Message.created_at >= recent_cutoff)\
             .scalar() or 0

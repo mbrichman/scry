@@ -3,7 +3,7 @@ Repository for conversation operations.
 """
 
 from typing import List, Optional, Tuple
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from uuid import UUID
 from sqlalchemy import desc, func, text
 from sqlalchemy.orm import Session, selectinload
@@ -145,7 +145,7 @@ class ConversationRepository(BaseRepository[Conversation]):
     
     def get_recent(self, days: int = 30, limit: int = 50) -> List[Conversation]:
         """Get conversations from the last N days."""
-        cutoff_date = datetime.utcnow() - timedelta(days=days)
+        cutoff_date = datetime.now(timezone.utc) - timedelta(days=days)
         return self.session.query(Conversation)\
             .filter(Conversation.updated_at >= cutoff_date)\
             .order_by(desc(Conversation.updated_at))\
@@ -160,7 +160,7 @@ class ConversationRepository(BaseRepository[Conversation]):
         total_messages = self.session.query(func.count(Message.id)).scalar() or 0
         
         # Get recent activity (last 30 days)
-        thirty_days_ago = datetime.utcnow() - timedelta(days=30)
+        thirty_days_ago = datetime.now(timezone.utc) - timedelta(days=30)
         recent_conversations = self.session.query(func.count(Conversation.id))\
             .filter(Conversation.updated_at >= thirty_days_ago)\
             .scalar() or 0

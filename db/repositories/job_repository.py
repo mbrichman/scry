@@ -3,7 +3,7 @@ Repository for job queue operations using PostgreSQL as the queue backend.
 """
 
 from typing import List, Optional, Dict, Any
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from uuid import UUID
 from sqlalchemy import desc, func, text, and_
 from sqlalchemy.orm import Session
@@ -110,7 +110,7 @@ class JobRepository(BaseRepository[Job]):
         job = self.session.query(Job).filter(Job.id == job_id).first()
         if job:
             job.status = 'completed'
-            job.updated_at = datetime.utcnow()
+            job.updated_at = datetime.now(timezone.utc)
             self.session.flush()
             return True
         return False
@@ -125,9 +125,9 @@ class JobRepository(BaseRepository[Job]):
                 # Schedule retry with exponential backoff
                 delay_minutes = retry_delay_minutes * (2 ** (job.attempts - 1))
                 job.status = 'pending'
-                job.not_before = datetime.utcnow() + timedelta(minutes=delay_minutes)
+                job.not_before = datetime.now(timezone.utc) + timedelta(minutes=delay_minutes)
             
-            job.updated_at = datetime.utcnow()
+            job.updated_at = datetime.now(timezone.utc)
             self.session.flush()
             return True
         return False
@@ -137,8 +137,8 @@ class JobRepository(BaseRepository[Job]):
         job = self.session.query(Job).filter(Job.id == job_id).first()
         if job:
             job.status = 'pending'
-            job.not_before = not_before or datetime.utcnow()
-            job.updated_at = datetime.utcnow()
+            job.not_before = not_before or datetime.now(timezone.utc)
+            job.updated_at = datetime.now(timezone.utc)
             self.session.flush()
             return True
         return False
@@ -174,7 +174,7 @@ class JobRepository(BaseRepository[Job]):
     
     def cleanup_old_completed_jobs(self, days_old: int = 7) -> int:
         """Clean up old completed jobs. Returns count of deleted jobs."""
-        cutoff_date = datetime.utcnow() - timedelta(days=days_old)
+        cutoff_date = datetime.now(timezone.utc) - timedelta(days=days_old)
         
         count = self.session.query(Job)\
             .filter(and_(
@@ -198,7 +198,7 @@ class JobRepository(BaseRepository[Job]):
         Clean up jobs stuck in 'running' status for too long.
         Resets them to 'pending'. Returns count of jobs reset.
         """
-        cutoff_time = datetime.utcnow() - timedelta(hours=hours_stuck)
+        cutoff_time = datetime.now(timezone.utc) - timedelta(hours=hours_stuck)
         
         stuck_jobs = self.session.query(Job)\
             .filter(and_(
@@ -210,8 +210,8 @@ class JobRepository(BaseRepository[Job]):
         count = 0
         for job in stuck_jobs:
             job.status = 'pending'
-            job.not_before = datetime.utcnow()
-            job.updated_at = datetime.utcnow()
+            job.not_before = datetime.now(timezone.utc)
+            job.updated_at = datetime.now(timezone.utc)
             count += 1
         
         self.session.flush()
@@ -235,7 +235,7 @@ class JobRepository(BaseRepository[Job]):
         )
         
         # Recent activity (last hour)
-        recent_cutoff = datetime.utcnow() - timedelta(hours=1)
+        recent_cutoff = datetime.now(timezone.utc) - timedelta(hours=1)
         recent_jobs = self.session.query(func.count(Job.id))\
             .filter(Job.created_at >= recent_cutoff)\
             .scalar() or 0
@@ -274,7 +274,7 @@ class JobRepository(BaseRepository[Job]):
         status_counts = dict(embedding_stats)
         
         # Recent embedding jobs (last 24 hours)
-        recent_cutoff = datetime.utcnow() - timedelta(hours=24)
+        recent_cutoff = datetime.now(timezone.utc) - timedelta(hours=24)
         recent_embedding_jobs = self.session.query(func.count(Job.id))\
             .filter(and_(
                 Job.kind == 'generate_embedding',

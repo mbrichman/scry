@@ -15,7 +15,7 @@ import time
 import signal
 import logging
 from typing import Optional, List
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 import threading
 from contextlib import contextmanager
 
@@ -112,7 +112,7 @@ class EmbeddingWorker:
     def start(self):
         """Start the worker loop."""
         self.running = True
-        self.stats['start_time'] = datetime.utcnow()
+        self.stats['start_time'] = datetime.now(timezone.utc)
         
         logger.info(f"🚀 Starting embedding worker {self.worker_id}")
         logger.info(f"   Max jobs per batch: {self.max_jobs_per_batch}")
@@ -128,7 +128,7 @@ class EmbeddingWorker:
                     time.sleep(self.poll_interval_seconds)
                 else:
                     # Jobs were processed, check for more immediately
-                    self.stats['last_job_time'] = datetime.utcnow()
+                    self.stats['last_job_time'] = datetime.now(timezone.utc)
                     
         except KeyboardInterrupt:
             logger.info("Worker interrupted by user")
@@ -253,7 +253,7 @@ class EmbeddingWorker:
     
     def _log_stats(self):
         """Log current worker statistics."""
-        runtime = datetime.utcnow() - self.stats['start_time']
+        runtime = datetime.now(timezone.utc) - self.stats['start_time']
         
         logger.info(f"📊 Worker {self.worker_id} stats:")
         logger.info(f"   Runtime: {runtime}")

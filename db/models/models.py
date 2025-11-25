@@ -6,8 +6,7 @@ Corresponds to the schema defined in db/schema.sql.
 import uuid
 from datetime import datetime
 from sqlalchemy import Column, String, Text, DateTime, Integer, ForeignKey, JSON, BigInteger, CheckConstraint, Index, Computed
-from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.orm import relationship
+from sqlalchemy.orm import relationship, declarative_base
 from sqlalchemy.dialects.postgresql import UUID, TSVECTOR
 from pgvector.sqlalchemy import Vector
 

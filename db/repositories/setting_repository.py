@@ -1,7 +1,7 @@
 """Repository for managing application settings."""
 
 from typing import Optional, Dict, Any
-from datetime import datetime
+from datetime import datetime, timezone
 from sqlalchemy import func
 
 from db.models.models import Setting
@@ -45,7 +45,7 @@ class SettingRepository:
         if setting:
             # Update existing
             setting.value = value
-            setting.updated_at = datetime.utcnow()
+            setting.updated_at = datetime.now(timezone.utc)
             if description:
                 setting.description = description
         else:
