@@ -1,6 +1,13 @@
 # Dovos Test Suite Analysis Report
-**Generated:** 2025-11-24  
-**Status:** 🟡 Partially Running (155/202 tests passing)
+
+> **⚠️ DEPRECATED - This document is outdated**  
+> **Last Updated:** 2025-11-24  
+> **Current Status:** See [TEST_STATUS.md](TEST_STATUS.md) for up-to-date information  
+> **Note:** Test suite is now at 98.9% passing (176/178 tests) as of 2025-11-27
+
+---
+
+**Original Status:** 🟡 Partially Running (155/202 tests passing)
 
 ## Executive Summary
 
