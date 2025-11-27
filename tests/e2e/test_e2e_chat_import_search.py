@@ -21,9 +21,6 @@ from typing import List, Dict, Any, Optional
 from datetime import datetime
 import uuid
 
-# Set feature flag to use PostgreSQL backend
-os.environ['USE_POSTGRES'] = 'true'
-
 # Add project root to path
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 

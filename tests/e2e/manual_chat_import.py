@@ -12,9 +12,6 @@ import time
 import logging
 from typing import Dict, Any
 
-# Set feature flag to use PostgreSQL backend
-os.environ['USE_POSTGRES'] = 'true'
-
 # Add project root to path
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 

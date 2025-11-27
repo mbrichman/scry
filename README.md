@@ -40,15 +40,11 @@ Create a `.env` file in the project root (use `.env.example` as a template):
 ```env
 # Database
 DATABASE_URL=postgresql://user:password@localhost:5432/dovos
-USE_POSTGRES=true
 
 # Flask
 FLASK_APP=app.py
 FLASK_ENV=development
 SECRET_KEY=your-secret-key-here
-
-# ChromaDB / RAG
-CHROMA_PERSIST_DIRECTORY=./chroma_storage
 ```
 
 ## Directory Structure

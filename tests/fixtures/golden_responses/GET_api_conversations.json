@@ -83,6 +83,9 @@
     "This is a test message from the repository pattern.",
     "Testing concurrent embedding workers.",
     "This conversation is for testing the embedding worker.",
+    "This is a test message from the repository pattern.",
+    "Testing concurrent embedding workers.",
+    "This conversation is for testing the embedding worker.",
     "This is a test message for the outbox pattern.",
     "This is a test message from the repository pattern.",
     "No messages yet.",
@@ -3478,6 +3481,9 @@
     "what do you know about me"
   ],
   "ids": [
+    "523ab8b0-949c-4bc3-97a8-e2440404164d",
+    "5be7e9b2-9c19-428a-bb91-61e30f0f957f",
+    "0500fc25-5e6a-4750-9108-d77b64ecdec1",
     "9d6e2c5c-8044-4bd3-ae07-6d2fb70b0bd5",
     "faffbb49-c0bb-4169-bea0-517f937d4418",
     "060be900-b089-459f-ad28-cc7962ecc822",
@@ -4138,8 +4144,8 @@
     "6c2bea0d-3b7c-4d96-b066-2e3c32d97138",
     "eb1267c3-1e60-4153-8bcb-f97546526872",
     "57b4f2cc-8fed-4833-b237-d67923409b0f",
-    "b694421d-d095-4f33-b317-bad7c884b5fa",
     "b2689afa-1fa0-4ccc-8467-ed5d139a64df",
+    "b694421d-d095-4f33-b317-bad7c884b5fa",
     "ae5370cb-d745-4191-a7c4-dc67f4475014",
     "ff564780-6c01-4477-908a-eda2e2e2ed40",
     "d20e3f3e-4c11-44e0-8209-06302c37ac45",
@@ -6956,6 +6962,36 @@
     "3db6e49f-71b7-4a8e-91c8-a4933c92d586"
   ],
   "metadatas": [
+    {
+      "conversation_id": "523ab8b0-949c-4bc3-97a8-e2440404164d",
+      "earliest_ts": "2025-11-27T04:12:24.279347-06:00",
+      "id": "523ab8b0-949c-4bc3-97a8-e2440404164d",
+      "is_chunk": false,
+      "latest_ts": "2025-11-27T04:12:24.372821-06:00",
+      "message_count": 11,
+      "source": "unknown",
+      "title": "Concurrent Worker Test"
+    },
+    {
+      "conversation_id": "5be7e9b2-9c19-428a-bb91-61e30f0f957f",
+      "earliest_ts": "2025-11-27T04:12:13.153390-06:00",
+      "id": "5be7e9b2-9c19-428a-bb91-61e30f0f957f",
+      "is_chunk": false,
+      "latest_ts": "2025-11-27T04:12:13.245175-06:00",
+      "message_count": 6,
+      "source": "unknown",
+      "title": "Embedding Worker Test"
+    },
+    {
+      "conversation_id": "0500fc25-5e6a-4750-9108-d77b64ecdec1",
+      "earliest_ts": "2025-11-27T04:08:29.806897-06:00",
+      "id": "0500fc25-5e6a-4750-9108-d77b64ecdec1",
+      "is_chunk": false,
+      "latest_ts": "2025-11-27T04:08:29.806897-06:00",
+      "message_count": 1,
+      "source": "unknown",
+      "title": "Test Conversation from Repository"
+    },
     {
       "conversation_id": "9d6e2c5c-8044-4bd3-ae07-6d2fb70b0bd5",
       "earliest_ts": "2025-11-27T04:08:00.937532-06:00",
@@ -13557,9 +13593,9 @@
       "title": "Count word documents on mac"
     },
     {
-      "conversation_id": "b694421d-d095-4f33-b317-bad7c884b5fa",
+      "conversation_id": "b2689afa-1fa0-4ccc-8467-ed5d139a64df",
       "earliest_ts": "2025-10-03T00:13:57-05:00",
-      "id": "b694421d-d095-4f33-b317-bad7c884b5fa",
+      "id": "b2689afa-1fa0-4ccc-8467-ed5d139a64df",
       "is_chunk": false,
       "latest_ts": "2025-10-03T21:40:28-05:00",
       "message_count": 56,
@@ -13567,9 +13603,9 @@
       "title": "Imanage MCP server integration"
     },
     {
-      "conversation_id": "b2689afa-1fa0-4ccc-8467-ed5d139a64df",
+      "conversation_id": "b694421d-d095-4f33-b317-bad7c884b5fa",
       "earliest_ts": "2025-10-03T00:13:57-05:00",
-      "id": "b2689afa-1fa0-4ccc-8467-ed5d139a64df",
+      "id": "b694421d-d095-4f33-b317-bad7c884b5fa",
       "is_chunk": false,
       "latest_ts": "2025-10-03T21:40:28-05:00",
       "message_count": 56,
