@@ -1,10 +1,18 @@
 # Docker Deployment Guide
 
+## Overview
+
+This guide covers deploying the fully containerized Dovos application stack, including:
+- **dovos-rag-api**: Flask application with RAG capabilities
+- **PostgreSQL 16**: Database with pgvector extension
+- **Docker volumes**: Persistent data storage
+- **Docker network**: Isolated container networking
+
 ## Prerequisites on Mac Mini
 
 1. Docker installed (`brew install docker` or Docker Desktop)
-2. PostgreSQL running on host (not in Docker)
-3. `.env` file configured
+2. `.env` file configured with PostgreSQL credentials
+3. (Optional) Existing PostgreSQL data to migrate
 
 ## Quick Start
 
@@ -16,34 +24,64 @@ nano .env  # Edit with production values
 ```
 
 **Required settings:**
-- `USE_PG_SINGLE_STORE=true`
-- `DATABASE_URL=postgresql+psycopg://user:pass@host.docker.internal:5432/dovos_prod`
-- `OPENWEBUI_URL=http://your-openwebui-url:3000`
-- `OPENWEBUI_API_KEY=your-api-key`
-- `SECRET_KEY=generate-a-secure-random-key`
+```env
+# PostgreSQL credentials (used by both postgres and dovos-rag services)
+POSTGRES_USER=dovos
+POSTGRES_PASSWORD=your-secure-password-here
+POSTGRES_DB=dovos
 
-**Note:** Use `host.docker.internal` in `DATABASE_URL` to connect to PostgreSQL on the host machine.
+# Application settings
+USE_PG_SINGLE_STORE=true
+OPENWEBUI_URL=http://your-openwebui-url:3000
+OPENWEBUI_API_KEY=your-api-key
+SECRET_KEY=generate-a-secure-random-key
+```
+
+**Note:** The `DATABASE_URL` is automatically constructed in docker-compose.yml using the PostgreSQL credentials.
 
 ### 2. Build and Start
 
 ```bash
-# Build the image
+# Build the images
 docker compose build
 
-# Start the service
+# Start all services (PostgreSQL + Application)
 docker compose up -d
 
 # View logs
 docker compose logs -f
+
+# View logs for specific service
+docker compose logs -f postgres
+docker compose logs -f dovos-rag
 ```
 
-### 3. Verify Running
+**First-time setup:** The PostgreSQL container will automatically:
+1. Initialize the database with the specified credentials
+2. Run initialization scripts from `init-scripts/` directory
+3. Create the pgvector extension
+4. Be ready for the application to run Alembic migrations
+
+### 3. Run Database Migrations
+
+```bash
+# Run Alembic migrations inside the application container
+docker compose exec dovos-rag alembic upgrade head
+```
+
+### 4. Verify Running
 
 ```bash
 # Check container status
 docker compose ps
 
-# Test endpoint
+# Verify PostgreSQL is healthy
+docker compose exec postgres pg_isready -U dovos
+
+# Verify pgvector extension
+docker compose exec postgres psql -U dovos -d dovos -c "SELECT * FROM pg_extension WHERE extname = 'vector';"
+
+# Test application endpoint
 curl http://localhost:5001/api/rag/query -X POST \
   -H 'Content-Type: application/json' \
   -d '{"query": "test", "context_window": 3}'
@@ -97,9 +135,16 @@ docker compose ps
 ```
 
 ### Database connection issues
-- Verify PostgreSQL is running: `pg_isready`
-- Check `DATABASE_URL` uses `host.docker.internal` for host PostgreSQL
-- Ensure PostgreSQL allows connections from Docker network
+```bash
+# Check if PostgreSQL container is running
+docker compose ps postgres
+
+# Check PostgreSQL logs
+docker compose logs postgres
+
+# Test connection from application container
+docker compose exec dovos-rag python -c "from db.database import test_connection; print('✅ PostgreSQL OK' if test_connection() else '❌ Connection failed')"
+```
 
 ### Port already in use
 ```bash
@@ -111,7 +156,10 @@ lsof -i :5001
 
 ### Rebuild from scratch
 ```bash
-# Remove containers and volumes
+# Stop and remove containers (preserves volumes)
+docker compose down
+
+# Remove containers AND volumes (⚠️  deletes all data)
 docker compose down -v
 
 # Rebuild without cache
@@ -121,25 +169,76 @@ docker compose build --no-cache
 docker compose up -d
 ```
 
-## Advanced Configuration
+## Data Management
 
-### Using External PostgreSQL Network
+### PostgreSQL Data Persistence
 
-If you need specific networking:
+PostgreSQL data is stored in a Docker named volume (`dovos_postgres_data`). This volume persists even when containers are stopped or removed.
 
-```yaml
-# In docker-compose.yml, replace network_mode: host with:
-networks:
-  - dovos-network
+```bash
+# List Docker volumes
+docker volume ls | grep dovos
 
-networks:
-  dovos-network:
-    driver: bridge
+# Inspect volume details
+docker volume inspect dovos_postgres_data
+
+# Check volume size
+docker system df -v | grep dovos_postgres_data
 ```
 
-### Adding Health Checks
+### Backup Database
 
-Uncomment the healthcheck section in `docker-compose.yml` to enable automatic container health monitoring.
+```bash
+# Create backup directory
+mkdir -p ./backups
+
+# Backup database to file
+docker compose exec -T postgres pg_dump -U dovos -d dovos > ./backups/dovos_backup_$(date +%Y%m%d_%H%M%S).sql
+
+# Backup with custom format (compressed, allows selective restore)
+docker compose exec -T postgres pg_dump -U dovos -d dovos -Fc > ./backups/dovos_backup_$(date +%Y%m%d_%H%M%S).dump
+```
+
+### Restore Database
+
+```bash
+# Restore from SQL file
+docker compose exec -T postgres psql -U dovos -d dovos < ./backups/dovos_backup.sql
+
+# Restore from custom format
+docker compose exec -T postgres pg_restore -U dovos -d dovos -c /path/to/backup.dump
+
+# Or copy backup into container first
+docker cp ./backups/dovos_backup.dump dovos-postgres:/tmp/
+docker compose exec postgres pg_restore -U dovos -d dovos -c /tmp/dovos_backup.dump
+```
+
+### Migrate Data from Host PostgreSQL
+
+See `docs/DOCKER_DATA_MIGRATION.md` for detailed instructions on migrating existing data from host PostgreSQL to the containerized version.
+
+## Advanced Configuration
+
+### Custom PostgreSQL Port
+
+To use a different host port for PostgreSQL:
+
+```yaml
+# In docker-compose.yml, change:
+ports:
+  - "5433:5432"  # Host port 5433 maps to container port 5432
+```
+
+### Using External PostgreSQL
+
+If you want to use PostgreSQL on the host or another server:
+
+1. Remove the `postgres` service from docker-compose.yml
+2. Set `DATABASE_URL` environment variable in `.env`:
+   ```env
+   DATABASE_URL=postgresql+psycopg://user:pass@host.docker.internal:5432/dovos
+   ```
+3. Remove the `depends_on` section from dovos-rag service
 
 ### Resource Limits
 
