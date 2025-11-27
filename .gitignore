@@ -88,6 +88,8 @@ scripts/archived/
 backups/
 *.sql
 *.sql.gz
+*.backup
+dovos_backups/
 
 # Large data files
 Source Files/
