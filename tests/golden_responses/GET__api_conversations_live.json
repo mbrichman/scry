@@ -77,6 +77,12 @@
     "This is a test message from the repository pattern.",
     "Testing concurrent embedding workers.",
     "This conversation is for testing the embedding worker.",
+    "This is a test message from the repository pattern.",
+    "Testing concurrent embedding workers.",
+    "This conversation is for testing the embedding worker.",
+    "This is a test message from the repository pattern.",
+    "Testing concurrent embedding workers.",
+    "This conversation is for testing the embedding worker.",
     "This is a test message for the outbox pattern.",
     "This is a test message from the repository pattern.",
     "No messages yet.",
@@ -3472,6 +3478,12 @@
     "what do you know about me"
   ],
   "ids": [
+    "9d6e2c5c-8044-4bd3-ae07-6d2fb70b0bd5",
+    "faffbb49-c0bb-4169-bea0-517f937d4418",
+    "060be900-b089-459f-ad28-cc7962ecc822",
+    "e36db410-e91f-410c-9059-3b6fd10a018a",
+    "0cc7d7f4-15c6-4773-a405-4e9085e58feb",
+    "3f96974a-a69f-452f-b470-ef1cfa59914c",
     "6a5bbe9a-820e-412d-8fb2-f9fb34037df4",
     "f8f60b9b-b129-41e4-8a8b-2b8ac1ad330a",
     "47f8fea0-e9a0-4247-bcb2-a2a9c71e48de",
@@ -6944,6 +6956,66 @@
     "3db6e49f-71b7-4a8e-91c8-a4933c92d586"
   ],
   "metadatas": [
+    {
+      "conversation_id": "9d6e2c5c-8044-4bd3-ae07-6d2fb70b0bd5",
+      "earliest_ts": "2025-11-27T04:08:00.937532-06:00",
+      "id": "9d6e2c5c-8044-4bd3-ae07-6d2fb70b0bd5",
+      "is_chunk": false,
+      "latest_ts": "2025-11-27T04:08:01.001931-06:00",
+      "message_count": 11,
+      "source": "unknown",
+      "title": "Concurrent Worker Test"
+    },
+    {
+      "conversation_id": "faffbb49-c0bb-4169-bea0-517f937d4418",
+      "earliest_ts": "2025-11-27T04:07:49.646187-06:00",
+      "id": "faffbb49-c0bb-4169-bea0-517f937d4418",
+      "is_chunk": false,
+      "latest_ts": "2025-11-27T04:07:49.737258-06:00",
+      "message_count": 6,
+      "source": "unknown",
+      "title": "Embedding Worker Test"
+    },
+    {
+      "conversation_id": "060be900-b089-459f-ad28-cc7962ecc822",
+      "earliest_ts": "2025-11-27T04:04:47.647406-06:00",
+      "id": "060be900-b089-459f-ad28-cc7962ecc822",
+      "is_chunk": false,
+      "latest_ts": "2025-11-27T04:04:47.647406-06:00",
+      "message_count": 1,
+      "source": "unknown",
+      "title": "Test Conversation from Repository"
+    },
+    {
+      "conversation_id": "e36db410-e91f-410c-9059-3b6fd10a018a",
+      "earliest_ts": "2025-11-27T04:04:18.091815-06:00",
+      "id": "e36db410-e91f-410c-9059-3b6fd10a018a",
+      "is_chunk": false,
+      "latest_ts": "2025-11-27T04:04:18.153144-06:00",
+      "message_count": 11,
+      "source": "unknown",
+      "title": "Concurrent Worker Test"
+    },
+    {
+      "conversation_id": "0cc7d7f4-15c6-4773-a405-4e9085e58feb",
+      "earliest_ts": "2025-11-27T04:04:07.005058-06:00",
+      "id": "0cc7d7f4-15c6-4773-a405-4e9085e58feb",
+      "is_chunk": false,
+      "latest_ts": "2025-11-27T04:04:07.094900-06:00",
+      "message_count": 6,
+      "source": "unknown",
+      "title": "Embedding Worker Test"
+    },
+    {
+      "conversation_id": "3f96974a-a69f-452f-b470-ef1cfa59914c",
+      "earliest_ts": "2025-11-27T03:54:19.598521-06:00",
+      "id": "3f96974a-a69f-452f-b470-ef1cfa59914c",
+      "is_chunk": false,
+      "latest_ts": "2025-11-27T03:54:19.598521-06:00",
+      "message_count": 1,
+      "source": "unknown",
+      "title": "Test Conversation from Repository"
+    },
     {
       "conversation_id": "6a5bbe9a-820e-412d-8fb2-f9fb34037df4",
       "earliest_ts": "2025-11-27T03:53:50.034109-06:00",
