@@ -56,6 +56,15 @@
     "This is a test message from the repository pattern.",
     "Testing concurrent embedding workers.",
     "This conversation is for testing the embedding worker.",
+    "This is a test message from the repository pattern.",
+    "Testing concurrent embedding workers.",
+    "This conversation is for testing the embedding worker.",
+    "This is a test message from the repository pattern.",
+    "Testing concurrent embedding workers.",
+    "This conversation is for testing the embedding worker.",
+    "This is a test message from the repository pattern.",
+    "Testing concurrent embedding workers.",
+    "This conversation is for testing the embedding worker.",
     "This is a test message for the outbox pattern.",
     "This is a test message from the repository pattern.",
     "No messages yet.",
@@ -3451,6 +3460,15 @@
     "what do you know about me"
   ],
   "ids": [
+    "25465970-d6f1-4c29-9941-9f2a7c3229ce",
+    "4615e853-ea6f-45d9-b9b0-65f5e8bec88c",
+    "5ffe32ba-b8f6-48c7-97d9-b407283fb30e",
+    "2cc2e71a-e078-456d-885c-5c3847e921c9",
+    "fec7a410-0ddc-4b0c-ba24-a638ab2b33a2",
+    "704c2817-dcf6-4435-aaad-e8ff9b9ae3a4",
+    "0167c27e-82de-4e7e-93a8-b488c465d4f1",
+    "49e77776-bfc0-441a-b9e1-e5021ff5e22e",
+    "5ca5e2cb-40c8-4f7a-8470-75feacbfb4b9",
     "2f5a8a45-dc3e-4b71-9c7d-59103e28863e",
     "8052f2fa-8537-4a91-8f78-2fcd63c33e0e",
     "520428fd-8954-4f17-9f93-1c15b284c984",
@@ -4084,8 +4102,8 @@
     "6c2bea0d-3b7c-4d96-b066-2e3c32d97138",
     "eb1267c3-1e60-4153-8bcb-f97546526872",
     "57b4f2cc-8fed-4833-b237-d67923409b0f",
-    "b694421d-d095-4f33-b317-bad7c884b5fa",
     "b2689afa-1fa0-4ccc-8467-ed5d139a64df",
+    "b694421d-d095-4f33-b317-bad7c884b5fa",
     "ae5370cb-d745-4191-a7c4-dc67f4475014",
     "ff564780-6c01-4477-908a-eda2e2e2ed40",
     "d20e3f3e-4c11-44e0-8209-06302c37ac45",
@@ -6902,6 +6920,96 @@
     "3db6e49f-71b7-4a8e-91c8-a4933c92d586"
   ],
   "metadatas": [
+    {
+      "conversation_id": "25465970-d6f1-4c29-9941-9f2a7c3229ce",
+      "earliest_ts": "2025-11-27T03:24:03.386487-06:00",
+      "id": "25465970-d6f1-4c29-9941-9f2a7c3229ce",
+      "is_chunk": false,
+      "latest_ts": "2025-11-27T03:24:03.442681-06:00",
+      "message_count": 11,
+      "source": "unknown",
+      "title": "Concurrent Worker Test"
+    },
+    {
+      "conversation_id": "4615e853-ea6f-45d9-b9b0-65f5e8bec88c",
+      "earliest_ts": "2025-11-27T03:23:52.867228-06:00",
+      "id": "4615e853-ea6f-45d9-b9b0-65f5e8bec88c",
+      "is_chunk": false,
+      "latest_ts": "2025-11-27T03:23:52.959104-06:00",
+      "message_count": 6,
+      "source": "unknown",
+      "title": "Embedding Worker Test"
+    },
+    {
+      "conversation_id": "5ffe32ba-b8f6-48c7-97d9-b407283fb30e",
+      "earliest_ts": "2025-11-27T03:23:08.079648-06:00",
+      "id": "5ffe32ba-b8f6-48c7-97d9-b407283fb30e",
+      "is_chunk": false,
+      "latest_ts": "2025-11-27T03:23:08.079648-06:00",
+      "message_count": 1,
+      "source": "unknown",
+      "title": "Test Conversation from Repository"
+    },
+    {
+      "conversation_id": "2cc2e71a-e078-456d-885c-5c3847e921c9",
+      "earliest_ts": "2025-11-27T03:22:35.199647-06:00",
+      "id": "2cc2e71a-e078-456d-885c-5c3847e921c9",
+      "is_chunk": false,
+      "latest_ts": "2025-11-27T03:22:35.250482-06:00",
+      "message_count": 11,
+      "source": "unknown",
+      "title": "Concurrent Worker Test"
+    },
+    {
+      "conversation_id": "fec7a410-0ddc-4b0c-ba24-a638ab2b33a2",
+      "earliest_ts": "2025-11-27T03:22:24.004566-06:00",
+      "id": "fec7a410-0ddc-4b0c-ba24-a638ab2b33a2",
+      "is_chunk": false,
+      "latest_ts": "2025-11-27T03:22:24.091010-06:00",
+      "message_count": 6,
+      "source": "unknown",
+      "title": "Embedding Worker Test"
+    },
+    {
+      "conversation_id": "704c2817-dcf6-4435-aaad-e8ff9b9ae3a4",
+      "earliest_ts": "2025-11-27T03:21:30.516339-06:00",
+      "id": "704c2817-dcf6-4435-aaad-e8ff9b9ae3a4",
+      "is_chunk": false,
+      "latest_ts": "2025-11-27T03:21:30.516339-06:00",
+      "message_count": 1,
+      "source": "unknown",
+      "title": "Test Conversation from Repository"
+    },
+    {
+      "conversation_id": "0167c27e-82de-4e7e-93a8-b488c465d4f1",
+      "earliest_ts": "2025-11-27T03:20:55.986708-06:00",
+      "id": "0167c27e-82de-4e7e-93a8-b488c465d4f1",
+      "is_chunk": false,
+      "latest_ts": "2025-11-27T03:20:56.038940-06:00",
+      "message_count": 11,
+      "source": "unknown",
+      "title": "Concurrent Worker Test"
+    },
+    {
+      "conversation_id": "49e77776-bfc0-441a-b9e1-e5021ff5e22e",
+      "earliest_ts": "2025-11-27T03:20:44.636405-06:00",
+      "id": "49e77776-bfc0-441a-b9e1-e5021ff5e22e",
+      "is_chunk": false,
+      "latest_ts": "2025-11-27T03:20:44.770239-06:00",
+      "message_count": 6,
+      "source": "unknown",
+      "title": "Embedding Worker Test"
+    },
+    {
+      "conversation_id": "5ca5e2cb-40c8-4f7a-8470-75feacbfb4b9",
+      "earliest_ts": "2025-11-24T19:25:52.797147-06:00",
+      "id": "5ca5e2cb-40c8-4f7a-8470-75feacbfb4b9",
+      "is_chunk": false,
+      "latest_ts": "2025-11-24T19:25:52.797147-06:00",
+      "message_count": 1,
+      "source": "unknown",
+      "title": "Test Conversation from Repository"
+    },
     {
       "conversation_id": "2f5a8a45-dc3e-4b71-9c7d-59103e28863e",
       "earliest_ts": "2025-11-24T19:25:17.606648-06:00",
@@ -13233,9 +13341,9 @@
       "title": "Count word documents on mac"
     },
     {
-      "conversation_id": "b694421d-d095-4f33-b317-bad7c884b5fa",
+      "conversation_id": "b2689afa-1fa0-4ccc-8467-ed5d139a64df",
       "earliest_ts": "2025-10-03T00:13:57-05:00",
-      "id": "b694421d-d095-4f33-b317-bad7c884b5fa",
+      "id": "b2689afa-1fa0-4ccc-8467-ed5d139a64df",
       "is_chunk": false,
       "latest_ts": "2025-10-03T21:40:28-05:00",
       "message_count": 56,
@@ -13243,9 +13351,9 @@
       "title": "Imanage MCP server integration"
     },
     {
-      "conversation_id": "b2689afa-1fa0-4ccc-8467-ed5d139a64df",
+      "conversation_id": "b694421d-d095-4f33-b317-bad7c884b5fa",
       "earliest_ts": "2025-10-03T00:13:57-05:00",
-      "id": "b2689afa-1fa0-4ccc-8467-ed5d139a64df",
+      "id": "b694421d-d095-4f33-b317-bad7c884b5fa",
       "is_chunk": false,
       "latest_ts": "2025-10-03T21:40:28-05:00",
       "message_count": 56,
