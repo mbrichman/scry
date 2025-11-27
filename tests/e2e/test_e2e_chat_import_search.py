@@ -21,9 +21,6 @@ from typing import List, Dict, Any, Optional
 from datetime import datetime
 import uuid
 
-# Set feature flag to use PostgreSQL backend
-os.environ['USE_POSTGRES'] = 'true'
-
 # Add project root to path
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
@@ -32,7 +29,7 @@ from db.services.message_service import MessageService
 from db.services.search_service import SearchService, SearchConfig
 from db.workers.embedding_worker import EmbeddingWorker
 from db.repositories.unit_of_work import get_unit_of_work
-from db.adapters.legacy_api_adapter import get_legacy_adapter
+from db.adapters.api_format_adapter import get_api_format_adapter
 
 # Configure logging
 logging.basicConfig(
@@ -50,7 +47,7 @@ class EndToEndTester:
     def __init__(self):
         self.message_service = MessageService()
         self.search_service = SearchService()
-        self.legacy_adapter = get_legacy_adapter()
+        self.api_adapter = get_api_format_adapter()
         self.embedding_worker = None
         self.worker_thread = None
         self.test_conversations = []

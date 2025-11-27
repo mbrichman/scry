@@ -295,64 +295,8 @@ def conv_id(uow, seed_conversations):
     return conversation.id
 
 
-@pytest.fixture
-def toggle_postgres_mode(monkeypatch):
-    """
-    Toggle USE_POSTGRES environment variable for side-by-side testing.
-    
-    Usage:
-        def test_both_backends(toggle_postgres_mode):
-            # Test with PostgreSQL
-            toggle_postgres_mode(True)
-            result_pg = api_call()
-            
-            # Test with legacy ChromaDB
-            toggle_postgres_mode(False)
-            result_legacy = api_call()
-            
-            assert result_pg == result_legacy
-    """
-    def _toggle(use_postgres: bool):
-        value = "true" if use_postgres else "false"
-        monkeypatch.setenv("USE_POSTGRES", value)
-        # Also update config module
-        import config
-        monkeypatch.setattr(config, "USE_PG_SINGLE_STORE", use_postgres)
-    
-    return _toggle
-
-
-@pytest.fixture
-def both_backends(toggle_postgres_mode, db_session, seed_conversations):
-    """
-    Fixture for testing both backends with identical data.
-    
-    Seeds both PostgreSQL and legacy ChromaDB with same data.
-    Returns helper object for running tests against both.
-    
-    Usage:
-        def test_api_parity(both_backends):
-            result_pg = both_backends.postgres_api_call()
-            result_legacy = both_backends.legacy_api_call()
-            assert result_pg == result_legacy
-    """
-    class BothBackends:
-        def __init__(self):
-            self.toggle = toggle_postgres_mode
-            
-        def with_postgres(self, func, *args, **kwargs):
-            self.toggle(True)
-            return func(*args, **kwargs)
-        
-        def with_legacy(self, func, *args, **kwargs):
-            self.toggle(False)
-            return func(*args, **kwargs)
-    
-    # Seed PostgreSQL with test data
-    toggle_postgres_mode(True)
-    seed_conversations(count=5, with_embeddings=True)
-    
-    return BothBackends()
+# Removed: toggle_postgres_mode fixture (obsolete - PostgreSQL is now the only backend)
+# Removed: both_backends fixture (obsolete - no dual-backend support)
 
 
 # ===== Existing Fixtures =====

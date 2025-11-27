@@ -66,7 +66,6 @@ def quick_data_check():
             if total_conversations == 0:
                 logger.info("❌ No data found - database is empty")
                 logger.info("💡 To add test data:")
-                logger.info("   export USE_POSTGRES=true")
                 logger.info("   python3 test_manual_chat_import.py")
                 return False
             else:
@@ -114,7 +113,6 @@ if __name__ == "__main__":
     if success:
         logger.info("")
         logger.info("🎯 Your PostgreSQL backend is ready!")
-        logger.info("   Set: export USE_POSTGRES=true")
         logger.info("   Run: python3 app.py")
     else:
         logger.info("")

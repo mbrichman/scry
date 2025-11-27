@@ -12,9 +12,6 @@ import time
 import logging
 from typing import Dict, Any
 
-# Set feature flag to use PostgreSQL backend
-os.environ['USE_POSTGRES'] = 'true'
-
 # Add project root to path
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
@@ -23,7 +20,7 @@ from db.services.message_service import MessageService
 from db.services.search_service import SearchService
 from db.workers.embedding_worker import EmbeddingWorker
 from db.repositories.unit_of_work import get_unit_of_work
-from db.adapters.legacy_api_adapter import get_legacy_adapter
+from db.adapters.api_format_adapter import get_api_format_adapter
 
 # Configure logging
 logging.basicConfig(level=logging.INFO, format='%(levelname)s: %(message)s')
@@ -112,7 +109,7 @@ def test_search_methods(conversation_id: str):
     logger.info("🔍 Testing all search methods...")
     
     search_service = SearchService()
-    legacy_adapter = get_legacy_adapter()
+    api_adapter = get_api_format_adapter()
     
     # Test queries
     queries = [
@@ -153,9 +150,9 @@ def test_search_methods(conversation_id: str):
         except Exception as e:
             logger.error(f"❌ Hybrid search failed: {e}")
         
-        # 4. Legacy API Search
+        # 4. API Format Adapter Search
         try:
-            api_results = legacy_adapter.search(query_text=query, n_results=3)
+            api_results = api_adapter.search(query_text=query, n_results=3)
             api_count = len(api_results.get("documents", [[]])[0])
             logger.info(f"🌐 API Search: {api_count} results")
             if api_count > 0:
@@ -166,7 +163,7 @@ def test_search_methods(conversation_id: str):
         
         # 5. RAG Query
         try:
-            rag_results = legacy_adapter.rag_query(query=query, n_results=2)
+            rag_results = api_adapter.rag_query(query=query, n_results=2)
             rag_count = len(rag_results.get("results", []))
             logger.info(f"🤖 RAG Query: {rag_count} results")
             for i, result in enumerate(rag_results.get("results", [])):

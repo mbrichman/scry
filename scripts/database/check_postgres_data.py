@@ -229,11 +229,9 @@ def main():
         
         if not has_data:
             logger.info("\n💡 To add test data, run:")
-            logger.info("   export USE_POSTGRES=true")
             logger.info("   python test_manual_chat_import.py")
     
-    logger.info("\n🎯 To enable PostgreSQL backend in your app:")
-    logger.info("   export USE_POSTGRES=true")
+    logger.info("\n🎯 To run the app:")
     logger.info("   python app.py")
 
 
