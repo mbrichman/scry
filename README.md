@@ -18,10 +18,34 @@ Dovos is a Flask-based web application designed to import, archive, and search t
 
 ### Requirements
 
+**Option 1: Docker (Recommended)**
+- Docker and Docker Compose
+- No additional dependencies needed
+
+**Option 2: Local Development**
 - Python 3.8+
 - PostgreSQL 12+ with pgvector extension
 
-### Python Environment Setup
+### Quick Start with Docker (Recommended)
+
+```bash
+# 1. Configure environment
+cp .env.example .env
+# Edit .env with your PostgreSQL credentials and OpenWebUI settings
+
+# 2. Start the entire stack
+docker compose up -d
+
+# 3. Run database migrations
+docker compose exec dovos-rag alembic upgrade head
+
+# 4. Access the application
+open http://localhost:5001
+```
+
+See `DOCKER_DEPLOYMENT.md` for detailed Docker deployment instructions.
+
+### Alternative: Local Python Environment Setup
 
 ```bash
 # Create virtual environment
@@ -38,9 +62,23 @@ pip install -r requirements.txt
 
 Create a `.env` file in the project root (use `.env.example` as a template):
 
+**For Docker deployment:**
+```env
+# PostgreSQL credentials
+POSTGRES_USER=dovos
+POSTGRES_PASSWORD=your-secure-password
+POSTGRES_DB=dovos
+
+# Application settings
+OPENWEBUI_URL=http://your-openwebui-url:3000
+OPENWEBUI_API_KEY=your-api-key
+SECRET_KEY=your-secret-key-here
+```
+
+**For local development:**
 ```env
 # Database
-DATABASE_URL=postgresql://user:password@localhost:5432/dovos
+DATABASE_URL=postgresql+psycopg://user:password@localhost:5432/dovos
 
 # Flask
 FLASK_APP=app.py

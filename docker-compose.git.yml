@@ -1,3 +1,14 @@
+# Docker Compose configuration for building from GitHub
+# This pulls code from GitHub instead of using local files
+#
+# Usage:
+#   docker compose -f docker-compose.git.yml up -d
+#   docker compose -f docker-compose.git.yml build --build-arg BRANCH=dockerize-application
+#
+# Environment variables (set in .env or pass via command line):
+#   GITHUB_REPO - GitHub repository URL (default: https://github.com/markrichman/dovos.git)
+#   GIT_BRANCH - Branch to checkout (default: main)
+
 services:
   postgres:
     image: pgvector/pgvector:pg17
@@ -9,7 +20,8 @@ services:
       - PGDATA=/var/lib/postgresql/data/pgdata
     volumes:
       - postgres_data:/var/lib/postgresql/data
-      - ./init-scripts:/docker-entrypoint-initdb.d
+      # Note: init-scripts would need to be in the repo or mounted separately
+      # - ./init-scripts:/docker-entrypoint-initdb.d
     ports:
       - "5432:5432"
     healthcheck:
@@ -23,7 +35,12 @@ services:
       - dovos-network
 
   dovos-rag:
-    build: .
+    build:
+      context: .
+      dockerfile: Dockerfile.git
+      args:
+        GITHUB_REPO: ${GITHUB_REPO:-https://github.com/markrichman/dovos.git}
+        BRANCH: ${GIT_BRANCH:-main}
     container_name: dovos-rag-api
     ports:
       - "5001:5001"
