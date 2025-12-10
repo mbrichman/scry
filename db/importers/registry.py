@@ -67,16 +67,17 @@ def detect_format(data: Dict[str, Any] | List[Dict]) -> Tuple[List[Dict], str]:
     return conversations, "Unknown"
 
 
-# Format registry - maps format names to extractor functions
-# This will be populated by individual extractor modules
-from db.importers.chatgpt import extract_messages as extract_chatgpt_messages
-from db.importers.claude import extract_messages as extract_claude_messages
-from db.importers.openwebui import extract_messages as extract_openwebui_messages
-from db.importers.docx import extract_messages_from_file as extract_docx_messages
+# Format registry - dynamically loaded from discovered extractors
+# Extractors are discovered automatically from db/importers/ directory
+from db.importers.loader import discover_extractors
 
+# Discover and register extractors
+_discovered = discover_extractors()
 FORMAT_REGISTRY: Dict[str, Any] = {
-    'chatgpt': extract_chatgpt_messages,
-    'claude': extract_claude_messages,
-    'openwebui': extract_openwebui_messages,
-    'docx': extract_docx_messages,
+    name: info['extract'] for name, info in _discovered.items()
+}
+
+# Keep metadata accessible
+EXTRACTOR_METADATA = {
+    name: info.get('metadata', {}) for name, info in _discovered.items()
 }
