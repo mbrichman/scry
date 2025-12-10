@@ -12,6 +12,8 @@ import os
 from pathlib import Path
 from typing import Dict, Any, Callable, Optional
 
+from db.importers.metadata import DEFAULT_METADATA
+
 logger = logging.getLogger(__name__)
 
 
@@ -74,7 +76,7 @@ def discover_extractors() -> Dict[str, Dict[str, Any]]:
                 'name': display_name,
                 'extract': extract_func,
                 'module': module,
-                'metadata': _extract_metadata(module)
+                'metadata': _extract_metadata(module, format_name)
             }
             
         except Exception as e:
@@ -112,26 +114,32 @@ def _get_extract_function(module) -> Optional[Callable]:
     return None
 
 
-def _extract_metadata(module) -> Dict[str, Any]:
+def _extract_metadata(module, format_name: str) -> Dict[str, Any]:
     """
-    Extract metadata from a module.
+    Extract metadata from a module with defaults.
     
-    Looks for a METADATA dict or derives metadata from module docstring.
+    Looks for explicit METADATA dict, merges with DEFAULT_METADATA,
+    and derives additional metadata from module docstring.
     
     Args:
         module: The imported module
+        format_name: The format name (for looking up defaults)
         
     Returns:
         Dict with metadata fields
     """
+    # Start with defaults if available
     metadata = {}
+    if format_name in DEFAULT_METADATA:
+        metadata = DEFAULT_METADATA[format_name].to_dict()
     
-    # Check for explicit METADATA dict
+    # Check for explicit METADATA dict in module (overrides defaults)
     if hasattr(module, 'METADATA'):
-        metadata = getattr(module, 'METADATA', {})
+        module_meta = getattr(module, 'METADATA', {})
+        metadata.update(module_meta)
     
-    # Extract from docstring
-    if module.__doc__:
+    # Extract description from docstring if not already set
+    if module.__doc__ and 'description' not in metadata:
         metadata['description'] = module.__doc__.strip().split('\n')[0]
     
     return metadata
