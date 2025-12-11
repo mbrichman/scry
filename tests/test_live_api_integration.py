@@ -17,9 +17,8 @@ pytestmark = [pytest.mark.integration, pytest.mark.contract]
 class TestLiveAPIEndpoints:
     """Integration tests against live API endpoints"""
     
-    @pytest.mark.usefixtures("live_api_test_data")
     def test_api_conversations_list(self, client, contract_validator, golden_response_helpers):
-        """Test GET /api/conversations endpoint with real data from seeded database"""
+        """Test GET /api/conversations endpoint with real data"""
         start_time = time.time()
         response = client.get('/api/conversations')
         response_time = time.time() - start_time
@@ -89,9 +88,8 @@ class TestLiveAPIEndpoints:
         
         return results
     
-    @pytest.mark.usefixtures("live_api_test_data")
     def test_api_conversation_detail(self, client, contract_validator, golden_response_helpers):
-        """Test GET /api/conversation/<id> with real conversation ID from seeded database"""
+        """Test GET /api/conversation/<id> with real conversation ID"""
         # First get a list of conversations to find a valid ID
         list_response = client.get('/api/conversations')
         assert list_response.status_code == 200
@@ -163,9 +161,8 @@ class TestLiveAPIEndpoints:
             "response_time": response_time
         }
     
-    @pytest.mark.usefixtures("live_api_test_data")
     def test_api_search(self, client, contract_validator, golden_response_helpers):
-        """Test GET /api/search endpoint with seeded test data"""
+        """Test GET /api/search endpoint"""
         test_queries = [
             "python",
             "javascript", 

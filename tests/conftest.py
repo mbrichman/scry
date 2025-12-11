@@ -21,7 +21,8 @@ from db.repositories.unit_of_work import UnitOfWork
 from tests.utils.seed import (
     seed_conversation_with_messages,
     seed_multiple_conversations,
-    seed_test_corpus
+    seed_test_corpus,
+    clear_test_data
 )
 
 
@@ -299,37 +300,6 @@ def conv_id(uow, seed_conversations):
 
 
 # ===== Existing Fixtures =====
-
-@pytest.fixture(scope="function")
-def live_api_test_data(app):
-    """
-    Fixture for live API tests.
-    
-    Seeds the database with non-sensitive test conversations,
-    yields the app context, then cleans up after the test.
-    
-    This ensures tests capture real API responses with actual data
-    while remaining idempotent and not exposing personal information.
-    """
-    from db.repositories.unit_of_work import UnitOfWork
-    from db.database import get_session
-    
-    # Seed test data
-    session = get_session()
-    uow = UnitOfWork(session=session)
-    
-    try:
-        corpus = seed_test_corpus(uow, with_embeddings=True)
-        session.commit()
-        
-        # Yield control to test
-        yield uow
-        
-    finally:
-        # Cleanup: rollback all changes
-        session.rollback()
-        session.close()
-
 
 # Marks for organizing tests
 pytestmark = pytest.mark.contract
