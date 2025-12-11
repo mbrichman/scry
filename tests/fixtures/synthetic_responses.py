@@ -9,9 +9,6 @@ but with safe, generic, and clearly fake data.
 """
 
 from typing import Dict, Any, List
-from uuid import uuid4
-from datetime import datetime, timedelta
-import random
 import json
 
 from tests.utils.response_generators import (
@@ -24,29 +21,29 @@ from tests.utils.response_generators import (
 def generate_conversations_response(count: int = 10) -> Dict[str, Any]:
     """
     Generate synthetic GET /api/conversations response.
-    
+
     Structure matches legacy API format with documents, ids, metadatas.
     Uses generic conversation titles instead of real user data.
     """
     conversations = []
     ids = []
     metadatas = []
-    
+
     for _ in range(count):
         conv_id = SyntheticDataGenerator.fake_uuid()
         ids.append(conv_id)
-        
+
         # Generic conversation content
         title = SyntheticDataGenerator.fake_conversation_title()
         conversations.append(title)
-        
+
         # Safe metadata
         metadatas.append({
             "source": SyntheticDataGenerator.fake_source(),
             "date": SyntheticDataGenerator.fake_timestamp(60),
-            "message_count": random.randint(2, 20)
+            "message_count": SyntheticDataGenerator.rand_int(2, 20)
         })
-    
+
     return {
         "documents": conversations,
         "ids": ids,
@@ -57,15 +54,15 @@ def generate_conversations_response(count: int = 10) -> Dict[str, Any]:
 def generate_conversation_detail_response(conv_id: str = None) -> Dict[str, Any]:
     """
     Generate synthetic GET /api/conversation/<id> response.
-    
+
     Contains a single conversation with generic user-assistant exchanges.
     """
     if conv_id is None:
         conv_id = SyntheticDataGenerator.fake_uuid()
-    
+
     # Create a synthetic conversation
     conversation = generate_conversation_pair(include_metadata=True)
-    
+
     return {
         "documents": [conversation["title"]],
         "ids": [conv_id],
@@ -80,7 +77,7 @@ def generate_conversation_detail_response(conv_id: str = None) -> Dict[str, Any]
 def generate_search_response(query: str = "python", count: int = 5) -> Dict[str, Any]:
     """
     Generate synthetic GET /api/search response.
-    
+
     Returns search results with generic content, no real conversation data.
     """
     results = []
@@ -89,7 +86,7 @@ def generate_search_response(query: str = "python", count: int = 5) -> Dict[str,
         # Add ranking
         result["rank"] = len(results) + 1
         results.append(result)
-    
+
     return {
         "query": query,
         "results": results,
@@ -101,7 +98,7 @@ def generate_search_response(query: str = "python", count: int = 5) -> Dict[str,
 def generate_rag_query_response(query: str = "How to use Python?", count: int = 5) -> Dict[str, Any]:
     """
     Generate synthetic POST /api/rag/query response.
-    
+
     RAG results with generic content and realistic relevance scores.
     """
     results = []
@@ -112,10 +109,10 @@ def generate_rag_query_response(query: str = "How to use Python?", count: int = 
             "source_id": SyntheticDataGenerator.fake_uuid(),
             "metadata": {
                 "model": SyntheticDataGenerator.fake_model(),
-                "chunk": random.randint(1, 5)
+                "chunk": SyntheticDataGenerator.rand_int(1, 5)
             }
         })
-    
+
     return {
         "query": query,
         "results": results,
@@ -127,15 +124,15 @@ def generate_rag_query_response(query: str = "How to use Python?", count: int = 
 def generate_rag_health_response() -> Dict[str, Any]:
     """
     Generate synthetic GET /api/rag/health response.
-    
+
     Health check with realistic but generic statistics.
     """
     return {
         "status": "healthy",
-        "document_count": random.randint(1000, 10000),
+        "document_count": SyntheticDataGenerator.rand_int(1000, 10000),
         "embedding_model": SyntheticDataGenerator.fake_embedding_model(),
         "collection_name": "chat_history",
-        "uptime_seconds": random.randint(3600, 86400),
+        "uptime_seconds": SyntheticDataGenerator.rand_int(3600, 86400),
         "last_update": SyntheticDataGenerator.fake_timestamp(7)
     }
 
@@ -143,83 +140,84 @@ def generate_rag_health_response() -> Dict[str, Any]:
 def generate_stats_response() -> Dict[str, Any]:
     """
     Generate synthetic GET /api/stats response.
-    
+
     Statistics with generic but realistic numbers.
     """
     return {
-        "document_count": random.randint(100, 10000),
-        "conversation_count": random.randint(10, 500),
-        "message_count": random.randint(500, 50000),
+        "document_count": SyntheticDataGenerator.rand_int(100, 10000),
+        "conversation_count": SyntheticDataGenerator.rand_int(10, 500),
+        "message_count": SyntheticDataGenerator.rand_int(500, 50000),
         "embedding_model": SyntheticDataGenerator.fake_embedding_model(),
         "sources": {
-            "chatgpt": random.randint(10, 200),
-            "claude": random.randint(10, 200),
-            "openwebui": random.randint(10, 200)
+            "chatgpt": SyntheticDataGenerator.rand_int(10, 200),
+            "claude": SyntheticDataGenerator.rand_int(10, 200),
+            "openwebui": SyntheticDataGenerator.rand_int(10, 200)
         },
-        "indexed_documents": random.randint(100, 9000)
+        "indexed_documents": SyntheticDataGenerator.rand_int(100, 9000)
     }
 
 
 def generate_collection_count_response() -> Dict[str, Any]:
     """
     Generate synthetic GET /api/collection/count response.
-    
+
     Returns document count in the collection.
     """
     return {
-        "count": random.randint(100, 10000)
+        "count": SyntheticDataGenerator.rand_int(100, 10000)
     }
 
 
 def generate_live_api_snapshots() -> Dict[str, Any]:
     """
     Generate synthetic live_api_snapshots.json content.
-    
+
     Contains multiple endpoint snapshots with synthetic data.
     """
     conv_id = SyntheticDataGenerator.fake_uuid()
-    
+
     return {
         "GET /api/conversations": {
             "status_code": 200,
-            "captured_at": datetime.utcnow().isoformat(),
+            "captured_at": SyntheticDataGenerator.now_iso(),
             "data": generate_conversations_response(5)
         },
         "GET /api/conversation/<id>": {
             "status_code": 200,
-            "captured_at": datetime.utcnow().isoformat(),
+            "captured_at": SyntheticDataGenerator.now_iso(),
             "conversation_id": conv_id,
             "data": generate_conversation_detail_response(conv_id)
         },
         "GET /api/search": {
             "status_code": 200,
-            "captured_at": datetime.utcnow().isoformat(),
+            "captured_at": SyntheticDataGenerator.now_iso(),
             "data": generate_search_response("python")
         },
         "POST /api/rag/query": {
             "status_code": 200,
-            "captured_at": datetime.utcnow().isoformat(),
+            "captured_at": SyntheticDataGenerator.now_iso(),
             "data": generate_rag_query_response()
         },
         "GET /api/rag/health": {
             "status_code": 200,
-            "captured_at": datetime.utcnow().isoformat(),
+            "captured_at": SyntheticDataGenerator.now_iso(),
             "data": generate_rag_health_response()
         },
         "GET /api/stats": {
             "status_code": 200,
-            "captured_at": datetime.utcnow().isoformat(),
+            "captured_at": SyntheticDataGenerator.now_iso(),
             "data": generate_stats_response()
         },
         "GET /api/collection/count": {
             "status_code": 200,
-            "captured_at": datetime.utcnow().isoformat(),
+            "captured_at": SyntheticDataGenerator.now_iso(),
             "data": generate_collection_count_response()
         }
     }
 
 
 # Factory functions for pytest fixtures
+
 def create_synthetic_conversations() -> Dict[str, Any]:
     """Factory for synthetic conversations response."""
     return generate_conversations_response(10)

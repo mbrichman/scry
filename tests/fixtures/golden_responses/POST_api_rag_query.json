@@ -2,104 +2,104 @@
   "query": "test query",
   "results": [
     {
-      "content": "I need help with this query",
-      "distance": 0.4075821218615009,
-      "id": "82baa9b4-a659-4342-9d61-aebea455ce17",
+      "content": "I converted the sever to C to compare:\nTest \u00a0 \u00a0 \u00a0 \u00a0 \u00a0 \u00a0 \u00a0 \u00a0 \u00a0 \u00a0 ASM (req/s) \u00a0 \u00a0 \u00a0 C (req/s)\u00a0 \u00a0 \u00a0 Difference\n---- \u00a0 \u00a0 \u00a0 \u00a0 \u00a0 \u00a0 \u00a0 \u00a0 \u00a0 \u00a0 ----------- \u00a0 \u00a0 \u00a0 ---------\u00a0 \u00a0 \u00a0 ----------\nsmall_concurrent \u00a0 \u00a0 \u00a0 \u00a0 \u00a0 \u00a0 7908.48 \u00a0 \u00a0 \u00a0 \u00a0 7467.35 \u00a0 \u00a0 \u00a0 \u00a0 \u00a0 +5.9%\nmedium_concurrent\u00a0 \u00a0 \u00a0 \u00a0 \u00a0 \u00a0 1652.27 \u00a0 \u00a0 \u00a0 \u00a0 1552.89 \u00a0 \u00a0 \u00a0 \u00a0 \u00a0 +6.4%\nsmall_seq\u00a0 \u00a0 \u00a0 \u00a0 \u00a0 \u00a0 \u00a0 \u00a0 \u00a0 \u00a0 5367.41 \u00a0 \u00a0 \u00a0 \u00a0 4830.35\u00a0 \u00a0 \u00a0 \u00a0 \u00a0 +11.1%\nmedium_seq \u00a0 \u00a0 \u00a0 \u00a0 \u00a0 \u00a0 \u00a0 \u00a0 \u00a0 2559.45 \u00a0 \u00a0 \u00a0 \u00a0 2441.25 \u00a0 \u00a0 \u00a0 \u00a0 \u00a0 +4.8%\nlarge_seq\u00a0 \u00a0 \u00a0 \u00a0 \u00a0 \u00a0 \u00a0 \u00a0 \u00a0 \u00a0 1107.91 \u00a0 \u00a0 \u00a0 \u00a0 1153.94 \u00a0 \u00a0 \u00a0 \u00a0 \u00a0 -4.0%\nlarge_concurrent \u00a0 \u00a0 \u00a0 \u00a0 \u00a0 \u00a0 1291.05 \u00a0 \u00a0 \u00a0 \u00a0 1340.21 \u00a0 \u00a0 \u00a0 \u00a0 \u00a0 -3.7%",
+      "distance": 0.6960761754535455,
+      "id": "440d4241-b63b-4656-ae2c-954f8dbe8d0f",
       "metadata": {
-        "conversation_id": "82baa9b4-a659-4342-9d61-aebea455ce17",
-        "earliest_ts": "2024-08-21T18:53:50.520814-05:00",
-        "id": "82baa9b4-a659-4342-9d61-aebea455ce17",
-        "latest_ts": "2024-08-21T18:53:50.520814-05:00",
+        "conversation_id": "440d4241-b63b-4656-ae2c-954f8dbe8d0f",
+        "earliest_ts": "2025-11-05T18:07:57.965391-06:00",
+        "id": "440d4241-b63b-4656-ae2c-954f8dbe8d0f",
+        "latest_ts": "2025-11-05T18:07:57.965391-06:00",
         "message_count": 1,
-        "message_id": "47969e99-1802-4d61-837c-b850c6dd928c",
+        "message_id": "8b0a7c6a-1492-4afe-ba64-186727baf603",
         "role": "user",
         "source": "postgres",
-        "title": "Help with Query"
+        "title": "HTTP protocol on circuit boards"
       },
-      "preview": "I need help with this query",
-      "relevance": 0.5924178781384991,
+      "preview": "I converted the sever to C to compare:\nTest \u00a0 \u00a0 \u00a0 \u00a0 \u00a0 \u00a0 \u00a0 \u00a0 \u00a0 \u00a0 ASM (req/s) \u00a0 \u00a0 \u00a0 C (req/s)\u00a0 \u00a0 \u00a0 Difference\n---- \u00a0 \u00a0 \u00a0 \u00a0 \u00a0 \u00a0 \u00a0 \u00a0 \u00a0 \u00a0 ----------- \u00a0 \u00a0 \u00a0 ---------\u00a0 \u00a0 \u00a0 ----------\nsmall_concurrent \u00a0 \u00a0 \u00a0 \u00a0 \u00a0 \u00a0 7908.48 \u00a0 \u00a0 \u00a0 \u00a0 7467.35 \u00a0 \u00a0 \u00a0 \u00a0 \u00a0 +5.9%\nmedium_concurrent\u00a0 \u00a0 \u00a0 \u00a0 \u00a0 \u00a0 1652.27 \u00a0 \u00a0 \u00a0 \u00a0 1552.89 \u00a0 \u00a0 \u00a0 \u00a0 \u00a0 +6.4%\nsmall_seq\u00a0 \u00a0 \u00a0 \u00a0 \u00a0 \u00a0 \u00a0 \u00a0 \u00a0 \u00a0 5367.41 \u00a0 \u00a0 \u00a0 \u00a0 4830.35\u00a0 \u00a0 \u00a0 \u00a0 \u00a0 +11.1%\nmedium_seq \u00a0 \u00a0 \u00a0 \u00a0 \u00a0 \u00a0 \u00a0 \u00a0 \u00a0 2559.45 \u00a0 \u00a0 \u00a0 \u00a0 2441.25 \u00a0 \u00a0 \u00a0 \u00a0 \u00a0 +4.8%\nlarge_seq\u00a0 \u00a0 \u00a0 \u00a0 \u00a0 \u00a0 \u00a0 \u00a0 \u00a0 \u00a0 1107.91 \u00a0 \u00a0 \u00a0 \u00a0 11...",
+      "relevance": 0.3039238245464545,
       "source": "postgres",
-      "title": "Help with Query"
+      "title": "HTTP protocol on circuit boards"
     },
     {
-      "content": "Mixed results on the queries",
-      "distance": 0.4782554662747429,
-      "id": "143ff2fe-bbc4-4d01-978e-34c4ef0b0053",
+      "content": "Search",
+      "distance": 0.7027608397913975,
+      "id": "99aca976-0d93-4ec6-8f8b-dd255838672c",
       "metadata": {
-        "conversation_id": "143ff2fe-bbc4-4d01-978e-34c4ef0b0053",
-        "earliest_ts": "2025-10-03T15:51:23.905630-05:00",
-        "id": "143ff2fe-bbc4-4d01-978e-34c4ef0b0053",
-        "latest_ts": "2025-10-03T15:51:23.905630-05:00",
+        "conversation_id": "99aca976-0d93-4ec6-8f8b-dd255838672c",
+        "earliest_ts": "2025-11-24T04:13:35.621721-06:00",
+        "id": "99aca976-0d93-4ec6-8f8b-dd255838672c",
+        "latest_ts": "2025-11-24T04:13:35.621721-06:00",
         "message_count": 1,
-        "message_id": "5a455ae4-4f2c-41fb-be81-f05ce6f001d6",
+        "message_id": "94a52082-c1f3-4f35-982f-6f4926d01b0c",
         "role": "user",
         "source": "postgres",
-        "title": "iManage search system redesign"
+        "title": "Asymptomatic Tourette's comedy skit"
       },
-      "preview": "Mixed results on the queries",
-      "relevance": 0.5217445337252571,
+      "preview": "Search",
+      "relevance": 0.2972391602086025,
       "source": "postgres",
-      "title": "iManage search system redesign"
+      "title": "Asymptomatic Tourette's comedy skit"
     },
     {
-      "content": "Can you give me a simple practice test",
-      "distance": 0.4964220373756245,
-      "id": "d875b068-eaf3-47f6-aadc-5b8c0f59b7e9",
+      "content": "Into what is the question",
+      "distance": 0.7187062380770202,
+      "id": "6d922120-6a24-433c-b5eb-3c2fedead5cd",
       "metadata": {
-        "conversation_id": "d875b068-eaf3-47f6-aadc-5b8c0f59b7e9",
-        "earliest_ts": "2025-03-23T02:34:08.652178-05:00",
-        "id": "d875b068-eaf3-47f6-aadc-5b8c0f59b7e9",
-        "latest_ts": "2025-03-23T02:34:08.652178-05:00",
+        "conversation_id": "6d922120-6a24-433c-b5eb-3c2fedead5cd",
+        "earliest_ts": "2025-11-01T22:59:29-05:00",
+        "id": "6d922120-6a24-433c-b5eb-3c2fedead5cd",
+        "latest_ts": "2025-11-01T22:59:29-05:00",
         "message_count": 1,
-        "message_id": "da7d3e5b-3b87-4f3d-bae1-bbe5911e46ac",
+        "message_id": "9ad83ce4-1d75-4ce2-b639-ec3f8d2d3a17",
         "role": "user",
         "source": "postgres",
-        "title": "Teas Test Clarification"
+        "title": "\ud83d\udc94 Emotional Shitshow Day"
       },
-      "preview": "Can you give me a simple practice test",
-      "relevance": 0.5035779626243755,
+      "preview": "Into what is the question",
+      "relevance": 0.28129376192297983,
       "source": "postgres",
-      "title": "Teas Test Clarification"
+      "title": "\ud83d\udc94 Emotional Shitshow Day"
     },
     {
-      "content": "optimize this query",
-      "distance": 0.5144638751659087,
-      "id": "cd6d421a-dc80-4f46-aa7f-dc90949c5198",
+      "content": "I\u2019ve already refactored and added tests.",
+      "distance": 0.7225033325694792,
+      "id": "5f9cd9bb-3f59-4f3c-81b0-3963184aaaaa",
       "metadata": {
-        "conversation_id": "cd6d421a-dc80-4f46-aa7f-dc90949c5198",
-        "earliest_ts": "2024-06-11T12:14:12.548413-05:00",
-        "id": "cd6d421a-dc80-4f46-aa7f-dc90949c5198",
-        "latest_ts": "2024-06-11T12:14:12.548413-05:00",
+        "conversation_id": "5f9cd9bb-3f59-4f3c-81b0-3963184aaaaa",
+        "earliest_ts": "2025-11-23T02:54:24.265293-06:00",
+        "id": "5f9cd9bb-3f59-4f3c-81b0-3963184aaaaa",
+        "latest_ts": "2025-11-23T02:54:24.265293-06:00",
         "message_count": 1,
-        "message_id": "0dd314fc-84d7-4c13-8ccf-90729145f105",
+        "message_id": "793ef957-69b9-436f-b559-fd3664ba6937",
         "role": "user",
         "source": "postgres",
-        "title": "Optimize Conversation Query"
+        "title": "DovOS alternatives and competitive landscape"
       },
-      "preview": "optimize this query",
-      "relevance": 0.48553612483409125,
+      "preview": "I\u2019ve already refactored and added tests.",
+      "relevance": 0.2774966674305208,
       "source": "postgres",
-      "title": "Optimize Conversation Query"
+      "title": "DovOS alternatives and competitive landscape"
     },
     {
-      "content": "I don't know where to put that query call",
-      "distance": 0.5262637483353165,
-      "id": "48d60430-2d69-4083-a2fe-188ed6f613cc",
+      "content": "The question is more how than if",
+      "distance": 0.7411443833109339,
+      "id": "f18a7dc0-8b33-44c0-9286-9d9085526718",
       "metadata": {
-        "conversation_id": "48d60430-2d69-4083-a2fe-188ed6f613cc",
-        "earliest_ts": "2025-10-05T23:05:08.964566-05:00",
-        "id": "48d60430-2d69-4083-a2fe-188ed6f613cc",
-        "latest_ts": "2025-10-05T23:05:08.964566-05:00",
+        "conversation_id": "f18a7dc0-8b33-44c0-9286-9d9085526718",
+        "earliest_ts": "2025-11-17T16:32:29.185223-06:00",
+        "id": "f18a7dc0-8b33-44c0-9286-9d9085526718",
+        "latest_ts": "2025-11-17T16:32:29.185223-06:00",
         "message_count": 1,
-        "message_id": "e7647d88-1307-49dc-b34b-1bef77848a60",
+        "message_id": "945721f2-137a-4176-b718-519fd6f18dbc",
         "role": "user",
         "source": "postgres",
-        "title": "RAG API service architecture"
+        "title": "Instagram thirst trap fatigue"
       },
-      "preview": "I don't know where to put that query call",
-      "relevance": 0.47373625166468347,
+      "preview": "The question is more how than if",
+      "relevance": 0.2588556166890661,
       "source": "postgres",
-      "title": "RAG API service architecture"
+      "title": "Instagram thirst trap fatigue"
     }
   ],
   "search_type": "semantic"

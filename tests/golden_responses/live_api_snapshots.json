@@ -1,221 +1,221 @@
 {
-  "GET /api/conversations": {
-    "status_code": 200,
-    "captured_at": "2025-12-11T04:35:40.873752",
+  "GET /api/collection/count": {
+    "captured_at": "2025-01-01T12:00:00Z",
     "data": {
-      "documents": [
-        "Understanding machine learning basics",
-        "Testing strategies and approaches",
-        "Web development frameworks comparison",
-        "Web development frameworks comparison",
-        "Database optimization techniques"
-      ],
-      "ids": [
-        "ff0a0de4-7024-4e5e-b64b-65a6705da8a7",
-        "cff9d06d-9f32-48d9-9a17-0717e0bcb6d7",
-        "d6761072-b830-4607-968b-d6cd24880001",
-        "d9a682d0-474e-4c5c-ab68-5d583a88585f",
-        "1cdfa1c9-208e-4e73-8255-04fd9fb8264f"
-      ],
-      "metadatas": [
-        {
-          "source": "claude",
-          "date": "2025-11-24T04:35:40.873761Z",
-          "message_count": 20
-        },
-        {
-          "source": "openwebui",
-          "date": "2025-12-04T04:35:40.873769Z",
-          "message_count": 12
-        },
-        {
-          "source": "claude",
-          "date": "2025-11-10T04:35:40.873776Z",
-          "message_count": 14
-        },
-        {
-          "source": "openwebui",
-          "date": "2025-11-28T04:35:40.873783Z",
-          "message_count": 3
-        },
-        {
-          "source": "claude",
-          "date": "2025-10-26T04:35:40.873789Z",
-          "message_count": 5
-        }
-      ]
-    }
+      "count": 8367
+    },
+    "status_code": 200
   },
   "GET /api/conversation/<id>": {
-    "status_code": 200,
-    "captured_at": "2025-12-11T04:35:40.873792",
-    "conversation_id": "4d8928a9-e42b-4e13-861b-997c8384475f",
+    "captured_at": "2025-01-01T12:00:00Z",
+    "conversation_id": "c151b518-42cd-4a49-a713-1248b9d47345",
     "data": {
       "documents": [
-        "Database optimization techniques"
+        "Security considerations in applications"
       ],
       "ids": [
-        "4d8928a9-e42b-4e13-861b-997c8384475f"
+        "c151b518-42cd-4a49-a713-1248b9d47345"
       ],
       "metadatas": [
         {
-          "source": "openwebui",
+          "date": "2024-12-25T12:00:00Z",
           "message_count": 2,
-          "date": "2025-11-21T04:35:40.873806Z"
+          "source": "claude"
         }
       ]
-    }
+    },
+    "status_code": 200
   },
-  "GET /api/search": {
-    "status_code": 200,
-    "captured_at": "2025-12-11T04:35:40.873809",
+  "GET /api/conversations": {
+    "captured_at": "2025-01-01T12:00:00Z",
     "data": {
-      "query": "python",
-      "results": [
-        {
-          "id": "538471e8-91c0-4591-a053-39bc57541ea8",
-          "content": "That's a great question. Here are the key considerations: 1) Performance optimization 2) Best practices 3) Common pitfalls to avoid.",
-          "score": 0.662,
-          "metadata": {
-            "source": "openwebui",
-            "date": "2025-10-25T04:35:40.873817Z"
-          },
-          "rank": 1
-        },
-        {
-          "id": "b2ff58ae-e1e2-4ef1-b9c3-2639a7cf7e35",
-          "content": "This depends on your specific use case. Generally speaking, you'll want to consider: scalability, maintainability, and performance.",
-          "score": 0.699,
-          "metadata": {
-            "source": "chatgpt",
-            "date": "2025-10-22T04:35:40.873824Z"
-          },
-          "rank": 2
-        },
-        {
-          "id": "f2c07ebf-0287-43d7-bf83-6761e984126a",
-          "content": "This is an important topic in the field. Let me break down the essential concepts and practical applications.",
-          "score": 0.854,
-          "metadata": {
-            "source": "openwebui",
-            "date": "2025-10-26T04:35:40.873831Z"
-          },
-          "rank": 3
-        },
-        {
-          "id": "bc3363c6-3dbe-477a-9e54-4aa8e3695f88",
-          "content": "There are several approaches to this problem. The most common solutions involve: traditional methods and modern approaches.",
-          "score": 0.894,
-          "metadata": {
-            "source": "chatgpt",
-            "date": "2025-10-29T04:35:40.873837Z"
-          },
-          "rank": 4
-        },
-        {
-          "id": "296b6ca8-f19b-4679-aa71-e3c87d94f2e0",
-          "content": "This depends on your specific use case. Generally speaking, you'll want to consider: scalability, maintainability, and performance.",
-          "score": 0.942,
-          "metadata": {
-            "source": "openwebui",
-            "date": "2025-10-17T04:35:40.873843Z"
-          },
-          "rank": 5
-        }
+      "documents": [
+        "How to improve productivity",
+        "Understanding machine learning basics",
+        "Data analysis workflows",
+        "API design principles",
+        "Best practices for Python development"
       ],
-      "result_count": 5,
-      "search_type": "full_text"
-    }
-  },
-  "POST /api/rag/query": {
-    "status_code": 200,
-    "captured_at": "2025-12-11T04:35:40.873846",
-    "data": {
-      "query": "How to use Python?",
-      "results": [
-        {
-          "content": "There are several approaches to this problem. The most common solutions involve: traditional methods and modern approaches.",
-          "score": 0.695,
-          "source_id": "b491bc28-07d4-4ee3-ba2a-075dcff792ec",
-          "metadata": {
-            "model": "claude-3-opus",
-            "chunk": 1
-          }
-        },
-        {
-          "content": "That's a great question. Here are the key considerations: 1) Performance optimization 2) Best practices 3) Common pitfalls to avoid.",
-          "score": 0.819,
-          "source_id": "ce86d3ae-0761-4c5c-a168-afdffc986129",
-          "metadata": {
-            "model": "neural-chat",
-            "chunk": 1
-          }
-        },
-        {
-          "content": "This depends on your specific use case. Generally speaking, you'll want to consider: scalability, maintainability, and performance.",
-          "score": 0.852,
-          "source_id": "d54af14d-c9ad-4c90-b494-59240015e502",
-          "metadata": {
-            "model": "mistral-7b",
-            "chunk": 1
-          }
-        },
-        {
-          "content": "This is an important topic in the field. Let me break down the essential concepts and practical applications.",
-          "score": 0.893,
-          "source_id": "b671840b-a655-444a-8ae2-81f270260f2c",
-          "metadata": {
-            "model": "neural-chat",
-            "chunk": 4
-          }
-        },
-        {
-          "content": "This depends on your specific use case. Generally speaking, you'll want to consider: scalability, maintainability, and performance.",
-          "score": 0.851,
-          "source_id": "0c409097-1e5f-440c-a354-dd459d0f2362",
-          "metadata": {
-            "model": "mistral-7b",
-            "chunk": 2
-          }
-        }
+      "ids": [
+        "d4a1f546-a10a-43e2-b4dc-86fd3033aad6",
+        "a089e943-42ef-4155-addd-b1c8b6c8d5fd",
+        "d0df2214-241a-496f-b70d-ec886712cd5e",
+        "0f63950e-63e9-49a7-ad52-a68442cb8941",
+        "2db8e083-c197-4452-b19e-3908fb128bba"
       ],
-      "result_count": 5,
-      "search_type": "semantic"
-    }
+      "metadatas": [
+        {
+          "date": "2024-12-25T12:00:00Z",
+          "message_count": 9,
+          "source": "openwebui"
+        },
+        {
+          "date": "2024-11-27T12:00:00Z",
+          "message_count": 17,
+          "source": "claude"
+        },
+        {
+          "date": "2024-11-04T12:00:00Z",
+          "message_count": 15,
+          "source": "chatgpt"
+        },
+        {
+          "date": "2024-12-03T12:00:00Z",
+          "message_count": 3,
+          "source": "chatgpt"
+        },
+        {
+          "date": "2024-12-30T12:00:00Z",
+          "message_count": 7,
+          "source": "openwebui"
+        }
+      ]
+    },
+    "status_code": 200
   },
   "GET /api/rag/health": {
-    "status_code": 200,
-    "captured_at": "2025-12-11T04:35:40.873873",
+    "captured_at": "2025-01-01T12:00:00Z",
     "data": {
-      "status": "healthy",
-      "document_count": 7200,
-      "embedding_model": "bgem3-base",
       "collection_name": "chat_history",
-      "uptime_seconds": 47746,
-      "last_update": "2025-12-07T04:35:40.873877Z"
-    }
+      "document_count": 5775,
+      "embedding_model": "all-MiniLM-L6-v2",
+      "last_update": "2024-12-30T12:00:00Z",
+      "status": "healthy",
+      "uptime_seconds": 75089
+    },
+    "status_code": 200
+  },
+  "GET /api/search": {
+    "captured_at": "2025-01-01T12:00:00Z",
+    "data": {
+      "query": "python",
+      "result_count": 5,
+      "results": [
+        {
+          "content": "There are several approaches to this problem. The most common solutions involve: traditional methods and modern approaches.",
+          "id": "dce8ad57-99e8-44fe-9e44-cbfe364c3357",
+          "metadata": {
+            "date": "2024-11-21T12:00:00Z",
+            "source": "claude"
+          },
+          "rank": 1,
+          "score": 0.875
+        },
+        {
+          "content": "There are several approaches to this problem. The most common solutions involve: traditional methods and modern approaches.",
+          "id": "8aef756e-c411-41f6-bcec-c33c34a78e46",
+          "metadata": {
+            "date": "2024-11-12T12:00:00Z",
+            "source": "chatgpt"
+          },
+          "rank": 2,
+          "score": 0.791
+        },
+        {
+          "content": "There's quite a bit to cover here. First, let's establish the fundamentals, then we can explore more advanced concepts.",
+          "id": "dc5c38ed-f420-4e68-b76a-c4c3116f35b5",
+          "metadata": {
+            "date": "2024-12-29T12:00:00Z",
+            "source": "claude"
+          },
+          "rank": 3,
+          "score": 0.872
+        },
+        {
+          "content": "This is an important topic in the field. Let me break down the essential concepts and practical applications.",
+          "id": "db01059d-9a70-4dc5-85a6-6fe9fc20d8e4",
+          "metadata": {
+            "date": "2024-12-11T12:00:00Z",
+            "source": "openwebui"
+          },
+          "rank": 4,
+          "score": 0.733
+        },
+        {
+          "content": "This is an important topic in the field. Let me break down the essential concepts and practical applications.",
+          "id": "20b485a8-d9b9-4450-bd4b-a99bb8487e9b",
+          "metadata": {
+            "date": "2024-12-31T12:00:00Z",
+            "source": "claude"
+          },
+          "rank": 5,
+          "score": 0.773
+        }
+      ],
+      "search_type": "full_text"
+    },
+    "status_code": 200
   },
   "GET /api/stats": {
-    "status_code": 200,
-    "captured_at": "2025-12-11T04:35:40.873879",
+    "captured_at": "2025-01-01T12:00:00Z",
     "data": {
-      "document_count": 1628,
-      "conversation_count": 269,
-      "message_count": 22627,
-      "embedding_model": "bgem3-base",
+      "conversation_count": 146,
+      "document_count": 6837,
+      "embedding_model": "sentence-transformers/paraphrase-MiniLM-L6-v2",
+      "indexed_documents": 7815,
+      "message_count": 37023,
       "sources": {
-        "chatgpt": 167,
-        "claude": 199,
-        "openwebui": 143
-      },
-      "indexed_documents": 5809
-    }
+        "chatgpt": 38,
+        "claude": 132,
+        "openwebui": 57
+      }
+    },
+    "status_code": 200
   },
-  "GET /api/collection/count": {
-    "status_code": 200,
-    "captured_at": "2025-12-11T04:35:40.873885",
+  "POST /api/rag/query": {
+    "captured_at": "2025-01-01T12:00:00Z",
     "data": {
-      "count": 5952
-    }
+      "query": "How to use Python?",
+      "result_count": 5,
+      "results": [
+        {
+          "content": "This depends on your specific use case. Generally speaking, you'll want to consider: scalability, maintainability, and performance.",
+          "metadata": {
+            "chunk": 2,
+            "model": "claude-3-opus"
+          },
+          "score": 0.877,
+          "source_id": "f6ac9ce9-5981-47d5-bc9f-9fb5239c3763"
+        },
+        {
+          "content": "This depends on your specific use case. Generally speaking, you'll want to consider: scalability, maintainability, and performance.",
+          "metadata": {
+            "chunk": 3,
+            "model": "claude-3-opus"
+          },
+          "score": 0.674,
+          "source_id": "a63d1bda-3d50-4fe7-9354-6c925bfa2bf5"
+        },
+        {
+          "content": "That's a great question. Here are the key considerations: 1) Performance optimization 2) Best practices 3) Common pitfalls to avoid.",
+          "metadata": {
+            "chunk": 3,
+            "model": "claude-3-opus"
+          },
+          "score": 0.755,
+          "source_id": "5a43d878-095a-4539-9196-bc2fcc404926"
+        },
+        {
+          "content": "This is an important topic in the field. Let me break down the essential concepts and practical applications.",
+          "metadata": {
+            "chunk": 1,
+            "model": "neural-chat"
+          },
+          "score": 0.725,
+          "source_id": "ad1797fb-8814-4e0d-b631-b16ff1d51bbe"
+        },
+        {
+          "content": "This depends on your specific use case. Generally speaking, you'll want to consider: scalability, maintainability, and performance.",
+          "metadata": {
+            "chunk": 4,
+            "model": "gpt-4"
+          },
+          "score": 0.887,
+          "source_id": "d6c22174-08e2-4bbf-adae-b70b3c5a2837"
+        }
+      ],
+      "search_type": "semantic"
+    },
+    "status_code": 200
   }
 }

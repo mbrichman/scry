@@ -1,97 +1,97 @@
 {
   "query": "How to use Python?",
+  "result_count": 10,
   "results": [
     {
       "content": "This is an important topic in the field. Let me break down the essential concepts and practical applications.",
-      "score": 0.991,
-      "source_id": "f3545514-8431-4f61-8f3b-be614e6db826",
       "metadata": {
-        "model": "mistral-7b",
-        "chunk": 2
-      }
-    },
-    {
-      "content": "There's quite a bit to cover here. First, let's establish the fundamentals, then we can explore more advanced concepts.",
-      "score": 0.797,
-      "source_id": "78e4b24f-1af0-4939-b516-bf4462d54748",
-      "metadata": {
-        "model": "claude-3-opus",
-        "chunk": 1
-      }
-    },
-    {
-      "content": "This is an important topic in the field. Let me break down the essential concepts and practical applications.",
-      "score": 0.819,
-      "source_id": "73f2bee5-8fe0-48a0-9ae9-72159a87a6ed",
-      "metadata": {
-        "model": "neural-chat",
-        "chunk": 5
-      }
-    },
-    {
-      "content": "There are several approaches to this problem. The most common solutions involve: traditional methods and modern approaches.",
-      "score": 0.678,
-      "source_id": "d913c90c-4e24-4f03-bc26-ae4d2a183b12",
-      "metadata": {
-        "model": "neural-chat",
-        "chunk": 4
-      }
-    },
-    {
-      "content": "There are several approaches to this problem. The most common solutions involve: traditional methods and modern approaches.",
-      "score": 0.814,
-      "source_id": "1cf6ae50-7b2a-4584-a684-b34543178e38",
-      "metadata": {
-        "model": "mistral-7b",
-        "chunk": 1
-      }
-    },
-    {
-      "content": "There are several approaches to this problem. The most common solutions involve: traditional methods and modern approaches.",
-      "score": 0.9,
-      "source_id": "0a1f7542-9ffe-4c33-8329-a7cfe8934dfe",
-      "metadata": {
-        "model": "neural-chat",
-        "chunk": 5
-      }
-    },
-    {
-      "content": "This is an important topic in the field. Let me break down the essential concepts and practical applications.",
-      "score": 0.837,
-      "source_id": "69c29c40-0b71-4b9e-a72d-e2aa34bdc885",
-      "metadata": {
-        "model": "gpt-4",
-        "chunk": 5
-      }
-    },
-    {
-      "content": "There are several approaches to this problem. The most common solutions involve: traditional methods and modern approaches.",
-      "score": 0.696,
-      "source_id": "795fd9fd-3251-4153-ba60-2e3b1f9c2ee1",
-      "metadata": {
-        "model": "claude-3-opus",
-        "chunk": 1
-      }
-    },
-    {
-      "content": "There are several approaches to this problem. The most common solutions involve: traditional methods and modern approaches.",
+        "chunk": 4,
+        "model": "neural-chat"
+      },
       "score": 0.667,
-      "source_id": "451cd7e1-a6e1-4845-a042-e2ee11c0d6fa",
+      "source_id": "736ae2e9-1bdf-46a7-9815-e81e9f3679d1"
+    },
+    {
+      "content": "This is an important topic in the field. Let me break down the essential concepts and practical applications.",
       "metadata": {
-        "model": "mistral-7b",
-        "chunk": 1
-      }
+        "chunk": 5,
+        "model": "claude-3-opus"
+      },
+      "score": 0.736,
+      "source_id": "c949cc8c-1651-4a39-9bcb-d6070021185a"
+    },
+    {
+      "content": "This is an important topic in the field. Let me break down the essential concepts and practical applications.",
+      "metadata": {
+        "chunk": 1,
+        "model": "mistral-7b"
+      },
+      "score": 0.831,
+      "source_id": "a04282e5-67d2-4b24-8d2d-f842033bc36d"
     },
     {
       "content": "That's a great question. Here are the key considerations: 1) Performance optimization 2) Best practices 3) Common pitfalls to avoid.",
-      "score": 0.844,
-      "source_id": "d652a084-a0f7-47da-af00-482e8b4fb7f4",
       "metadata": {
-        "model": "mistral-7b",
-        "chunk": 2
-      }
+        "chunk": 2,
+        "model": "claude-3-opus"
+      },
+      "score": 0.973,
+      "source_id": "6f3e598d-a28f-48b2-953b-8c523213b9e1"
+    },
+    {
+      "content": "This is an important topic in the field. Let me break down the essential concepts and practical applications.",
+      "metadata": {
+        "chunk": 2,
+        "model": "neural-chat"
+      },
+      "score": 0.839,
+      "source_id": "8818f769-f8a8-4116-a1fd-2851e009323e"
+    },
+    {
+      "content": "There's quite a bit to cover here. First, let's establish the fundamentals, then we can explore more advanced concepts.",
+      "metadata": {
+        "chunk": 1,
+        "model": "gpt-4"
+      },
+      "score": 0.689,
+      "source_id": "8f38f6ec-399e-40be-9d4d-3ccaa3d37953"
+    },
+    {
+      "content": "That's a great question. Here are the key considerations: 1) Performance optimization 2) Best practices 3) Common pitfalls to avoid.",
+      "metadata": {
+        "chunk": 4,
+        "model": "claude-3-opus"
+      },
+      "score": 0.985,
+      "source_id": "b67115a3-fba3-4682-841c-fda08fdfc55d"
+    },
+    {
+      "content": "This depends on your specific use case. Generally speaking, you'll want to consider: scalability, maintainability, and performance.",
+      "metadata": {
+        "chunk": 4,
+        "model": "gpt-4"
+      },
+      "score": 0.81,
+      "source_id": "b54602ab-0037-4350-bb57-d0b49bfee0c2"
+    },
+    {
+      "content": "There are several approaches to this problem. The most common solutions involve: traditional methods and modern approaches.",
+      "metadata": {
+        "chunk": 2,
+        "model": "gpt-4"
+      },
+      "score": 0.727,
+      "source_id": "4015d925-4cd9-44dd-a46f-43687e5b07e4"
+    },
+    {
+      "content": "There are several approaches to this problem. The most common solutions involve: traditional methods and modern approaches.",
+      "metadata": {
+        "chunk": 2,
+        "model": "neural-chat"
+      },
+      "score": 0.655,
+      "source_id": "60093ab1-29b5-42d1-8ce6-2bafee3e46cf"
     }
   ],
-  "result_count": 10,
   "search_type": "semantic"
 }

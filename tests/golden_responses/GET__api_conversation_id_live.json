@@ -1,15 +1,15 @@
 {
   "documents": [
-    "Cloud infrastructure setup"
+    "Understanding machine learning basics"
   ],
   "ids": [
-    "ec0ad547-9012-40d7-91ed-58124cc80076"
+    "fec1b447-bc46-45e0-ab20-3a26bbe22b18"
   ],
   "metadatas": [
     {
-      "source": "claude",
+      "date": "2024-12-23T12:00:00Z",
       "message_count": 2,
-      "date": "2025-11-17T04:35:40.870917Z"
+      "source": "claude"
     }
   ]
 }
