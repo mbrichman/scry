@@ -352,12 +352,14 @@ class ConversationFormatService:
                 - role: Message role (user/assistant)
                 - content: Message content (markdown)
                 - created_at: Created timestamp (optional)
+                - message_metadata: Message metadata dict (optional)
         
         Returns:
             List of formatted message dicts with fields:
                 - role: Message role
                 - content: HTML-rendered content
                 - timestamp: Formatted timestamp string
+                - attachments: List of attachments (if present)
         """
         messages = []
         for msg in db_messages:
@@ -367,10 +369,16 @@ class ConversationFormatService:
                 extensions=["extra", "tables", "fenced_code", "codehilite", "nl2br"]
             )
             
-            messages.append({
+            msg_dict = {
                 'role': msg.role,
                 'content': html_content,
                 'timestamp': msg.created_at.strftime('%Y-%m-%d %H:%M:%S') if msg.created_at else None
-            })
+            }
+            
+            # Extract attachments from metadata if present
+            if msg.message_metadata and msg.message_metadata.get('attachments'):
+                msg_dict['attachments'] = msg.message_metadata['attachments']
+            
+            messages.append(msg_dict)
         
         return messages

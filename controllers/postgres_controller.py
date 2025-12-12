@@ -702,6 +702,231 @@ class PostgresController:
             return None
 
 
+# ===== ATTACHMENT EXTRACTION UTILITIES =====
+
+def extract_claude_attachments(message: Dict[str, Any]) -> List[Dict[str, Any]]:
+    """
+    Extract attachments from a Claude message.
+    
+    Claude exports have two types of attachments:
+    - attachments[]: Files with extracted_content (text files, code, etc.)
+    - files[]: File references without content (images, etc.)
+    
+    Args:
+        message: Claude message dict with 'attachments' and 'files' fields
+        
+    Returns:
+        List of normalized attachment dicts
+    """
+    attachments = []
+    
+    # Process attachments with extracted content
+    for attachment in message.get('attachments', []):
+        file_name = attachment.get('file_name', 'unknown')
+        file_type = attachment.get('file_type', '')
+        
+        # Determine if it's an image based on file extension or type
+        is_image = (
+            file_name.lower().endswith(('.png', '.jpg', '.jpeg', '.gif', '.webp', '.bmp')) or
+            'image' in file_type.lower()
+        )
+        
+        attachments.append({
+            'type': 'image' if is_image else 'file',
+            'file_name': file_name,
+            'file_size': attachment.get('file_size'),
+            'file_type': file_type,
+            'extracted_content': attachment.get('extracted_content'),
+            'available': bool(attachment.get('extracted_content')),
+            'metadata': {}
+        })
+    
+    # Process file references (usually images without content)
+    for file_ref in message.get('files', []):
+        file_name = file_ref.get('file_name', 'unknown')
+        
+        # Determine type from extension
+        is_image = file_name.lower().endswith(('.png', '.jpg', '.jpeg', '.gif', '.webp', '.bmp'))
+        
+        attachments.append({
+            'type': 'image' if is_image else 'file',
+            'file_name': file_name,
+            'file_size': None,
+            'file_type': None,
+            'extracted_content': None,
+            'available': False,  # Files without extracted_content are not available
+            'metadata': {}
+        })
+    
+    return attachments
+
+
+def extract_chatgpt_attachments(message: Dict[str, Any]) -> List[Dict[str, Any]]:
+    """
+    Extract attachments/artifacts from a ChatGPT message.
+    
+    ChatGPT exports have various content types and metadata that represent attachments:
+    - content.content_type: 'code', 'thoughts', 'reasoning_recap', 'multimodal_text'
+    - content.parts[]: Can contain image_asset_pointer, audio_transcription, etc.
+    - metadata.attachments[]: File metadata
+    - metadata.content_references[]: Web citations
+    
+    Args:
+        message: ChatGPT message dict
+        
+    Returns:
+        List of normalized attachment dicts
+    """
+    attachments = []
+    content = message.get('content', {})
+    metadata = message.get('metadata', {})
+    
+    # Handle code content type
+    if isinstance(content, dict) and content.get('content_type') == 'code':
+        attachments.append({
+            'type': 'code',
+            'language': content.get('language', 'unknown'),
+            'extracted_content': content.get('text', ''),
+            'available': True,
+            'file_name': f"code.{content.get('language', 'txt')}",
+            'metadata': {}
+        })
+    
+    # Handle thoughts/reasoning content type
+    elif isinstance(content, dict) and content.get('content_type') == 'thoughts':
+        thoughts_data = content.get('thoughts', [])
+        if thoughts_data:
+            attachments.append({
+                'type': 'reasoning',
+                'reasoning_type': 'thoughts',
+                'thoughts': thoughts_data,
+                'available': True,
+                'file_name': 'reasoning.txt',
+                'metadata': {}
+            })
+    
+    # Handle reasoning_recap content type
+    elif isinstance(content, dict) and content.get('content_type') == 'reasoning_recap':
+        attachments.append({
+            'type': 'reasoning',
+            'reasoning_type': 'recap',
+            'recap_content': content.get('content', ''),
+            'available': True,
+            'file_name': 'reasoning_recap.txt',
+            'metadata': {}
+        })
+    
+    # Handle multimodal_text content type
+    elif isinstance(content, dict) and content.get('content_type') == 'multimodal_text':
+        parts = content.get('parts', [])
+        
+        for part in parts:
+            if not isinstance(part, dict):
+                continue
+            
+            part_type = part.get('content_type')
+            
+            # Image asset pointer
+            if part_type == 'image_asset_pointer':
+                # Try to get actual filename from metadata.attachments
+                file_name = 'image.png'
+                file_size = part.get('size_bytes')
+                file_type = 'image/png'
+                
+                # Look for matching attachment in metadata
+                for meta_attachment in metadata.get('attachments', []):
+                    if meta_attachment.get('id') in part.get('asset_pointer', ''):
+                        file_name = meta_attachment.get('name', file_name)
+                        file_size = meta_attachment.get('size', file_size)
+                        file_type = meta_attachment.get('mime_type', file_type)
+                        break
+                
+                attachments.append({
+                    'type': 'image',
+                    'file_name': file_name,
+                    'file_size': file_size,
+                    'file_type': file_type,
+                    'asset_pointer': part.get('asset_pointer'),
+                    'width': part.get('width'),
+                    'height': part.get('height'),
+                    'available': False,  # Asset not in export
+                    'metadata': {}
+                })
+            
+            # Audio transcription
+            elif part_type == 'audio_transcription':
+                attachments.append({
+                    'type': 'audio',
+                    'transcription': part.get('text', ''),
+                    'direction': part.get('direction'),
+                    'available': True,
+                    'file_name': 'audio_transcription.txt',
+                    'metadata': {}
+                })
+            
+            # Audio asset pointer
+            elif part_type == 'audio_asset_pointer':
+                attachments.append({
+                    'type': 'audio',
+                    'asset_pointer': part.get('asset_pointer'),
+                    'available': False,
+                    'file_name': 'audio.mp3',
+                    'metadata': {}
+                })
+    
+    # Handle content_references (web citations)
+    content_refs = metadata.get('content_references', [])
+    if content_refs:
+        citations = []
+        for ref in content_refs:
+            if ref.get('type') == 'grouped_webpages':
+                for item in ref.get('items', []):
+                    citations.append({
+                        'title': item.get('title', ''),
+                        'url': item.get('url', ''),
+                        'snippet': item.get('snippet', '')
+                    })
+        
+        if citations:
+            attachments.append({
+                'type': 'citation',
+                'citations': citations,
+                'available': True,
+                'file_name': 'citations.json',
+                'metadata': {}
+            })
+    
+    return attachments
+
+
+def normalize_attachment(attachment: Dict[str, Any]) -> Dict[str, Any]:
+    """
+    Normalize an attachment dict to ensure all required fields are present.
+    
+    Args:
+        attachment: Raw attachment dict
+        
+    Returns:
+        Normalized attachment dict with all required fields
+    """
+    normalized = {
+        'type': attachment.get('type', 'file'),
+        'file_name': attachment.get('file_name', 'unknown'),
+        'file_size': attachment.get('file_size'),
+        'file_type': attachment.get('file_type'),
+        'extracted_content': attachment.get('extracted_content'),
+        'available': attachment.get('available', False),
+        'metadata': attachment.get('metadata', {})
+    }
+    
+    # Copy any additional fields (language, transcription, citations, etc.)
+    for key, value in attachment.items():
+        if key not in normalized:
+            normalized[key] = value
+    
+    return normalized
+
+
 # Global controller instance
 _controller = None
 
