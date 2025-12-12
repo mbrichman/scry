@@ -11,6 +11,12 @@
 View Conversation
 {% endblock %}
 
+{% block styles %}
+<!-- Prism.js CSS for syntax highlighting in attachments only -->
+<link href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism.min.css" rel="stylesheet" />
+{{ super() }}
+{% endblock %}
+
 {% block page_styles %}
     .back-arrow {
         display: inline-flex;
@@ -131,19 +137,42 @@ View Conversation
         color: hsl(var(--muted-foreground));
         font-weight: 400;
     }
-    pre {
+    /* Default pre/code styles for regular markdown content
+     * NOTE: We use :not([class*="language-"]) to exclude Prism.js syntax-highlighted blocks
+     * This prevents our generic styles from overriding Prism's token colors */
+    .message-content pre:not([class*="language-"]) {
         background-color: hsl(var(--secondary));
         padding: 1rem;
         border-radius: var(--radius);
         overflow-x: auto;
         border: 1px solid hsl(var(--border));
     }
-    code {
+    .message-content code:not([class*="language-"]) {
         padding: 0.2rem 0.4rem;
         background-color: hsl(var(--secondary));
         border-radius: 0.25rem;
         color: hsl(var(--foreground));
         font-size: 0.875em;
+    }
+    
+    /* CRITICAL: Override Bootstrap's reboot CSS for Prism syntax highlighting
+     * Bootstrap 5 includes _reboot.scss and _rfs.scss that apply generic code styles
+     * These styles override Prism's token colors, making all code appear gray
+     * Solution: Use high-specificity selector (pre > code with class attributes)
+     * plus !important to win the CSS cascade battle
+     * Without this, syntax highlighting will not work despite Prism loading correctly */
+    pre[class*="language-"] > code[class*="language-"] {
+        all: unset !important;
+        font-family: Consolas, Monaco, 'Andale Mono', 'Ubuntu Mono', monospace !important;
+        font-size: 1em !important;
+        line-height: 1.5 !important;
+        direction: ltr !important;
+        text-align: left !important;
+        white-space: pre !important;
+        word-spacing: normal !important;
+        word-break: normal !important;
+        tab-size: 4 !important;
+        hyphens: none !important;
     }
     .action-buttons {
         margin-top: 2rem;
@@ -379,6 +408,202 @@ View Conversation
             font-size: 0.9rem;
         }
     }
+    
+    /* Attachment styles */
+    .attachment-container {
+        margin-top: 1rem;
+        padding-top: 1rem;
+        border-top: 1px solid hsl(var(--border));
+    }
+    
+    .attachment-item {
+        margin-bottom: 0.75rem;
+        border: 1px solid hsl(var(--border));
+        border-radius: var(--radius);
+        background: hsl(var(--secondary));
+        transition: var(--transition-base);
+    }
+    
+    .attachment-item:hover {
+        border-color: hsl(var(--muted-foreground) / 0.3);
+    }
+    
+    .attachment-item[open] {
+        background: white;
+    }
+    
+    .attachment-header {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        padding: 0.75rem 1rem;
+        cursor: pointer;
+        user-select: none;
+        list-style: none;
+    }
+    
+    .attachment-header::-webkit-details-marker {
+        display: none;
+    }
+    
+    .attachment-header::before {
+        content: '▶';
+        font-size: 0.7rem;
+        color: hsl(var(--muted-foreground));
+        transition: transform 0.2s ease;
+    }
+    
+    .attachment-item[open] .attachment-header::before {
+        transform: rotate(90deg);
+    }
+    
+    .attachment-badge {
+        display: inline-block;
+        padding: 0.25rem 0.5rem;
+        border-radius: 0.25rem;
+        font-size: 0.75rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.025em;
+    }
+    
+    .attachment-badge.file { background: #e0f2fe; color: #0369a1; }
+    .attachment-badge.image { background: #fef3c7; color: #92400e; }
+    .attachment-badge.code { background: #ddd6fe; color: #5b21b6; }
+    .attachment-badge.reasoning { background: #fce7f3; color: #9f1239; }
+    .attachment-badge.audio { background: #dcfce7; color: #166534; }
+    .attachment-badge.citation { background: #fed7aa; color: #9a3412; }
+    
+    .attachment-name {
+        flex: 1;
+        font-size: 0.875rem;
+        font-weight: 500;
+        color: hsl(var(--foreground));
+    }
+    
+    .attachment-size {
+        font-size: 0.75rem;
+        color: hsl(var(--muted-foreground));
+    }
+    
+    .attachment-content {
+        padding: 1rem;
+        border-top: 1px solid hsl(var(--border));
+        background: white;
+    }
+    
+    .attachment-content pre {
+        margin: 0;
+    }
+    
+    /* Minimal styling for Prism blocks in attachments
+     * Let Prism handle colors, padding, backgrounds - we only adjust margin and border */
+    .attachment-content pre[class*="language-"] {
+        margin: 0;
+        border-radius: var(--radius);
+    }
+    
+    .attachment-placeholder {
+        text-align: center;
+        padding: 2rem;
+        color: hsl(var(--muted-foreground));
+    }
+    
+    .attachment-placeholder-icon {
+        font-size: 2rem;
+        margin-bottom: 0.5rem;
+    }
+    
+    .attachment-placeholder-text {
+        font-size: 0.875rem;
+        font-weight: 500;
+        margin-bottom: 0.25rem;
+    }
+    
+    .attachment-placeholder-note {
+        font-size: 0.75rem;
+        opacity: 0.7;
+    }
+    
+    .attachment-copy-btn {
+        float: right;
+        padding: 0.375rem 0.75rem;
+        background: hsl(var(--secondary));
+        border: 1px solid hsl(var(--border));
+        border-radius: 0.25rem;
+        font-size: 0.75rem;
+        cursor: pointer;
+        transition: var(--transition-base);
+    }
+    
+    .attachment-copy-btn:hover {
+        background: white;
+    }
+    
+    .citation-list {
+        list-style: none;
+        padding: 0;
+        margin: 0;
+    }
+    
+    .citation-item {
+        padding: 0.75rem;
+        margin-bottom: 0.5rem;
+        background: hsl(var(--secondary));
+        border-radius: 0.375rem;
+        border-left: 3px solid hsl(var(--muted-foreground));
+    }
+    
+    .citation-title {
+        font-weight: 600;
+        margin-bottom: 0.25rem;
+    }
+    
+    .citation-url {
+        font-size: 0.75rem;
+        color: hsl(220 70% 50%);
+        text-decoration: none;
+        word-break: break-all;
+    }
+    
+    .citation-url:hover {
+        text-decoration: underline;
+    }
+    
+    .citation-snippet {
+        font-size: 0.875rem;
+        margin-top: 0.5rem;
+        color: hsl(var(--muted-foreground));
+    }
+    
+    .reasoning-summary {
+        padding: 0.75rem 1rem;
+        background: linear-gradient(135deg, #fce7f3 0%, #fce7f3 100%);
+        border-left: 3px solid #9f1239;
+        border-radius: 0.375rem;
+        margin-bottom: 1rem;
+        font-weight: 600;
+        color: #9f1239;
+    }
+    
+    .reasoning-content {
+        padding: 1rem;
+        background: hsl(var(--secondary));
+        border-radius: 0.375rem;
+        font-size: 0.875rem;
+        line-height: 1.6;
+    }
+    
+    @media (max-width: 768px) {
+        .attachment-header {
+            gap: 0.5rem;
+            padding: 0.625rem 0.875rem;
+        }
+        
+        .attachment-name {
+            font-size: 0.8125rem;
+        }
+    }
 {% endblock %}
 
 {% block content %}
@@ -465,6 +690,65 @@ View Conversation
             </div>
             <div class="message-body">
                 <div class="message-content">{{ message.content|safe }}</div>
+                
+                {% if message.attachments %}
+                <div class="attachment-container">
+                    {% for attachment in message.attachments %}
+                    <details class="attachment-item">
+                        <summary class="attachment-header">
+                            <span class="attachment-badge {{ attachment.type }}">{{ attachment.type }}</span>
+                            <span class="attachment-name">{{ attachment.file_name }}</span>
+                            {% if attachment.file_size %}
+                            <span class="attachment-size">{{ (attachment.file_size / 1024)|round(1) }} KB</span>
+                            {% endif %}
+                        </summary>
+                        <div class="attachment-content">
+                            {% if attachment.available and attachment.extracted_content %}
+                                {% if attachment.type == 'code' %}
+                                    <button class="attachment-copy-btn" onclick="copyAttachmentContent(this)">Copy</button>
+                                    {% set code_lang = attachment.get('language', 'python')|lower %}
+                                    <pre data-language="{{ code_lang }}"><code>{{ attachment.extracted_content }}</code></pre>
+                                {% elif attachment.type == 'file' %}
+                                    <button class="attachment-copy-btn" onclick="copyAttachmentContent(this)">Copy</button>
+                                    {% set file_ext = attachment.file_name.split('.')[-1]|lower if '.' in attachment.file_name else 'python' %}
+                                    <pre data-language="{{ file_ext }}"><code>{{ attachment.extracted_content }}</code></pre>
+                                {% elif attachment.type == 'reasoning' %}
+                                    <div class="reasoning-summary">
+                                        {{ attachment.get('thoughts', [{}])[0].get('summary', 'Thinking...') if attachment.get('thoughts') else 'Thought for a better answer' }}
+                                    </div>
+                                    <div class="reasoning-content">
+                                        {{ attachment.get('thoughts', [{}])[0].get('content', '') if attachment.get('thoughts') else attachment.get('recap_content', '') }}
+                                    </div>
+                                {% elif attachment.type == 'audio' %}
+                                    <p><strong>Audio Transcription:</strong></p>
+                                    <p>{{ attachment.transcription }}</p>
+                                {% elif attachment.type == 'citation' %}
+                                    <ul class="citation-list">
+                                    {% for citation in attachment.citations %}
+                                        <li class="citation-item">
+                                            <div class="citation-title">{{ citation.title }}</div>
+                                            <a href="{{ citation.url }}" class="citation-url" target="_blank" rel="noopener">{{ citation.url }}</a>
+                                            {% if citation.snippet %}
+                                            <div class="citation-snippet">{{ citation.snippet }}</div>
+                                            {% endif %}
+                                        </li>
+                                    {% endfor %}
+                                    </ul>
+                                {% endif %}
+                            {% else %}
+                                <div class="attachment-placeholder">
+                                    <div class="attachment-placeholder-icon">
+                                        {% if attachment.type == 'image' %}🖼️{% else %}📎{% endif %}
+                                    </div>
+                                    <div class="attachment-placeholder-text">{{ attachment.file_name }}</div>
+                                    <div class="attachment-placeholder-note">Not included in export</div>
+                                </div>
+                            {% endif %}
+                        </div>
+                    </details>
+                    {% endfor %}
+                </div>
+                {% endif %}
             </div>
         </div>
     {% endfor %}
@@ -929,5 +1213,93 @@ View Conversation
             }
         });
     }
+    
+    // Copy attachment content
+    function copyAttachmentContent(button) {
+        const attachmentContent = button.parentElement.querySelector('code');
+        if (!attachmentContent) return;
+        
+        const text = attachmentContent.textContent;
+        
+        if (navigator.clipboard && window.isSecureContext) {
+            navigator.clipboard.writeText(text).then(() => {
+                button.textContent = 'Copied!';
+                setTimeout(() => {
+                    button.textContent = 'Copy';
+                }, 2000);
+            }).catch(() => {
+                showNotification('Failed to copy attachment', 'error');
+            });
+        } else {
+            // Fallback
+            const textArea = document.createElement('textarea');
+            textArea.value = text;
+            textArea.style.position = 'fixed';
+            textArea.style.left = '-999999px';
+            document.body.appendChild(textArea);
+            textArea.select();
+            
+            try {
+                document.execCommand('copy');
+                button.textContent = 'Copied!';
+                setTimeout(() => {
+                    button.textContent = 'Copy';
+                }, 2000);
+            } catch (err) {
+                showNotification('Failed to copy attachment', 'error');
+            }
+            
+            document.body.removeChild(textArea);
+        }
+    }
+</script>
+
+<!-- Prism.js for syntax highlighting - Load BEFORE our initialization -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-python.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-javascript.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-typescript.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-json.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-markdown.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-bash.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-sql.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-yaml.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-css.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-markup.min.js"></script>
+
+<script>
+// Syntax highlighting initialization
+// Applies Prism.js language classes to code blocks based on data-language attributes
+document.addEventListener('DOMContentLoaded', function() {
+    // 1) Attachments: Find all code blocks in attachments with data-language attribute
+    //    These are explicitly tagged with language info from the import process
+    document.querySelectorAll('pre[data-language]').forEach(function(pre) {
+        const language = pre.getAttribute('data-language');
+        const code = pre.querySelector('code');
+        if (code && language) {
+            pre.classList.add('language-' + language);
+            code.classList.add('language-' + language);
+            console.log('Added language class (attachment):', language);
+        }
+    });
+
+    // 2) Message content: upgrade plain <pre><code> blocks to Prism (default python)
+    document.querySelectorAll('.message-content pre code').forEach(function(code){
+        const hasLang = Array.from(code.classList).some(c => c.startsWith('language-'));
+        if (!hasLang) {
+            code.classList.add('language-python');
+            if (code.parentElement) code.parentElement.classList.add('language-python');
+            console.log('Upgraded message code block to language-python');
+        }
+    });
+    
+    // Run Prism highlighting
+    console.log('Running Prism.highlightAll()...');
+    if (typeof Prism !== 'undefined') {
+        Prism.highlightAll();
+    }
+    
+    console.log('Syntax highlighting complete.');
+});
 </script>
 {% endblock %}
