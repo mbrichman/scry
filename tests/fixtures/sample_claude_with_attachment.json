@@ -1,0 +1,84 @@
+[
+  {
+    "uuid": "test-conv-001",
+    "name": "Python Hello World with File",
+    "created_at": "2025-01-01T10:00:00.000Z",
+    "updated_at": "2025-01-01T10:05:00.000Z",
+    "chat_messages": [
+      {
+        "uuid": "msg-001",
+        "text": "Here's a simple Python script I'd like you to review",
+        "sender": "human",
+        "created_at": "2025-01-01T10:00:00.000Z",
+        "attachments": [
+          {
+            "file_name": "hello.py",
+            "file_size": 156,
+            "file_type": "text/x-python",
+            "extracted_content": "#!/usr/bin/env python3\n\ndef greet(name):\n    \"\"\"Print a friendly greeting.\"\"\"\n    print(f\"Hello, {name}!\")\n\nif __name__ == \"__main__\":\n    greet(\"World\")\n"
+          }
+        ],
+        "files": []
+      },
+      {
+        "uuid": "msg-002",
+        "text": "This is a well-structured Python script! Here's my review:\n\n**Strengths:**\n- Uses a shebang line for direct execution\n- Has a proper docstring\n- Uses f-strings for formatting\n- Follows Python naming conventions\n- Has a `__main__` guard\n\n**Suggestions:**\n- Consider adding type hints: `def greet(name: str) -> None:`\n- Could add argument parsing for command-line usage\n- Might want to handle empty string input\n\nOverall, it's clean and Pythonic! Good job.",
+        "sender": "assistant",
+        "created_at": "2025-01-01T10:01:00.000Z",
+        "attachments": [],
+        "files": []
+      },
+      {
+        "uuid": "msg-003",
+        "text": "Thanks! Can you show me an enhanced version with your suggestions?",
+        "sender": "human",
+        "created_at": "2025-01-01T10:03:00.000Z",
+        "attachments": [],
+        "files": []
+      },
+      {
+        "uuid": "msg-004",
+        "text": "Sure! Here's an enhanced version with type hints and argument parsing:",
+        "sender": "assistant",
+        "created_at": "2025-01-01T10:05:00.000Z",
+        "attachments": [
+          {
+            "file_name": "hello_enhanced.py",
+            "file_size": 512,
+            "file_type": "text/x-python",
+            "extracted_content": "#!/usr/bin/env python3\n\"\"\"Enhanced greeting script with argument parsing.\"\"\"\n\nimport argparse\nfrom typing import Optional\n\ndef greet(name: str) -> None:\n    \"\"\"Print a friendly greeting.\n    \n    Args:\n        name: The name to greet\n    \"\"\"\n    if not name or not name.strip():\n        print(\"Hello, stranger!\")\n    else:\n        print(f\"Hello, {name}!\")\n\ndef main() -> int:\n    \"\"\"Main entry point.\"\"\"\n    parser = argparse.ArgumentParser(\n        description=\"Print a friendly greeting\"\n    )\n    parser.add_argument(\n        \"name\",\n        nargs=\"?\",\n        default=\"World\",\n        help=\"Name to greet (default: World)\"\n    )\n    \n    args = parser.parse_args()\n    greet(args.name)\n    return 0\n\nif __name__ == \"__main__\":\n    raise SystemExit(main())\n"
+          }
+        ],
+        "files": []
+      }
+    ]
+  },
+  {
+    "uuid": "test-conv-002",
+    "name": "Image Analysis Request",
+    "created_at": "2025-01-02T14:00:00.000Z",
+    "updated_at": "2025-01-02T14:02:00.000Z",
+    "chat_messages": [
+      {
+        "uuid": "msg-005",
+        "text": "What's in this image?",
+        "sender": "human",
+        "created_at": "2025-01-02T14:00:00.000Z",
+        "attachments": [],
+        "files": [
+          {
+            "file_name": "architecture_diagram.png"
+          }
+        ]
+      },
+      {
+        "uuid": "msg-006",
+        "text": "I can see you've shared an image called 'architecture_diagram.png', but unfortunately I don't have access to view the actual image content in this export. The image file wasn't included in the export data.\n\nIf you'd like me to analyze it, please re-share the image in our current conversation.",
+        "sender": "assistant",
+        "created_at": "2025-01-02T14:02:00.000Z",
+        "attachments": [],
+        "files": []
+      }
+    ]
+  }
+]
