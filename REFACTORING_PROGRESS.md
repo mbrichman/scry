@@ -41,21 +41,31 @@ Benefits:
 - Encapsulates all query logic
 
 ## Test Results
-- **Total tests passing**: 485 (up from 453)
-- **New services**: 32 tests total
-- **Coverage**: 100% for both new services
+- **Total tests passing**: 508 (up from 453)
+- **New services**: 55 tests total
+- **Coverage**: 98%+ for all new services
 - **Regression**: 0 (all existing tests still pass)
+
+#### ConversationFormatService ✅
+**Status**: Complete (23 tests, 98% coverage)
+**Location**: `db/services/conversation_format_service.py`
+
+Formats conversation data for different views.
+
+Methods:
+- `format_conversation_list(conversations)` - Format for list view
+- `format_conversation_view(document, metadata)` - Format for detail view
+- `format_search_results(results)` - Format search results with relevance scores
+
+Benefits:
+- Separates presentation logic from controller
+- Reuses existing ConversationViewModel helpers
+- Easy to test independently
+- Consistent formatting across all views
 
 ## Remaining Work
 
 ### Phase 2: Formatting Services (In Progress)
-
-#### ConversationFormatService (Next)
-Extract formatting logic:
-- `format_conversation_list()` - Format for list view
-- `format_conversation_view()` - Format for detail view
-- `format_search_results()` - Format search results
-- **Target**: 12-15 tests, 80%+ coverage
 
 #### ConversationExportService (After formatting)
 Extract export logic:
@@ -102,12 +112,11 @@ Extract export logic:
 ### Completed ✅
 - [x] PaginationService (19 tests, 100% coverage)
 - [x] ConversationQueryService (13 tests, 100% coverage)
-- [x] Comprehensive test suites for both services
-- [x] Integration with existing test suite (485 tests passing)
+- [x] ConversationFormatService (23 tests, 98% coverage)
+- [x] Comprehensive test suites for all services
+- [x] Integration with existing test suite (508 tests passing)
 
 ### In Progress 🔄
-- [ ] ConversationFormatService
-- [ ] ConversationFormatService tests
 - [ ] ConversationExportService
 - [ ] ConversationExportService tests
 
@@ -181,13 +190,13 @@ ConversationController (Routes)
 ### Created
 - `db/services/pagination_service.py` (81 lines, 100% coverage)
 - `db/services/conversation_query_service.py` (85 lines, 100% coverage)
+- `db/services/conversation_format_service.py` (208 lines, 98% coverage)
 - `tests/unit/services/test_pagination_service.py` (186 lines)
 - `tests/unit/services/test_conversation_query_service.py` (193 lines)
+- `tests/unit/services/test_conversation_format_service.py` (327 lines)
 
 ### To be Created
-- `db/services/conversation_format_service.py` (estimated 100 lines)
 - `db/services/conversation_export_service.py` (estimated 120 lines)
-- `tests/unit/services/test_conversation_format_service.py`
 - `tests/unit/services/test_conversation_export_service.py`
 
 ### To be Modified
