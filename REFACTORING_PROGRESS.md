@@ -41,9 +41,9 @@ Benefits:
 - Encapsulates all query logic
 
 ## Test Results
-- **Total tests passing**: 508 (up from 453)
-- **New services**: 55 tests total
-- **Coverage**: 98%+ for all new services
+- **Total tests passing**: 531 (up from 453)
+- **New services**: 78 tests total
+- **Coverage**: 88%+ for all new services
 - **Regression**: 0 (all existing tests still pass)
 
 #### ConversationFormatService ✅
@@ -63,15 +63,27 @@ Benefits:
 - Easy to test independently
 - Consistent formatting across all views
 
+#### ConversationExportService ✅
+**Status**: Complete (23 tests, 88% coverage)
+**Location**: `db/services/conversation_export_service.py`
+
+Handles conversation export to different formats.
+
+Methods:
+- `export_as_markdown(document, metadata)` - Export as markdown with headers
+- `export_to_openwebui(document, metadata)` - Convert to OpenWebUI format
+- `_parse_messages_for_export()` - Parse messages from document
+- `_build_chat_messages()` - Build OpenWebUI chat_messages
+
+Benefits:
+- Separates export logic from controller
+- Reusable across different export endpoints
+- Easy to add new export formats
+- Comprehensive message parsing for different sources
+
 ## Remaining Work
 
-### Phase 2: Formatting Services (In Progress)
-
-#### ConversationExportService (After formatting)
-Extract export logic:
-- `export_as_markdown()` - Markdown export
-- `export_to_openwebui()` - OpenWebUI format conversion
-- **Target**: 8-10 tests, 80%+ coverage
+### Phase 2: Formatting Services ✅ Complete
 
 ### Phase 3: Controller Refactoring
 
@@ -113,12 +125,12 @@ Extract export logic:
 - [x] PaginationService (19 tests, 100% coverage)
 - [x] ConversationQueryService (13 tests, 100% coverage)
 - [x] ConversationFormatService (23 tests, 98% coverage)
+- [x] ConversationExportService (23 tests, 88% coverage)
 - [x] Comprehensive test suites for all services
-- [x] Integration with existing test suite (508 tests passing)
+- [x] Integration with existing test suite (531 tests passing)
 
 ### In Progress 🔄
-- [ ] ConversationExportService
-- [ ] ConversationExportService tests
+- [ ] Refactor ConversationController to use new services
 
 ### Pending 📋
 - [ ] Refactor ConversationController
@@ -191,13 +203,14 @@ ConversationController (Routes)
 - `db/services/pagination_service.py` (81 lines, 100% coverage)
 - `db/services/conversation_query_service.py` (85 lines, 100% coverage)
 - `db/services/conversation_format_service.py` (208 lines, 98% coverage)
+- `db/services/conversation_export_service.py` (279 lines, 88% coverage)
 - `tests/unit/services/test_pagination_service.py` (186 lines)
 - `tests/unit/services/test_conversation_query_service.py` (193 lines)
 - `tests/unit/services/test_conversation_format_service.py` (327 lines)
+- `tests/unit/services/test_conversation_export_service.py` (291 lines)
 
-### To be Created
-- `db/services/conversation_export_service.py` (estimated 120 lines)
-- `tests/unit/services/test_conversation_export_service.py`
+### To be Refactored
+- `controllers/conversation_controller.py` (refactor to use new services)
 
 ### To be Modified
 - `controllers/conversation_controller.py` (reduce from 1171 to ~250-300 lines)
