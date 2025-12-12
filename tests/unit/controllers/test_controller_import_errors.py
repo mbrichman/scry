@@ -42,8 +42,8 @@ class TestImportConversationsJsonErrorHandling:
         """_import_conversations_json should handle missing extractor."""
         controller = PostgresController()
         
-        # Mock FORMAT_REGISTRY to have missing extractor
-        with patch('controllers.postgres_controller.FORMAT_REGISTRY', {}):
+        # Mock FORMAT_REGISTRY to have missing extractor in the import service
+        with patch('db.services.import_service.FORMAT_REGISTRY', {}):
             chatgpt_data = {
                 "conversations": [
                     {
@@ -72,8 +72,8 @@ class TestImportConversationsJsonErrorHandling:
         """_import_conversations_json should validate extractor exists in FORMAT_REGISTRY."""
         controller = PostgresController()
         
-        # Valid ChatGPT format but extractor missing
-        with patch('controllers.postgres_controller.FORMAT_REGISTRY', {'docx': lambda x: []}):
+        # Valid ChatGPT format but extractor missing in the import service
+        with patch('db.services.import_service.FORMAT_REGISTRY', {'docx': lambda x: []}):
             chatgpt_data = {
                 "conversations": [
                     {

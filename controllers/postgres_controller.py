@@ -12,6 +12,7 @@ from flask import request
 
 from db.adapters.api_format_adapter import get_api_format_adapter
 from db.services.message_service import MessageService
+from db.services.import_service import ConversationImportService
 from db.importers import detect_format
 from db.importers.registry import FORMAT_REGISTRY
 
@@ -27,6 +28,7 @@ class PostgresController:
     def __init__(self):
         self.adapter = get_api_format_adapter()
         self.message_service = MessageService()
+        self.import_service = ConversationImportService()
     
     # ===== CONVERSATION ENDPOINTS =====
     
@@ -514,6 +516,7 @@ class PostgresController:
         from flask import render_template, request, redirect, url_for
         import os
         import json
+        import tempfile
         
         if request.method == "GET":
             return render_template("upload.html")
@@ -537,13 +540,16 @@ class PostgresController:
                     content = file.read().decode('utf-8')
                     conversations_data = json.loads(content)
                     
-                    # Import conversations into PostgreSQL
-                    import_result = self._import_conversations_json(conversations_data)
+                    # Delegate to import service
+                    import_result = self.import_service.import_json_data(conversations_data)
                     
-                    return import_result, 200
+                    return import_result.to_dict(), 200
                 
                 except json.JSONDecodeError as e:
                     return f"Error: Invalid JSON format - {str(e)}", 400
+                except ValueError as e:
+                    # User-friendly error from import service
+                    return f"Error: {str(e)}", 400
                 except Exception as e:
                     logger.error(f"JSON import failed: {e}")
                     return f"Error: Import failed - {str(e)}", 400
@@ -551,23 +557,23 @@ class PostgresController:
             # Handle DOCX files  
             elif file.filename.endswith('.docx'):
                 try:
-                    import tempfile
-                    import os
-                    
                     # Save to temporary file
                     with tempfile.NamedTemporaryFile(delete=False, suffix='.docx') as temp_file:
                         file.save(temp_file.name)
                         temp_path = temp_file.name
                     
                     try:
-                        # Import the DOCX file
-                        import_result = self._import_docx_file(temp_path, file.filename)
-                        return import_result, 200
+                        # Delegate to import service
+                        import_result = self.import_service.import_docx_file(temp_path, file.filename)
+                        return import_result.to_dict(), 200
                     finally:
                         # Clean up temp file
                         if os.path.exists(temp_path):
                             os.remove(temp_path)
                 
+                except ValueError as e:
+                    logger.error(f"DOCX import failed: {e}")
+                    return f"Error: {str(e)}", 400
                 except Exception as e:
                     logger.error(f"DOCX import failed: {e}")
                     return f"Error: DOCX import failed - {str(e)}", 400
@@ -577,351 +583,42 @@ class PostgresController:
             return f"Error: Upload failed - {str(e)}", 500
     
     def _import_conversations_json(self, data: Dict[str, Any]) -> str:
-        """Import conversations from JSON data into PostgreSQL. Returns message string."""
-        from db.repositories.unit_of_work import get_unit_of_work
-        import hashlib
-        from db.importers.errors import get_user_friendly_error_message, FormatDetectionError, ImporterNotAvailableError
+        """DEPRECATED: Import conversations from JSON data. Use ConversationImportService instead.
         
-        # Detect format (Claude vs ChatGPT) using proper detection method
-        conversations, format_type = self._detect_json_format(data)
-        
-        # Check if format was detected
-        if format_type == "Unknown":
-            available_formats = list(FORMAT_REGISTRY.keys())
-            error = FormatDetectionError(available_formats=available_formats)
-            user_msg = get_user_friendly_error_message(error, available_formats)
-            raise ValueError(user_msg)
-        
-        if not conversations:
-            available_formats = list(FORMAT_REGISTRY.keys())
-            error = FormatDetectionError(available_formats=available_formats)
-            user_msg = get_user_friendly_error_message(error, available_formats)
-            raise ValueError(user_msg)
-        
-        # Validate that extractor is available for the detected format
-        # First, normalize format name for registry lookup
-        format_key = format_type.lower() if format_type != "OpenWebUI" else "openwebui"
-        if format_key not in FORMAT_REGISTRY:
-            available_formats = list(FORMAT_REGISTRY.keys())
-            error = ImporterNotAvailableError(
-                format_name=format_type,
-                available_formats=available_formats
-            )
-            user_msg = get_user_friendly_error_message(error, available_formats)
-            raise ValueError(user_msg)
-        
-        print(f"🔍 Detected {format_type} format with {len(conversations)} conversations")
-        logger.info(f"🔍 Detected {format_type} format with {len(conversations)} conversations")
-        logger.info(f"📥 Importing {len(conversations)} conversations from {format_type} format into PostgreSQL")
-        print(f"📥 Importing {len(conversations)} conversations from {format_type} format into PostgreSQL")
-        
-        # Build map of existing conversations for duplicate detection
-        existing_conv_map = {}  # Map conversation_id -> (content_hash, db_id)
-        with get_unit_of_work() as uow:
-            existing_conversations = uow.conversations.get_all()
-            for conv in existing_conversations:
-                messages = uow.messages.get_by_conversation(conv.id)
-                # Concatenate all message content for duplicate detection
-                full_content = "\n\n".join(msg.content for msg in messages if msg.content)
-                content_hash = hashlib.sha256(full_content.encode()).hexdigest()
-                
-                # Store by original conversation ID if available in metadata
-                if messages and messages[0].message_metadata:
-                    original_id = messages[0].message_metadata.get('original_conversation_id')
-                    if original_id:
-                        existing_conv_map[original_id] = (content_hash, conv.id)
-        
-        print(f"Found {len(existing_conv_map)} existing conversations for duplicate checking")
-        
-        imported_count = 0
-        skipped_duplicates = 0
-        
-        # Process each conversation in its own transaction
-        for conv_data in conversations:
-            try:
-                # Extract conversation title
-                title = conv_data.get('title', conv_data.get('name', 'Untitled Conversation'))
-                
-                # Extract messages first
-                messages = []
-                try:
-                    if 'mapping' in conv_data:  # ChatGPT format
-                        if 'chatgpt' in FORMAT_REGISTRY:
-                            messages = FORMAT_REGISTRY['chatgpt'](conv_data['mapping'])
-                    elif 'chat_messages' in conv_data:  # Claude format
-                        if 'claude' in FORMAT_REGISTRY:
-                            messages = FORMAT_REGISTRY['claude'](conv_data['chat_messages'])
-                    elif 'chat' in conv_data and 'history' in conv_data.get('chat', {}) and 'messages' in conv_data['chat']['history']:  # OpenWebUI format
-                        if 'openwebui' in FORMAT_REGISTRY:
-                            messages = FORMAT_REGISTRY['openwebui'](conv_data['chat']['history']['messages'])
-                except (KeyError, TypeError, ValueError) as e:
-                    from db.importers.errors import ExtractionError, get_user_friendly_error_message
-                    available_formats = list(FORMAT_REGISTRY.keys())
-                    error = ExtractionError(
-                        format_name=format_type,
-                        original_error=e
-                    )
-                    user_msg = get_user_friendly_error_message(error, available_formats)
-                    logger.error(f"Failed to extract messages from {format_type}: {e}")
-                    raise ValueError(user_msg)
-                
-                # Skip if no valid messages
-                if not messages:
-                    continue
-                
-                # Check for duplicates using conversation ID
-                conv_id = conv_data.get('id') or conv_data.get('uuid')
-                full_content = "\n\n".join(msg['content'] for msg in messages if msg['content'].strip())
-                content_hash = hashlib.sha256(full_content.encode()).hexdigest()
-                
-                if conv_id and conv_id in existing_conv_map:
-                    existing_hash, existing_db_id = existing_conv_map[conv_id]
-                    if content_hash == existing_hash:
-                        # Content is identical, skip this duplicate
-                        skipped_duplicates += 1
-                        logger.info(f"Skipping duplicate conversation: {title}")
-                        continue
-                    else:
-                        # Content changed - for now we skip (update logic would go here)
-                        skipped_duplicates += 1
-                        logger.info(f"Conversation exists with different content: {title} - skipping")
-                        continue
-                
-                # Calculate earliest and latest timestamps from messages
-                timestamps = [msg.get('created_at') for msg in messages if msg.get('created_at')]
-                earliest_ts = min(timestamps) if timestamps else None
-                latest_ts = max(timestamps) if timestamps else None
-                
-                # If no message-level timestamps, fall back to conversation-level timestamps
-                # ChatGPT exports strip message timestamps, Claude uses ISO format, OpenWebUI uses Unix epoch
-                if not earliest_ts:
-                    if format_type.lower() == 'chatgpt':
-                        earliest_ts = conv_data.get('create_time')
-                    elif format_type.lower() == 'claude':
-                        earliest_ts = conv_data.get('created_at')
-                    elif format_type.lower() == 'openwebui':
-                        earliest_ts = conv_data.get('created_at')
-                if not latest_ts:
-                    if format_type.lower() == 'chatgpt':
-                        latest_ts = conv_data.get('update_time') or conv_data.get('create_time')
-                    elif format_type.lower() == 'claude':
-                        latest_ts = conv_data.get('updated_at') or conv_data.get('created_at')
-                    elif format_type.lower() == 'openwebui':
-                        latest_ts = conv_data.get('updated_at') or conv_data.get('created_at')
-                
-                # Import in a single transaction
-                with get_unit_of_work() as uow:
-                    # Create conversation with original timestamps if available
-                    conv_kwargs = {'title': title}
-                    
-                    # Set original timestamps if available
-                    # ChatGPT/OpenWebUI use Unix epoch (numeric), Claude uses ISO format (string)
-                    if earliest_ts:
-                        try:
-                            if isinstance(earliest_ts, datetime):
-                                # Already a datetime object (from OpenWebUI extraction)
-                                conv_kwargs['created_at'] = earliest_ts
-                            elif isinstance(earliest_ts, (int, float)):
-                                # ChatGPT/OpenWebUI format: Unix epoch
-                                conv_kwargs['created_at'] = datetime.fromtimestamp(earliest_ts, tz=timezone.utc)
-                            elif isinstance(earliest_ts, str):
-                                # Claude format: ISO string
-                                conv_kwargs['created_at'] = datetime.fromisoformat(earliest_ts.replace('Z', '+00:00'))
-                        except (ValueError, TypeError, OSError):
-                            pass  # Use default if conversion fails
-                    if latest_ts:
-                        try:
-                            if isinstance(latest_ts, datetime):
-                                # Already a datetime object (from OpenWebUI extraction)
-                                conv_kwargs['updated_at'] = latest_ts
-                            elif isinstance(latest_ts, (int, float)):
-                                # ChatGPT/OpenWebUI format: Unix epoch
-                                conv_kwargs['updated_at'] = datetime.fromtimestamp(latest_ts, tz=timezone.utc)
-                            elif isinstance(latest_ts, str):
-                                # Claude format: ISO string
-                                conv_kwargs['updated_at'] = datetime.fromisoformat(latest_ts.replace('Z', '+00:00'))
-                        except (ValueError, TypeError, OSError):
-                            pass  # Use default if conversion fails
-                    
-                    conversation = uow.conversations.create(**conv_kwargs)
-                    uow.session.flush()  # Get the ID
-                    
-                    # Add messages directly using repository instead of service
-                    # to avoid nested transactions
-                    for idx, msg in enumerate(messages):
-                        if msg['content'].strip():  # Skip empty messages
-                            # Store source and conversation info in message metadata
-                            message_metadata = {
-                                'source': format_type.lower(),
-                                'conversation_title': title,
-                                'original_conversation_id': conv_id or str(conversation.id),
-                                'sequence': msg.get('sequence', idx)  # Preserve sequence if available
-                            }
-                            
-                            # Add OpenWebUI-specific metadata
-                            if format_type.lower() == 'openwebui':
-                                openwebui_meta = {
-                                    'archived': conv_data.get('archived', False),
-                                    'pinned': conv_data.get('pinned', False),
-                                    'folder_id': conv_data.get('folder_id'),
-                                    'share_id': conv_data.get('share_id'),
-                                    'user_id': conv_data.get('user_id')
-                                }
-                                # Add model if present in the message
-                                if msg.get('model'):
-                                    openwebui_meta['model'] = msg['model']
-                                message_metadata['openwebui'] = {k: v for k, v in openwebui_meta.items() if v is not None}
-                            
-                            # Build kwargs for message creation, including timestamp if available
-                            msg_kwargs = {
-                                'conversation_id': conversation.id,
-                                'role': msg['role'],
-                                'content': msg['content'],
-                                'message_metadata': message_metadata
-                            }
-                            
-                            # Add original message timestamp if available
-                            # ChatGPT/OpenWebUI use Unix epoch (numeric), Claude uses ISO format (string)
-                            msg_ts = msg.get('created_at')
-                            # Fall back to conversation timestamp if message timestamp is unavailable
-                            if not msg_ts:
-                                if format_type.lower() == 'chatgpt':
-                                    msg_ts = conv_data.get('create_time')
-                                elif format_type.lower() == 'claude':
-                                    msg_ts = conv_data.get('created_at')
-                                elif format_type.lower() == 'openwebui':
-                                    msg_ts = conv_data.get('created_at')
-                            
-                            if msg_ts:
-                                try:
-                                    if isinstance(msg_ts, datetime):
-                                        # Already a datetime object (from OpenWebUI extraction)
-                                        msg_kwargs['created_at'] = msg_ts
-                                    elif isinstance(msg_ts, (int, float)):
-                                        # ChatGPT/OpenWebUI format: Unix epoch
-                                        msg_kwargs['created_at'] = datetime.fromtimestamp(msg_ts, tz=timezone.utc)
-                                    elif isinstance(msg_ts, str):
-                                        # Claude format: ISO string
-                                        msg_kwargs['created_at'] = datetime.fromisoformat(msg_ts.replace('Z', '+00:00'))
-                                except (ValueError, TypeError, OSError):
-                                    pass
-                            
-                            message = uow.messages.create(**msg_kwargs)
-                            uow.session.flush()  # Get the message ID
-                            
-                            # Enqueue embedding job separately
-                            job_payload = {
-                                'message_id': str(message.id),
-                                'conversation_id': str(conversation.id),
-                                'content': msg['content'],
-                                'model': 'all-MiniLM-L6-v2'
-                            }
-                            
-                            uow.jobs.enqueue(
-                                kind='generate_embedding',
-                                payload=job_payload
-                            )
-                    
-                    # Transaction commits here automatically
-                
-                imported_count += 1
-                
-                if imported_count % 50 == 0:
-                    print(f"📊 Imported {imported_count} conversations...")
-                    logger.info(f"📊 Imported {imported_count} conversations...")
-            
-            except Exception as e:
-                error_msg = f"Failed to import conversation '{conv_data.get('title', 'Unknown')}': {e}"
-                print(f"❌ {error_msg}")
-                logger.error(error_msg)
-                continue
-        
-        if imported_count == 0:
-            if skipped_duplicates > 0:
-                message = f"All {skipped_duplicates} conversations already indexed (no new content)"
-            else:
-                message = "No valid conversations found to index"
-            print(f"ℹ️ {message}")
-            logger.info(message)
-            return f"Success: {message}"
-        
-        completion_msg = f"✅ Successfully imported {imported_count} conversations into PostgreSQL"
-        if skipped_duplicates > 0:
-            completion_msg += f" (skipped {skipped_duplicates} duplicates)"
-        print(completion_msg)
-        logger.info(completion_msg)
-        return f"Success: {completion_msg}"
+        This method is kept for backward compatibility. New code should use:
+        result = self.import_service.import_json_data(data)
+        """
+        try:
+            result = self.import_service.import_json_data(data)
+            # Convert result to legacy string format
+            return f"Success: {result}"
+        except ValueError as e:
+            raise
+        except Exception as e:
+            return f"Error: {str(e)}"
     
     
     def _detect_json_format(self, data):
-        """Detect whether JSON is ChatGPT, Claude, or OpenWebUI format.
+        """DEPRECATED: Detect JSON format. Use ConversationImportService instead.
         
+        This method is kept for backward compatibility.
         Delegates to the registry detect_format function.
         """
         return detect_format(data)
     
     def _import_docx_file(self, file_path: str, filename: str) -> str:
-        """Import a Word document conversation into PostgreSQL. Returns message string."""
-        from db.repositories.unit_of_work import get_unit_of_work
-        from datetime import datetime
-        import os
+        """DEPRECATED: Import DOCX file. Use ConversationImportService instead.
         
+        This method is kept for backward compatibility. New code should use:
+        result = self.import_service.import_docx_file(file_path, filename)
+        """
         try:
-            # Extract messages using registry extractor
-            messages, title, timestamps = FORMAT_REGISTRY['docx'](file_path, filename)
-            
-            if not messages:
-                raise ValueError("No messages found in Word document")
-            
-            logger.info(f"📄 Importing Word document: {title} with {len(messages)} messages")
-            print(f"📄 Importing Word document: {title} with {len(messages)} messages")
-            
-            # Determine timestamps
-            if timestamps:
-                earliest_ts = datetime.fromisoformat(min(timestamps))
-                latest_ts = datetime.fromisoformat(max(timestamps))
-            else:
-                # Use file creation time as fallback
-                file_create_time = datetime.fromtimestamp(os.path.getctime(file_path))
-                earliest_ts = file_create_time
-                latest_ts = file_create_time
-            
-            # Create conversation and messages in database
-            with get_unit_of_work() as uow:
-                # Create conversation
-                conversation = uow.conversations.create(
-                    title=title,
-                    created_at=earliest_ts,
-                    updated_at=latest_ts
-                )
-                
-                # Create messages with sequence tracking
-                for idx, msg_data in enumerate(messages):
-                    # Store source, filename, and sequence in metadata
-                    metadata = {
-                        'source': 'docx',
-                        'filename': filename,
-                        'original_conversation_id': None,  # DOCX files don't have IDs
-                        'sequence': idx  # Track message order within conversation
-                    }
-                    
-                    uow.messages.create(
-                        conversation_id=conversation.id,
-                        role=msg_data['role'],
-                        content=msg_data['content'],
-                        message_metadata=metadata,
-                        created_at=earliest_ts  # Use conversation timestamp for all messages
-                    )
-                
-                uow.commit()
-                
-                logger.info(f"✅ Successfully imported Word document: {title}")
-                print(f"✅ Successfully imported Word document: {title}")
-                
-                return f"Successfully imported '{title}' with {len(messages)} messages"
-        
+            result = self.import_service.import_docx_file(file_path, filename)
+            # Convert result to legacy string format
+            return f"Successfully imported with {result.imported_count} conversations"
+        except ValueError as e:
+            raise
         except Exception as e:
-            logger.error(f"DOCX import failed: {e}")
             raise ValueError(f"Failed to import Word document: {str(e)}")
     
     # ===== SETTINGS ENDPOINTS =====

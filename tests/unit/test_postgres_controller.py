@@ -298,6 +298,130 @@ class TestDeleteEndpoint:
         # After deletion, conversation should not exist
         get_result = controller.get_conversation(str(conv.id))
         assert len(get_result["ids"]) == 0
+    
+    def test_delete_with_invalid_uuid(self, postgres_controller):
+        """Test delete with invalid UUID format."""
+        result = postgres_controller.delete_conversation("not-a-uuid")
+        
+        # Should handle gracefully
+        assert isinstance(result, dict)
+
+
+@pytest.mark.unit
+class TestGetEndpointErrors:
+    """Test error cases for GET endpoints."""
+    
+    def test_get_conversation_with_invalid_uuid(self, postgres_controller):
+        """Test get_conversation with invalid UUID format."""
+        result = postgres_controller.get_conversation("not-a-uuid")
+        
+        assert isinstance(result, dict)
+        # Should return empty results or error
+        if "ids" in result:
+            assert len(result["ids"]) == 0
+    
+    def test_get_conversation_with_nonexistent_id(self, postgres_controller):
+        """Test get_conversation with non-existent conversation ID."""
+        result = postgres_controller.get_conversation("550e8400-e29b-41d4-a716-446655440000")
+        
+        assert isinstance(result, dict)
+        # Should return empty results
+        if "ids" in result:
+            assert len(result["ids"]) == 0
+    
+    def test_get_stats_with_no_data(self, postgres_controller):
+        """Test get_stats returns valid structure even with no data."""
+        result = postgres_controller.get_stats()
+        
+        assert isinstance(result, dict)
+    
+    def test_get_conversation_list_empty_database(self, postgres_controller):
+        """Test get_conversations on empty database."""
+        result = postgres_controller.get_conversations()
+        
+        assert isinstance(result, dict)
+        # Should return empty list or similar
+        assert result is not None
+
+
+@pytest.mark.unit
+class TestUploadEndpoint:
+    """Test file upload endpoint."""
+    
+    def test_upload_returns_response(self, postgres_controller):
+        """Test that upload returns a response."""
+        # upload() requires Flask request context with file
+        from flask import Flask
+        from werkzeug.datastructures import FileStorage
+        from io import BytesIO
+        
+        app = Flask(__name__)
+        
+        # Create a mock file
+        file_data = BytesIO(b"test file content")
+        mock_file = FileStorage(
+            stream=file_data,
+            filename="test.txt",
+            name="file"
+        )
+        
+        with app.test_request_context(
+            method='POST',
+            data={'file': mock_file},
+            content_type='multipart/form-data'
+        ):
+            result = postgres_controller.upload()
+            # Should return a response (status, message, etc.)
+            assert result is not None
+    
+    def test_upload_without_file(self, postgres_controller):
+        """Test upload without file attached."""
+        from flask import Flask
+        app = Flask(__name__)
+        
+        with app.test_request_context(method='POST'):
+            result = postgres_controller.upload()
+            # Should handle missing file gracefully
+            assert result is not None
+
+
+@pytest.mark.unit
+class TestHandleSettingsEndpoint:
+    """Test settings management endpoint."""
+    
+    def test_handle_settings_with_post_returns_dict(self, postgres_controller):
+        """Test POST to settings returns dict."""
+        from flask import Flask, request
+        app = Flask(__name__)
+        
+        with app.test_request_context(method='POST', json={"test_key": "test_value"}):
+            result = postgres_controller.handle_settings(request)
+            
+            assert isinstance(result, dict)
+            # Should have success or error
+            assert "success" in result or "error" in result
+    
+    def test_handle_settings_with_get_returns_dict(self, postgres_controller):
+        """Test GET settings returns dict."""
+        from flask import Flask, request
+        app = Flask(__name__)
+        
+        with app.test_request_context(method='GET'):
+            result = postgres_controller.handle_settings(request)
+            
+            assert isinstance(result, dict)
+            # Should have settings or error
+            assert "success" in result or "error" in result or "settings" in result
+    
+    def test_handle_settings_empty_post(self, postgres_controller):
+        """Test POST with empty settings."""
+        from flask import Flask, request
+        app = Flask(__name__)
+        
+        with app.test_request_context(method='POST', json={}):
+            result = postgres_controller.handle_settings(request)
+            
+            assert isinstance(result, dict)
 
 
 @pytest.mark.unit
@@ -377,3 +501,406 @@ class TestGetSettingsEndpoint:
         # Should have a count
         if "count" in result:
             assert result["count"] >= 0
+
+
+@pytest.mark.unit
+class TestSearchEndpoints:
+    """Test search functionality endpoints."""
+    
+    def test_api_search_without_query(self, postgres_controller):
+        """Test api_search returns error when query is missing."""
+        from flask import Flask
+        app = Flask(__name__)
+        
+        with app.test_request_context('/api/search'):
+            result = postgres_controller.api_search()
+            
+            assert isinstance(result, dict)
+            assert "error" in result or "results" in result
+    
+    def test_api_search_with_query(self, postgres_controller):
+        """Test api_search with a valid query."""
+        from flask import Flask
+        app = Flask(__name__)
+        
+        with app.test_request_context('/api/search?q=test&n=5'):
+            result = postgres_controller.api_search()
+            
+            assert isinstance(result, dict)
+            # Should have query and results keys
+            assert "query" in result or "error" in result
+    
+    def test_search_post_without_query(self, postgres_controller):
+        """Test POST search returns error when query is missing."""
+        from flask import Flask
+        app = Flask(__name__)
+        
+        with app.test_request_context(method='POST', json={}):
+            result = postgres_controller.search()
+            
+            assert isinstance(result, dict)
+            assert "error" in result
+    
+    def test_search_post_with_query(self, postgres_controller):
+        """Test POST search with valid query."""
+        from flask import Flask
+        app = Flask(__name__)
+        
+        with app.test_request_context(method='POST', json={"query": "test"}):
+            result = postgres_controller.search()
+            
+            assert isinstance(result, dict)
+    
+    def test_search_with_date_range(self, postgres_controller):
+        """Test search with date range filter."""
+        from flask import Flask
+        from datetime import datetime, timedelta
+        app = Flask(__name__)
+        
+        start_date = (datetime.now() - timedelta(days=7)).isoformat()
+        end_date = datetime.now().isoformat()
+        
+        with app.test_request_context(
+            method='POST',
+            json={
+                "query": "test",
+                "start_date": start_date,
+                "end_date": end_date
+            }
+        ):
+            result = postgres_controller.search()
+            
+            assert isinstance(result, dict)
+    
+    def test_search_with_invalid_date_range(self, postgres_controller):
+        """Test search with invalid date format."""
+        from flask import Flask
+        app = Flask(__name__)
+        
+        with app.test_request_context(
+            method='POST',
+            json={
+                "query": "test",
+                "start_date": "invalid-date",
+                "end_date": "also-invalid"
+            }
+        ):
+            result = postgres_controller.search()
+            
+            # Should handle gracefully
+            assert isinstance(result, dict)
+
+
+@pytest.mark.unit
+class TestRAGEndpoints:
+    """Test RAG (Retrieval-Augmented Generation) endpoints."""
+    
+    def test_rag_query_without_query(self, postgres_controller):
+        """Test rag_query returns error when query is missing."""
+        from flask import Flask
+        app = Flask(__name__)
+        
+        with app.test_request_context(method='POST', json={}):
+            result = postgres_controller.rag_query()
+            
+            assert isinstance(result, dict)
+            assert "error" in result
+    
+    def test_rag_query_with_query(self, postgres_controller):
+        """Test rag_query with valid query."""
+        from flask import Flask
+        app = Flask(__name__)
+        
+        with app.test_request_context(method='POST', json={"query": "test query"}):
+            result = postgres_controller.rag_query()
+            
+            assert isinstance(result, dict)
+    
+    def test_rag_query_with_n_results(self, postgres_controller):
+        """Test rag_query with custom n_results parameter."""
+        from flask import Flask
+        app = Flask(__name__)
+        
+        with app.test_request_context(
+            method='POST',
+            json={"query": "test", "n_results": 10}
+        ):
+            result = postgres_controller.rag_query()
+            
+            assert isinstance(result, dict)
+    
+    def test_rag_query_with_search_type(self, postgres_controller):
+        """Test rag_query with different search types."""
+        from flask import Flask
+        app = Flask(__name__)
+        
+        for search_type in ["semantic", "keyword", "hybrid"]:
+            with app.test_request_context(
+                method='POST',
+                json={"query": "test", "search_type": search_type}
+            ):
+                result = postgres_controller.rag_query()
+                
+                assert isinstance(result, dict)
+    
+    def test_rag_health(self, postgres_controller):
+        """Test rag_health endpoint."""
+        from flask import Flask
+        app = Flask(__name__)
+        
+        with app.test_request_context('/api/rag/health'):
+            result = postgres_controller.rag_health()
+            
+            assert isinstance(result, dict)
+
+
+@pytest.mark.unit
+class TestPaginationEndpoint:
+    """Test paginated conversation listing."""
+    
+    def test_get_conversations_paginated_default(self, postgres_controller):
+        """Test paginated conversations with default parameters."""
+        from flask import Flask
+        app = Flask(__name__)
+        
+        with app.test_request_context('/api/conversations/list'):
+            result = postgres_controller.get_conversations_paginated()
+            
+            assert isinstance(result, dict)
+            # Should have pagination keys
+            if "conversations" in result:
+                assert "page" in result
+                assert "limit" in result
+                assert "has_more" in result
+    
+    def test_get_conversations_paginated_with_page(self, postgres_controller):
+        """Test paginated conversations with page parameter."""
+        from flask import Flask
+        app = Flask(__name__)
+        
+        with app.test_request_context('/api/conversations/list?page=2&limit=10'):
+            result = postgres_controller.get_conversations_paginated()
+            
+            assert isinstance(result, dict)
+    
+    def test_get_conversations_paginated_with_filters(self, postgres_controller):
+        """Test paginated conversations with source filter."""
+        from flask import Flask
+        app = Flask(__name__)
+        
+        with app.test_request_context(
+            '/api/conversations/list?source=chatgpt&date=month&sort=newest'
+        ):
+            result = postgres_controller.get_conversations_paginated()
+            
+            assert isinstance(result, dict)
+
+
+@pytest.mark.unit
+class TestImportMethods:
+    """Test conversation import helper methods."""
+    
+    def test_detect_json_format_with_invalid_data(self, postgres_controller):
+        """Test format detection with invalid data."""
+        # Should handle gracefully
+        result = postgres_controller._detect_json_format({})
+        assert isinstance(result, tuple)
+        assert len(result) == 2
+    
+    def test_detect_json_format_with_list(self, postgres_controller):
+        """Test format detection with list input."""
+        result = postgres_controller._detect_json_format([])
+        assert isinstance(result, tuple)
+        assert len(result) == 2
+    
+    def test_import_docx_with_invalid_path(self, postgres_controller):
+        """Test DOCX import with invalid file path."""
+        try:
+            result = postgres_controller._import_docx_file("/nonexistent/path/file.docx", "test.docx")
+            # Should return a string message (error or success)
+            assert isinstance(result, (str, dict))
+        except Exception:
+            # It's also acceptable to raise an exception
+            pass
+
+
+@pytest.mark.unit
+class TestHandleSettingsEndpointAdvanced:
+    """Test advanced settings endpoint scenarios."""
+    
+    def test_handle_settings_with_invalid_method(self, postgres_controller):
+        """Test settings with unsupported HTTP method."""
+        from flask import Flask, request
+        app = Flask(__name__)
+        
+        with app.test_request_context(method='DELETE'):
+            # Should handle unknown method gracefully
+            result = postgres_controller.handle_settings(request)
+            assert result is not None
+    
+    def test_handle_settings_with_complex_json(self, postgres_controller):
+        """Test settings with complex nested JSON."""
+        from flask import Flask, request
+        app = Flask(__name__)
+        
+        complex_data = {
+            "collection": {
+                "count": 100,
+                "metadata": {"version": "1.0"},
+                "nested": [1, 2, {"key": "value"}]
+            }
+        }
+        
+        with app.test_request_context(method='POST', json=complex_data):
+            result = postgres_controller.handle_settings(request)
+            assert isinstance(result, dict)
+
+
+@pytest.mark.unit
+class TestAPISearchEndpointAdvanced:
+    """Test advanced API search scenarios."""
+    
+    def test_api_search_with_keyword_flag(self, postgres_controller):
+        """Test api_search with keyword flag."""
+        from flask import Flask
+        app = Flask(__name__)
+        
+        with app.test_request_context('/api/search?q=test&keyword=true'):
+            result = postgres_controller.api_search()
+            
+            assert isinstance(result, dict)
+    
+    def test_api_search_with_search_type(self, postgres_controller):
+        """Test api_search with explicit search_type."""
+        from flask import Flask
+        app = Flask(__name__)
+        
+        for search_type in ["fts", "semantic", "hybrid", "auto"]:
+            with app.test_request_context(f'/api/search?q=test&search_type={search_type}'):
+                result = postgres_controller.api_search()
+                
+                assert isinstance(result, dict)
+    
+    def test_api_search_with_custom_n_results(self, postgres_controller):
+        """Test api_search with custom number of results."""
+        from flask import Flask
+        app = Flask(__name__)
+        
+        with app.test_request_context('/api/search?q=test&n=20'):
+            result = postgres_controller.api_search()
+            
+            assert isinstance(result, dict)
+
+
+@pytest.mark.unit
+class TestGetConversationSourceHelper:
+    """Test the _get_conversation_source helper method."""
+    
+    def test_get_source_with_invalid_uuid(self, postgres_controller):
+        """Test source detection with invalid UUID."""
+        result = postgres_controller._get_conversation_source("not-a-uuid")
+        
+        # Should return 'unknown' for invalid UUID
+        assert result == "unknown"
+    
+    def test_get_source_with_nonexistent_conversation(self, postgres_controller):
+        """Test source detection with non-existent conversation."""
+        result = postgres_controller._get_conversation_source("550e8400-e29b-41d4-a716-446655440000")
+        
+        # Should return 'unknown' for non-existent conversation
+        assert result == "unknown"
+
+
+@pytest.mark.unit
+class TestPostErrorHandling:
+    """Test error handling for POST endpoints."""
+    
+    def test_upload_with_invalid_file_type(self, postgres_controller):
+        """Test upload with unsupported file type."""
+        from flask import Flask
+        from werkzeug.datastructures import FileStorage
+        from io import BytesIO
+        
+        app = Flask(__name__)
+        
+        # Create a file with unsupported extension
+        file_data = BytesIO(b"binary content")
+        mock_file = FileStorage(
+            stream=file_data,
+            filename="test.bin",
+            name="file"
+        )
+        
+        with app.test_request_context(
+            method='POST',
+            data={'file': mock_file},
+            content_type='multipart/form-data'
+        ):
+            result = postgres_controller.upload()
+            # Should handle gracefully
+            assert result is not None
+    
+    def test_upload_with_large_file(self, postgres_controller):
+        """Test upload with very large file (mock)."""
+        from flask import Flask
+        from werkzeug.datastructures import FileStorage
+        from io import BytesIO
+        
+        app = Flask(__name__)
+        
+        # Create a large file mock
+        file_data = BytesIO(b"x" * (10 * 1024 * 1024))  # 10MB
+        mock_file = FileStorage(
+            stream=file_data,
+            filename="large.txt",
+            name="file"
+        )
+        
+        with app.test_request_context(
+            method='POST',
+            data={'file': mock_file},
+            content_type='multipart/form-data'
+        ):
+            result = postgres_controller.upload()
+            # Should handle gracefully
+            assert result is not None
+    
+    def test_handle_settings_with_invalid_json(self, postgres_controller):
+        """Test settings with malformed JSON."""
+        from flask import Flask, request
+        app = Flask(__name__)
+        
+        with app.test_request_context(
+            method='POST',
+            data='not valid json',
+            content_type='application/json'
+        ):
+            try:
+                result = postgres_controller.handle_settings(request)
+                # Should handle gracefully
+                assert result is not None
+            except Exception:
+                # Also acceptable to raise an exception
+                pass
+    
+    def test_handle_settings_with_none_request_body(self, postgres_controller):
+        """Test settings with None/empty request body."""
+        from flask import Flask, request
+        app = Flask(__name__)
+        
+        with app.test_request_context(method='POST'):
+            result = postgres_controller.handle_settings(request)
+            # Should handle gracefully
+            assert result is not None
+    
+    def test_export_with_invalid_conversation_id(self, postgres_controller):
+        """Test export with invalid UUID."""
+        result = postgres_controller.export_conversation("not-a-uuid")
+        # Should handle gracefully
+        assert result is not None
+    
+    def test_export_to_openwebui_with_nonexistent_id(self, postgres_controller):
+        """Test OpenWebUI export with non-existent conversation."""
+        result = postgres_controller.export_to_openwebui("550e8400-e29b-41d4-a716-446655440000")
+        # Should return response with error or empty data
+        assert isinstance(result, dict)

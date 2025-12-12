@@ -97,3 +97,9 @@ Source Files/
 !tests/**/*.json
 !api/**/*.json
 sampe_word_docs/
+
+# Golden response files (generated dynamically, should not be committed)
+tests/fixtures/golden_responses/*.json
+tests/golden_responses/*.json
+!tests/fixtures/golden_responses/.gitkeep
+!tests/golden_responses/.gitkeep
