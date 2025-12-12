@@ -327,3 +327,329 @@ class TestConversationFormatService:
         formatted = service._format_timestamp(None)
         
         assert formatted is None or formatted == ''
+    
+    # ===== format_postgres_search_results tests =====
+    
+    def test_format_postgres_search_results_empty(self, service):
+        """Test formatting empty PostgreSQL search results"""
+        results = []
+        
+        formatted = service.format_postgres_search_results(results)
+        
+        assert formatted == []
+    
+    def test_format_postgres_search_results_basic(self, service):
+        """Test formatting basic PostgreSQL search result"""
+        results = [{
+            'content': 'Test content',
+            'title': 'Test Title',
+            'date': '2025-01-01T12:00:00',
+            'metadata': {
+                'conversation_id': 'test-id-1',
+                'source': 'claude',
+                'earliest_ts': '2025-01-01T12:00:00'
+            }
+        }]
+        
+        formatted = service.format_postgres_search_results(results)
+        
+        assert len(formatted) == 1
+        assert formatted[0]['id'] == 'test-id-1'
+        assert formatted[0]['preview'] == 'Test content'
+        assert formatted[0]['meta']['title'] == 'Test Title'
+        assert formatted[0]['meta']['source'] == 'claude'
+    
+    def test_format_postgres_search_results_normalizes_chatgpt_source(self, service):
+        """Test that ChatGPT source variations are normalized"""
+        results = [{
+            'content': 'Content',
+            'metadata': {'source': 'ChatGPT-4o', 'id': 'test-1'}
+        }]
+        
+        formatted = service.format_postgres_search_results(results)
+        
+        assert formatted[0]['meta']['source'] == 'chatgpt'
+    
+    def test_format_postgres_search_results_normalizes_claude_source(self, service):
+        """Test that Claude source variations are normalized"""
+        results = [{
+            'content': 'Content',
+            'metadata': {'source': 'claude-3-opus', 'id': 'test-1'}
+        }]
+        
+        formatted = service.format_postgres_search_results(results)
+        
+        assert formatted[0]['meta']['source'] == 'claude'
+    
+    def test_format_postgres_search_results_handles_missing_metadata(self, service):
+        """Test formatting with minimal metadata"""
+        results = [{
+            'content': 'Content only',
+            'metadata': {}
+        }]
+        
+        formatted = service.format_postgres_search_results(results)
+        
+        assert len(formatted) == 1
+        assert formatted[0]['id'] == 'unknown'
+        assert formatted[0]['meta']['source'] == 'unknown'
+        assert formatted[0]['meta']['title'] == 'Untitled'
+    
+    # ===== format_postgres_list_results tests =====
+    
+    def test_format_postgres_list_results_empty(self, service):
+        """Test formatting empty conversation list"""
+        conversations = []
+        
+        formatted = service.format_postgres_list_results(conversations)
+        
+        assert formatted == []
+    
+    def test_format_postgres_list_results_basic(self, service):
+        """Test formatting basic conversation for list"""
+        conversations = [{
+            'id': 'test-id-1',
+            'title': 'Test Conversation',
+            'preview': 'Preview text',
+            'source': 'claude',
+            'latest_ts': '2025-01-01T12:00:00'
+        }]
+        
+        formatted = service.format_postgres_list_results(conversations)
+        
+        assert len(formatted) == 1
+        assert formatted[0]['id'] == 'test-id-1'
+        assert formatted[0]['preview'] == 'Preview text'
+        assert formatted[0]['meta']['title'] == 'Test Conversation'
+        assert formatted[0]['meta']['source'] == 'claude'
+    
+    def test_format_postgres_list_results_normalizes_source(self, service):
+        """Test that source is normalized to lowercase"""
+        conversations = [{
+            'id': 'test-1',
+            'title': 'Test',
+            'preview': 'Preview',
+            'source': 'CLAUDE',
+            'latest_ts': '2025-01-01'
+        }]
+        
+        formatted = service.format_postgres_list_results(conversations)
+        
+        assert formatted[0]['meta']['source'] == 'claude'
+    
+    def test_format_postgres_list_results_handles_none_source(self, service):
+        """Test handling None source value"""
+        conversations = [{
+            'id': 'test-1',
+            'title': 'Test',
+            'preview': 'Preview',
+            'source': None
+        }]
+        
+        formatted = service.format_postgres_list_results(conversations)
+        
+        assert formatted[0]['meta']['source'] == 'unknown'
+    
+    def test_format_postgres_list_results_handles_empty_source(self, service):
+        """Test handling empty string source"""
+        conversations = [{
+            'id': 'test-1',
+            'title': 'Test',
+            'preview': 'Preview',
+            'source': '  '
+        }]
+        
+        formatted = service.format_postgres_list_results(conversations)
+        
+        assert formatted[0]['meta']['source'] == 'unknown'
+    
+    # ===== calculate_source_breakdown tests =====
+    
+    def test_calculate_source_breakdown_empty(self, service):
+        """Test calculating source breakdown with empty data"""
+        conversations = {'metadatas': []}
+        
+        breakdown = service.calculate_source_breakdown(conversations)
+        
+        assert breakdown == {}
+    
+    def test_calculate_source_breakdown_single_source(self, service):
+        """Test calculating breakdown with single source"""
+        conversations = {
+            'metadatas': [
+                {'source': 'claude'},
+                {'source': 'claude'},
+                {'source': 'claude'}
+            ]
+        }
+        
+        breakdown = service.calculate_source_breakdown(conversations)
+        
+        assert breakdown == {'claude': 3}
+    
+    def test_calculate_source_breakdown_multiple_sources(self, service):
+        """Test calculating breakdown with multiple sources"""
+        conversations = {
+            'metadatas': [
+                {'source': 'claude'},
+                {'source': 'chatgpt'},
+                {'source': 'claude'},
+                {'source': 'docx'},
+                {'source': 'chatgpt'}
+            ]
+        }
+        
+        breakdown = service.calculate_source_breakdown(conversations)
+        
+        assert breakdown == {'claude': 2, 'chatgpt': 2, 'docx': 1}
+    
+    def test_calculate_source_breakdown_prefers_original_source(self, service):
+        """Test that original_source is preferred over source"""
+        conversations = {
+            'metadatas': [
+                {'source': 'postgres', 'original_source': 'claude'},
+                {'source': 'postgres', 'original_source': 'chatgpt'}
+            ]
+        }
+        
+        breakdown = service.calculate_source_breakdown(conversations)
+        
+        assert breakdown == {'claude': 1, 'chatgpt': 1}
+    
+    def test_calculate_source_breakdown_maps_postgres_to_imported(self, service):
+        """Test that postgres source is mapped to imported"""
+        conversations = {
+            'metadatas': [
+                {'source': 'postgres'},
+                {'source': 'postgres'}
+            ]
+        }
+        
+        breakdown = service.calculate_source_breakdown(conversations)
+        
+        assert breakdown == {'imported': 2}
+    
+    def test_calculate_source_breakdown_no_metadatas_key(self, service):
+        """Test handling missing metadatas key"""
+        conversations = {}
+        
+        breakdown = service.calculate_source_breakdown(conversations)
+        
+        assert breakdown == {}
+    
+    # ===== extract_source_from_messages tests =====
+    
+    def test_extract_source_from_messages_basic(self, service):
+        """Test extracting source from message metadata"""
+        messages = [Mock(message_metadata={'source': 'claude'})]
+        
+        source = service.extract_source_from_messages(messages)
+        
+        assert source == 'claude'
+    
+    def test_extract_source_from_messages_empty_list(self, service):
+        """Test extracting source from empty message list"""
+        messages = []
+        
+        source = service.extract_source_from_messages(messages)
+        
+        assert source == 'unknown'
+    
+    def test_extract_source_from_messages_no_metadata(self, service):
+        """Test extracting source when message has no metadata"""
+        messages = [Mock(message_metadata=None)]
+        
+        source = service.extract_source_from_messages(messages)
+        
+        assert source == 'unknown'
+    
+    def test_extract_source_from_messages_missing_source_key(self, service):
+        """Test extracting source when metadata has no source key"""
+        messages = [Mock(message_metadata={'other_key': 'value'})]
+        
+        source = service.extract_source_from_messages(messages)
+        
+        assert source == 'unknown'
+    
+    # ===== format_db_messages_for_view tests =====
+    
+    def test_format_db_messages_for_view_empty(self, service):
+        """Test formatting empty message list"""
+        messages = []
+        
+        formatted = service.format_db_messages_for_view(messages)
+        
+        assert formatted == []
+    
+    def test_format_db_messages_for_view_basic(self, service):
+        """Test formatting basic database messages"""
+        messages = [
+            Mock(
+                role='user',
+                content='Hello **world**',
+                created_at=datetime(2025, 1, 1, 12, 0, 0)
+            ),
+            Mock(
+                role='assistant',
+                content='# Heading\n\nResponse',
+                created_at=datetime(2025, 1, 1, 12, 0, 5)
+            )
+        ]
+        
+        formatted = service.format_db_messages_for_view(messages)
+        
+        assert len(formatted) == 2
+        assert formatted[0]['role'] == 'user'
+        assert '<strong>world</strong>' in formatted[0]['content']
+        assert formatted[0]['timestamp'] == '2025-01-01 12:00:00'
+        assert formatted[1]['role'] == 'assistant'
+        assert '<h1>Heading</h1>' in formatted[1]['content']
+    
+    def test_format_db_messages_for_view_with_code(self, service):
+        """Test formatting messages with code blocks"""
+        messages = [
+            Mock(
+                role='user',
+                content='```python\nprint("hello")\n```',
+                created_at=datetime(2025, 1, 1, 12, 0, 0)
+            )
+        ]
+        
+        formatted = service.format_db_messages_for_view(messages)
+        
+        assert len(formatted) == 1
+        # Markdown converts code blocks to <pre><code>
+        assert 'print' in formatted[0]['content']
+    
+    def test_format_db_messages_for_view_no_timestamp(self, service):
+        """Test formatting messages without timestamps"""
+        messages = [
+            Mock(
+                role='user',
+                content='Test',
+                created_at=None
+            )
+        ]
+        
+        formatted = service.format_db_messages_for_view(messages)
+        
+        assert formatted[0]['timestamp'] is None
+    
+    # ===== _determine_assistant_name with optional document =====
+    
+    def test_determine_assistant_name_with_none_document(self, service):
+        """Test determining assistant name with None document"""
+        assert service._determine_assistant_name(None, 'claude') == 'Claude'
+        assert service._determine_assistant_name(None, 'chatgpt') == 'ChatGPT'
+        assert service._determine_assistant_name(None, 'unknown') == 'AI'
+    
+    def test_determine_assistant_name_with_empty_document(self, service):
+        """Test determining assistant name with empty document"""
+        assert service._determine_assistant_name('', 'claude') == 'Claude'
+        assert service._determine_assistant_name('', 'CHATGPT') == 'ChatGPT'
+    
+    def test_determine_assistant_name_document_overrides_source(self, service):
+        """Test that document content can override source metadata"""
+        # Source says unknown, but document shows Claude
+        result = service._determine_assistant_name('**Claude said**: Hello', 'unknown')
+        assert result == 'Claude'

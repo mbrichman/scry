@@ -1,6 +1,7 @@
 import pytest
 import json
 from controllers.conversation_controller import ConversationController
+from db.services.conversation_format_service import ConversationFormatService
 from models.conversation_view_model import extract_preview_content
 
 # TODO: This test file uses Flask client which connects to production DB,
@@ -72,45 +73,45 @@ class TestAssistantNameDetection:
     
     def test_determine_assistant_name_claude_source(self):
         """Test assistant name detection with Claude source metadata."""
-        controller = ConversationController()
+        service = ConversationFormatService()
         
-        result = controller._determine_assistant_name("claude")
+        result = service._determine_assistant_name(None, "claude")
         assert result == "Claude"
     
     def test_determine_assistant_name_chatgpt_source(self):
         """Test assistant name detection with ChatGPT source metadata."""
-        controller = ConversationController()
+        service = ConversationFormatService()
         
-        result = controller._determine_assistant_name("chatgpt")
+        result = service._determine_assistant_name(None, "chatgpt")
         assert result == "ChatGPT"
     
     def test_determine_assistant_name_from_claude_content(self):
         """Test assistant name detection from source."""
-        controller = ConversationController()
+        service = ConversationFormatService()
         
-        result = controller._determine_assistant_name("claude")
+        result = service._determine_assistant_name(None, "claude")
         assert result == "Claude"
     
     def test_determine_assistant_name_from_chatgpt_content(self):
         """Test assistant name detection from source."""
-        controller = ConversationController()
+        service = ConversationFormatService()
         
-        result = controller._determine_assistant_name("chatgpt")
+        result = service._determine_assistant_name(None, "chatgpt")
         assert result == "ChatGPT"
     
     def test_determine_assistant_name_fallback_to_ai(self):
-        """Test assistant name detection fallback to Assistant for unknown source."""
-        controller = ConversationController()
+        """Test assistant name detection fallback to AI for unknown source."""
+        service = ConversationFormatService()
         
-        result = controller._determine_assistant_name("unknown")
-        assert result == "Assistant"
+        result = service._determine_assistant_name(None, "unknown")
+        assert result == "AI"
     
     def test_determine_assistant_name_empty_metadata(self):
         """Test assistant name detection with empty source."""
-        controller = ConversationController()
+        service = ConversationFormatService()
         
-        result = controller._determine_assistant_name("")
-        assert result == "Assistant"
+        result = service._determine_assistant_name(None, "")
+        assert result == "AI"
 
 
 class TestSingleConversationAPI:

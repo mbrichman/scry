@@ -5,9 +5,12 @@ the Single Responsibility Principle. It handles:
 - List view formatting
 - Detail view formatting  
 - Search results formatting
+- PostgreSQL-specific formatting
+- Message and metadata operations
 """
 
 import re
+import markdown
 from datetime import datetime
 from typing import List, Dict, Any, Optional
 from models.conversation_view_model import (
@@ -165,11 +168,11 @@ class ConversationFormatService:
         """
         return parse_messages_from_document(document)
     
-    def _determine_assistant_name(self, document: str, source: str) -> str:
+    def _determine_assistant_name(self, document: Optional[str], source: str) -> str:
         """Determine assistant name from source or document content
         
         Args:
-            document: Raw document text
+            document: Raw document text (optional, can be None or empty)
             source: Source type (claude, chatgpt, etc.)
         
         Returns:
@@ -182,13 +185,13 @@ class ConversationFormatService:
         elif source_lower == 'chatgpt':
             return 'ChatGPT'
         else:
-            # Try to detect from document content
-            if '**Claude said**' in document or '**Claude**:' in document:
-                return 'Claude'
-            elif '**ChatGPT said**' in document or '**ChatGPT**:' in document:
-                return 'ChatGPT'
-            else:
-                return 'AI'
+            # Try to detect from document content if available
+            if document:
+                if '**Claude said**' in document or '**Claude**:' in document:
+                    return 'Claude'
+                elif '**ChatGPT said**' in document or '**ChatGPT**:' in document:
+                    return 'ChatGPT'
+            return 'AI'
     
     def _format_timestamp(self, dt: Optional[datetime]) -> Optional[str]:
         """Format datetime to string
@@ -206,3 +209,168 @@ class ConversationFormatService:
             return dt.strftime('%Y-%m-%d %H:%M:%S')
         
         return None
+    
+    # ===== PostgreSQL-specific formatting methods =====
+    
+    def format_postgres_search_results(self, results: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+        """Format PostgreSQL search results for legacy UI
+        
+        Args:
+            results: List of search result dicts with fields:
+                - content: Result content/preview
+                - title: Result title (optional)
+                - date: Result date (optional)
+                - metadata: Result metadata dict (optional)
+                - source: Source at top level (optional)
+        
+        Returns:
+            List of formatted items with structure:
+                - id: Result ID
+                - preview: Preview text
+                - meta: Dict with title, source, timestamps, relevance_display
+        """
+        items = []
+        for result in results:
+            metadata = result.get('metadata', {})
+            
+            # Extract and normalize source
+            source = metadata.get('source') or result.get('source') or 'unknown'
+            if source and isinstance(source, str):
+                source_lower = source.lower()
+                if 'claude' in source_lower:
+                    source = 'claude'
+                elif 'chatgpt' in source_lower or 'gpt' in source_lower:
+                    source = 'chatgpt'
+            
+            item = {
+                'id': metadata.get('conversation_id', metadata.get('id', 'unknown')),
+                'preview': result.get('content', ''),
+                'meta': {
+                    'title': result.get('title', metadata.get('title', 'Untitled')),
+                    'source': source,
+                    'earliest_ts': result.get('date', metadata.get('earliest_ts', '')),
+                    'latest_ts': metadata.get('latest_ts', result.get('date', '')),
+                    'relevance_display': 'N/A'
+                }
+            }
+            items.append(item)
+        
+        return items
+    
+    def format_postgres_list_results(self, conversations: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+        """Format paginated conversation results for list view
+        
+        Args:
+            conversations: List of conversation dicts with fields:
+                - id: Conversation ID
+                - title: Conversation title
+                - preview: Preview text
+                - source: Source type
+                - latest_ts: Latest timestamp (optional)
+        
+        Returns:
+            List of formatted items with structure:
+                - id: Conversation ID
+                - preview: Preview text
+                - meta: Dict with title, source, timestamps, relevance_display
+        """
+        items = []
+        for conv in conversations:
+            # Normalize source value
+            source = conv.get('source', 'unknown')
+            if source:
+                source = str(source).strip().lower()
+            else:
+                source = 'unknown'
+            
+            # Handle empty string after stripping
+            if not source:
+                source = 'unknown'
+            
+            item = {
+                'id': conv['id'],
+                'preview': conv['preview'],
+                'meta': {
+                    'title': conv['title'],
+                    'source': source,
+                    'earliest_ts': conv.get('latest_ts', ''),
+                    'latest_ts': conv.get('latest_ts', ''),
+                    'relevance_display': 'N/A'
+                }
+            }
+            items.append(item)
+        return items
+    
+    def calculate_source_breakdown(self, all_conversations: Dict[str, Any]) -> Dict[str, int]:
+        """Count conversations by source
+        
+        Args:
+            all_conversations: Dict with 'metadatas' key containing list of metadata dicts
+        
+        Returns:
+            Dict mapping source names to counts
+        """
+        source_counts = {}
+        
+        if not all_conversations or not all_conversations.get('metadatas'):
+            return source_counts
+        
+        for metadata in all_conversations.get('metadatas', []):
+            # Get source, preferring original_source
+            source = metadata.get('original_source', metadata.get('source', 'unknown')).lower()
+            
+            # Map postgres -> imported
+            if source == 'postgres':
+                source = 'imported'
+            
+            if source not in source_counts:
+                source_counts[source] = 0
+            source_counts[source] += 1
+        
+        return source_counts
+    
+    # ===== Message and metadata operations =====
+    
+    def extract_source_from_messages(self, db_messages: List[Any]) -> str:
+        """Extract source from message metadata
+        
+        Args:
+            db_messages: List of message objects with message_metadata attribute
+        
+        Returns:
+            Source string (defaults to 'unknown' if not found)
+        """
+        if db_messages and db_messages[0].message_metadata:
+            return db_messages[0].message_metadata.get('source', 'unknown')
+        return 'unknown'
+    
+    def format_db_messages_for_view(self, db_messages: List[Any]) -> List[Dict[str, Any]]:
+        """Format database messages for view template
+        
+        Args:
+            db_messages: List of message objects from database with fields:
+                - role: Message role (user/assistant)
+                - content: Message content (markdown)
+                - created_at: Created timestamp (optional)
+        
+        Returns:
+            List of formatted message dicts with fields:
+                - role: Message role
+                - content: HTML-rendered content
+                - timestamp: Formatted timestamp string
+        """
+        messages = []
+        for msg in db_messages:
+            # Convert markdown content to HTML
+            html_content = markdown.markdown(
+                msg.content,
+                extensions=["extra", "tables", "fenced_code", "codehilite", "nl2br"]
+            )
+            
+            messages.append({
+                'role': msg.role,
+                'content': html_content,
+                'timestamp': msg.created_at.strftime('%Y-%m-%d %H:%M:%S') if msg.created_at else None
+            })
+        
+        return messages

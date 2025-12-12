@@ -135,11 +135,11 @@ class ConversationController:
                 ))
                 
                 # Extract source and determine assistant name
-                source = self._extract_source(db_messages)
-                assistant_name = self._determine_assistant_name(source)
+                source = self.format_service.extract_source_from_messages(db_messages)
+                assistant_name = self.format_service._determine_assistant_name(None, source)
                 
                 # Format messages for view
-                messages = self._format_messages_for_view(db_messages)
+                messages = self.format_service.format_db_messages_for_view(db_messages)
                 
                 # Build conversation metadata
                 conversation_meta = {
@@ -189,7 +189,7 @@ class ConversationController:
             
             # Get source breakdown
             all_conversations = postgres_controller.get_conversations()
-            source_counts = self._get_source_breakdown(all_conversations)
+            source_counts = self.format_service.calculate_source_breakdown(all_conversations)
             
             # Format stats for template
             document_count = int(stats_data.get('document_count', 0))
@@ -228,6 +228,7 @@ class ConversationController:
             })
     
     # ===== Private helper methods =====
+    # (Formatting methods have been moved to ConversationFormatService)
     
     def _get_search_results(self, postgres_controller, query, search_form):
         """Get and format search results from postgres controller
@@ -267,7 +268,7 @@ class ConversationController:
             request.args = original_args
             
             # Format results using format service
-            return self._format_postgres_search_results(search_results.get('results', []))
+            return self.format_service.format_postgres_search_results(search_results.get('results', []))
         
         except Exception as e:
             import logging
@@ -310,164 +311,10 @@ class ConversationController:
             request.args = original_args
             
             # Format results
-            return self._format_postgres_search_results_for_list(result.get('conversations', []))
+            return self.format_service.format_postgres_list_results(result.get('conversations', []))
         
         except Exception as e:
             import logging
             logging.error(f"Error getting PostgreSQL conversations: {e}")
             return []
     
-    def _format_postgres_search_results(self, results):
-        """Format PostgreSQL search results for legacy UI
-        
-        Args:
-            results: List of search result dicts
-        
-        Returns:
-            List of formatted items
-        """
-        items = []
-        for result in results:
-            metadata = result.get('metadata', {})
-            
-            # Extract and normalize source
-            source = metadata.get('source') or result.get('source') or 'unknown'
-            if source and isinstance(source, str):
-                source_lower = source.lower()
-                if 'claude' in source_lower:
-                    source = 'claude'
-                elif 'chatgpt' in source_lower or 'gpt' in source_lower:
-                    source = 'chatgpt'
-            
-            item = {
-                'id': metadata.get('conversation_id', metadata.get('id', 'unknown')),
-                'preview': result.get('content', ''),
-                'meta': {
-                    'title': result.get('title', metadata.get('title', 'Untitled')),
-                    'source': source,
-                    'earliest_ts': result.get('date', metadata.get('earliest_ts', '')),
-                    'latest_ts': metadata.get('latest_ts', result.get('date', '')),
-                    'relevance_display': 'N/A'
-                }
-            }
-            items.append(item)
-        
-        return items
-    
-    def _format_postgres_search_results_for_list(self, conversations):
-        """Format paginated conversation results for list view
-        
-        Args:
-            conversations: List of conversation dicts
-        
-        Returns:
-            List of formatted items
-        """
-        items = []
-        for conv in conversations:
-            # Normalize source value
-            source = conv.get('source', 'unknown')
-            if source:
-                source = str(source).strip().lower()
-            else:
-                source = 'unknown'
-            
-            item = {
-                'id': conv['id'],
-                'preview': conv['preview'],
-                'meta': {
-                    'title': conv['title'],
-                    'source': source,
-                    'earliest_ts': conv.get('latest_ts', ''),
-                    'latest_ts': conv.get('latest_ts', ''),
-                    'relevance_display': 'N/A'
-                }
-            }
-            items.append(item)
-        return items
-    
-    def _get_source_breakdown(self, all_conversations):
-        """Count conversations by source
-        
-        Args:
-            all_conversations: Dict with conversations data
-        
-        Returns:
-            Dict mapping source names to counts
-        """
-        source_counts = {}
-        
-        if not all_conversations or not all_conversations.get('metadatas'):
-            return source_counts
-        
-        for metadata in all_conversations.get('metadatas', []):
-            # Get source, preferring original_source
-            source = metadata.get('original_source', metadata.get('source', 'unknown')).lower()
-            
-            # Map postgres -> imported
-            if source == 'postgres':
-                source = 'imported'
-            
-            if source not in source_counts:
-                source_counts[source] = 0
-            source_counts[source] += 1
-        
-        return source_counts
-    
-    def _extract_source(self, db_messages):
-        """Extract source from message metadata
-        
-        Args:
-            db_messages: List of message objects
-        
-        Returns:
-            Source string
-        """
-        if db_messages and db_messages[0].message_metadata:
-            return db_messages[0].message_metadata.get('source', 'unknown')
-        return 'unknown'
-    
-    def _determine_assistant_name(self, source):
-        """Determine assistant name from source
-        
-        Args:
-            source: Source string
-        
-        Returns:
-            Assistant name string
-        """
-        source_lower = source.lower() if source else ''
-        
-        if source_lower == 'claude':
-            return 'Claude'
-        elif source_lower == 'chatgpt':
-            return 'ChatGPT'
-        else:
-            return 'Assistant'
-    
-    def _format_messages_for_view(self, db_messages):
-        """Format database messages for view template
-        
-        Args:
-            db_messages: List of message objects from database
-        
-        Returns:
-            List of formatted message dicts
-        """
-        import markdown
-        
-        messages = []
-        for msg in db_messages:
-            # Convert markdown content to HTML
-            html_content = markdown.markdown(
-                msg.content,
-                extensions=["extra", "tables", "fenced_code", "codehilite", "nl2br"]
-            )
-            
-            messages.append({
-                'role': msg.role,
-                'content': html_content,
-                'timestamp': msg.created_at.strftime('%Y-%m-%d %H:%M:%S') if msg.created_at else None
-            })
-        
-        return messages
