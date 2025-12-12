@@ -937,24 +937,38 @@ def extract_openwebui_attachments(message: Dict[str, Any]) -> List[Dict[str, Any
         url = file_data.get('url', '')
         content = file_data.get('content') or file_data.get('data')
         
-        # Data URLs are not really "available" for display - they're inline base64
-        # We mark them as unavailable since we can't extract/show the base64
+        # Data URLs contain base64-encoded image data that we can render
         has_data_url = url and url.startswith('data:')
         has_content = bool(content)
         
-        attachments.append({
-            'type': 'image' if is_image else 'file',
-            'file_name': file_name,
-            'file_size': file_data.get('size'),
-            'file_type': file_type,
-            'extracted_content': content,  # Only text content, not data URLs
-            'available': has_content,  # Available only if we have extractable text content
-            'metadata': {
-                'has_data_url': has_data_url,
-                'url': url if not has_data_url else None,  # Don't store huge base64 strings
-                'collection_name': file_data.get('collection_name')
-            }
-        })
+        # For images with data URLs, store the data URL for rendering
+        if is_image and has_data_url:
+            attachments.append({
+                'type': 'image',
+                'file_name': file_name,
+                'file_size': file_data.get('size'),
+                'file_type': file_type,
+                'extracted_content': url,  # Store data URL for image rendering
+                'available': True,  # Image is available for display
+                'metadata': {
+                    'data_url': url,
+                    'collection_name': file_data.get('collection_name')
+                }
+            })
+        else:
+            # For non-images or files without data URLs
+            attachments.append({
+                'type': 'image' if is_image else 'file',
+                'file_name': file_name,
+                'file_size': file_data.get('size'),
+                'file_type': file_type,
+                'extracted_content': content,
+                'available': has_content,
+                'metadata': {
+                    'url': url if not has_data_url else None,
+                    'collection_name': file_data.get('collection_name')
+                }
+            })
     
     return attachments
 

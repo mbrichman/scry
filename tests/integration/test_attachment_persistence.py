@@ -156,3 +156,9 @@ def test_openwebui_image_attachments_persist(import_service):
         attachments = user_msg.message_metadata['attachments']
         image_atts = [a for a in attachments if a['type'] == 'image']
         assert len(image_atts) > 0, f"No image attachments found. Attachments: {attachments}"
+        
+        # Verify the image is available and has data URL
+        image_att = image_atts[0]
+        assert image_att['available'] is True, "Image should be marked as available"
+        assert image_att['extracted_content'].startswith('data:'), "Image should have data URL"
+        assert 'data_url' in image_att['metadata'], "Image metadata should have data_url field"

@@ -734,6 +734,8 @@ View Conversation
                                         </li>
                                     {% endfor %}
                                     </ul>
+                                {% elif attachment.type == 'image' %}
+                                    <img src="{{ attachment.extracted_content }}" alt="{{ attachment.file_name }}" style="max-width: 100%; height: auto; border-radius: var(--radius);" />
                                 {% endif %}
                             {% else %}
                                 <div class="attachment-placeholder">
