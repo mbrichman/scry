@@ -59,6 +59,28 @@ services:
       retries: 3
       start_period: 40s
 
+  dovos-embedding-worker:
+    image: ghcr.io/mbrichman/dovos:main
+    container_name: dovos-embedding-worker
+    command: python -m db.workers.embedding_worker --workers 4 --batch-size 20 --verbose
+    environment:
+      - USE_PG_SINGLE_STORE=${USE_PG_SINGLE_STORE:-true}
+      - DATABASE_URL=postgresql+psycopg://${POSTGRES_USER:-dovos}:${POSTGRES_PASSWORD:-dovos_password}@postgres:5432/${POSTGRES_DB:-dovos}
+      - PGAPPNAME=${PGAPPNAME:-dovos-embedding-worker}
+      - EMBEDDING_MODEL=${EMBEDDING_MODEL:-sentence-transformers/all-MiniLM-L6-v2}
+      - EMBEDDING_DIM=${EMBEDDING_DIM:-384}
+      - PYTORCH_ENABLE_MPS_FALLBACK=1
+      - PYTORCH_MPS_HIGH_WATERMARK_RATIO=0.0
+      - CUDA_VISIBLE_DEVICES=""
+    volumes:
+      - ./logs:/app/logs
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+    networks:
+      - dovos-network
+
 volumes:
   postgres_data:
     name: dovos_postgres_data
