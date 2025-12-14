@@ -1,0 +1,571 @@
+{% extends "base.html" %}
+
+{% block title %}Conversations - DovOS{% endblock %}
+
+{% block page_title %}Conversations{% endblock %}
+
+{% block content %}
+<!-- Search Section -->
+<div class="search-section">
+    <form method="POST" action="/conversations" id="searchForm">
+        {{ search_form.hidden_tag() }}
+        <div class="search-wrapper">
+            <div class="search-input-group">
+                <input type="search" 
+                       name="query" 
+                       id="searchInput"
+                       placeholder="Search conversations..." 
+                       value="{{ query or '' }}"
+                       class="form-control">
+            </div>
+            
+            <div class="search-type-pills">
+                <button type="button" 
+                        class="pill {% if search_form.search_type.data == 'auto' or not search_form.search_type.data %}active{% endif %}" 
+                        data-type="auto">Auto</button>
+                <button type="button" 
+                        class="pill {% if search_form.search_type.data == 'semantic' %}active{% endif %}" 
+                        data-type="semantic">Semantic</button>
+                <button type="button" 
+                        class="pill {% if search_form.search_type.data == 'fts' %}active{% endif %}" 
+                        data-type="fts">Keyword</button>
+                <button type="button" 
+                        class="pill {% if search_form.search_type.data == 'hybrid' %}active{% endif %}" 
+                        data-type="hybrid">Hybrid</button>
+            </div>
+            
+            <input type="hidden" name="search_type" id="searchType" value="{{ search_form.search_type.data or 'auto' }}">
+            
+            <button type="submit" class="btn-search" id="searchButton">
+                <span class="btn-search-text">Search</span>
+                <span class="btn-search-spinner" style="display: none;">
+                    <svg class="spinner" viewBox="0 0 50 50">
+                        <circle class="spinner-path" cx="25" cy="25" r="20" fill="none" stroke-width="5"></circle>
+                    </svg>
+                </span>
+            </button>
+        </div>
+        
+        {% if search_triggered %}
+        <div class="alert alert-info mt-3">
+            <strong>{{ search_form.search_type.data|title }} Search Results for:</strong> "{{ query }}"
+            <a href="/conversations" class="btn btn-sm btn-outline-secondary ms-2">Clear Search</a>
+        </div>
+        {% endif %}
+    </form>
+</div>
+
+<!-- Filters Section -->
+<div class="filters-section">
+    <div class="filters-header" onclick="toggleFilters()">
+        <h3>Filters</h3>
+        <span class="filters-toggle" id="filtersToggle">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 15l7-7 7 7" />
+            </svg>
+        </span>
+    </div>
+    <div class="filters-content" id="filtersContent">
+        <div class="filters-grid">
+            <div class="filter-group">
+                <label for="sourceFilter">Source</label>
+                <select class="form-select" id="sourceFilter" onchange="applyFilters()">
+                    <option value="all" {% if source_filter == 'all' %}selected{% endif %}>All Sources</option>
+                    <option value="chatgpt" {% if source_filter == 'chatgpt' %}selected{% endif %}>ChatGPT</option>
+                    <option value="claude" {% if source_filter == 'claude' %}selected{% endif %}>Claude</option>
+                    <option value="openwebui" {% if source_filter == 'openwebui' %}selected{% endif %}>OpenWebUI</option>
+                    <option value="docx" {% if source_filter == 'docx' %}selected{% endif %}>Word Documents</option>
+                </select>
+            </div>
+            <div class="filter-group">
+                <label for="dateFilter">Date Range</label>
+                <select class="form-select" id="dateFilter" onchange="applyFilters()">
+                    <option value="all" {% if date_filter == 'all' %}selected{% endif %}>All Time</option>
+                    <option value="today" {% if date_filter == 'today' %}selected{% endif %}>Today</option>
+                    <option value="week" {% if date_filter == 'week' %}selected{% endif %}>Past Week</option>
+                    <option value="month" {% if date_filter == 'month' %}selected{% endif %}>Past Month</option>
+                    <option value="year" {% if date_filter == 'year' %}selected{% endif %}>Past Year</option>
+                </select>
+            </div>
+            <div class="filter-group">
+                <label for="sortOrder">Sort Order</label>
+                <select class="form-select" id="sortOrder" onchange="applyFilters()">
+                    <option value="newest" {% if sort_order == 'newest' %}selected{% endif %}>Newest First</option>
+                    <option value="oldest" {% if sort_order == 'oldest' %}selected{% endif %}>Oldest First</option>
+                    <option value="original" {% if sort_order == 'original' %}selected{% endif %}>Original Order</option>
+                </select>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Conversation List -->
+{% if conversations %}
+<div class="conversation-list">
+    {% for conversation in conversations %}
+    <div class="conversation-item" onclick="window.location.href='{{ url_for('view_conversation', doc_id=conversation.id) }}'">
+        <div class="conversation-item-header">
+            <h2 class="conversation-title">
+                <a href="{{ url_for('view_conversation', doc_id=conversation.id) }}">{{ conversation.meta.title }}</a>
+            </h2>
+            <div class="conversation-menu">
+                <button class="conversation-menu-button" onclick="event.stopPropagation(); toggleMenu(event, '{{ conversation.id }}')" aria-label="Options">
+                    <span>⋯</span>
+                </button>
+                <div class="conversation-menu-dropdown" id="menu-{{ conversation.id }}">
+                    <button class="conversation-menu-item" onclick="viewConversation('{{ conversation.id }}')">
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                        </svg>
+                        View
+                    </button>
+                    <button class="conversation-menu-item" onclick="exportConversation(event, '{{ conversation.id }}')">
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                        </svg>
+                        Export
+                    </button>
+                    <button class="conversation-menu-item conversation-menu-item-danger" onclick="deleteConversation(event, '{{ conversation.id }}')">
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                        </svg>
+                        Delete
+                    </button>
+                </div>
+            </div>
+        </div>
+        <div class="conversation-meta">
+            {% set source_clean = (conversation.meta.source|string|lower|trim) %}
+            {% if source_clean == 'claude' %}
+                <span class="badge badge-claude">Claude</span>
+            {% elif source_clean == 'chatgpt' %}
+                <span class="badge badge-chatgpt">ChatGPT</span>
+            {% elif source_clean == 'openwebui' or source_clean == 'open-webui' or source_clean == 'open webui' %}
+                <span class="badge badge-openwebui">OpenWebUI</span>
+            {% elif source_clean == 'docx' %}
+                <span class="badge badge-word">Word</span>
+            {% else %}
+                <span class="badge">{{ conversation.meta.source|capitalize }}</span>
+            {% endif %}
+            <span class="conversation-date date-to-format">{{ conversation.meta.latest_ts }}</span>
+        </div>
+        <div class="conversation-preview">
+            {{ conversation.preview|safe }}
+        </div>
+    </div>
+    {% endfor %}
+</div>
+
+<!-- Loading indicator for lazy load -->
+<div id="loadingIndicator" style="display: none; text-align: center; padding: 2rem;">
+    <svg class="spinner" viewBox="0 0 50 50" style="width: 40px; height: 40px;">
+        <circle class="spinner-path" cx="25" cy="25" r="20" fill="none" stroke-width="5"></circle>
+    </svg>
+    <p style="margin-top: 1rem; color: hsl(var(--muted-foreground));">Loading more conversations...</p>
+</div>
+
+<!-- Intersection observer target for infinite scroll -->
+<div id="scrollSentinel" style="height: 1px;"></div>
+
+{% else %}
+<div class="empty-state">
+    <div class="empty-state-icon">💬</div>
+    <h3>No Conversations Found</h3>
+    <p>Upload some conversations to get started.</p>
+    <a href="/upload" class="btn btn-primary mt-3">Upload Conversations</a>
+</div>
+{% endif %}
+{% endblock %}
+
+{% block page_scripts %}
+<script>
+// Search form loading state
+const searchForm = document.getElementById('searchForm');
+const searchButton = document.getElementById('searchButton');
+const searchButtonText = searchButton.querySelector('.btn-search-text');
+const searchButtonSpinner = searchButton.querySelector('.btn-search-spinner');
+
+searchForm.addEventListener('submit', function(e) {
+    // Show loading state
+    searchButton.disabled = true;
+    searchButtonText.style.display = 'none';
+    searchButtonSpinner.style.display = 'inline-block';
+});
+
+// Search type pills
+document.querySelectorAll('.pill').forEach(pill => {
+    pill.addEventListener('click', function(e) {
+        e.preventDefault();
+        document.querySelectorAll('.pill').forEach(p => p.classList.remove('active'));
+        this.classList.add('active');
+        document.getElementById('searchType').value = this.dataset.type;
+    });
+});
+
+// Toggle filters
+function toggleFilters() {
+    const content = document.getElementById('filtersContent');
+    const toggle = document.getElementById('filtersToggle');
+    
+    if (content.classList.contains('show')) {
+        content.classList.remove('show');
+        toggle.classList.remove('expanded');
+    } else {
+        content.classList.add('show');
+        toggle.classList.add('expanded');
+    }
+}
+
+// Apply filters
+function applyFilters() {
+    const source = document.getElementById('sourceFilter').value;
+    const date = document.getElementById('dateFilter').value;
+    const sort = document.getElementById('sortOrder').value;
+    
+    const params = new URLSearchParams();
+    if (source !== 'all') params.set('source', source);
+    if (date !== 'all') params.set('date', date);
+    if (sort !== 'newest') params.set('sort', sort);
+    
+    const queryString = params.toString();
+    window.location.href = window.location.pathname + (queryString ? '?' + queryString : '');
+}
+
+// Toggle conversation menu
+let currentOpenMenu = null;
+
+function toggleMenu(event, conversationId) {
+    event.stopPropagation();
+    const menu = document.getElementById(`menu-${conversationId}`);
+    
+    // Close any other open menu
+    if (currentOpenMenu && currentOpenMenu !== menu) {
+        currentOpenMenu.classList.remove('show');
+    }
+    
+    menu.classList.toggle('show');
+    currentOpenMenu = menu.classList.contains('show') ? menu : null;
+}
+
+// Close menus when clicking outside
+document.addEventListener('click', function() {
+    if (currentOpenMenu) {
+        currentOpenMenu.classList.remove('show');
+        currentOpenMenu = null;
+    }
+});
+
+// View conversation
+function viewConversation(conversationId) {
+    window.location.href = `/view/${conversationId}`;
+}
+
+// Export conversation
+async function exportConversation(event, conversationId) {
+    event.stopPropagation();
+    const button = event.currentTarget;
+    const originalHTML = button.innerHTML;
+    
+    button.disabled = true;
+    button.innerHTML = '<span>Exporting...</span>';
+    
+    try {
+        const response = await fetch(`/export_to_openwebui/${conversationId}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' }
+        });
+        
+        const data = await response.json();
+        
+        if (response.ok && data.success) {
+            showNotification('Successfully exported to OpenWebUI!', 'success');
+            button.innerHTML = '<span>✓ Exported</span>';
+            setTimeout(() => {
+                button.disabled = false;
+                button.innerHTML = originalHTML;
+            }, 2000);
+        } else {
+            throw new Error(data.error || 'Export failed');
+        }
+    } catch (error) {
+        console.error('Export error:', error);
+        showNotification(error.message || 'Export failed', 'error');
+        button.innerHTML = '<span>✗ Failed</span>';
+        setTimeout(() => {
+            button.disabled = false;
+            button.innerHTML = originalHTML;
+        }, 3000);
+    }
+}
+
+// Delete conversation
+async function deleteConversation(event, conversationId) {
+    event.stopPropagation();
+    
+    // Confirm deletion
+    if (!confirm('Are you sure you want to delete this conversation? This will also delete all messages and embeddings. This action cannot be undone.')) {
+        return;
+    }
+    
+    const button = event.currentTarget;
+    const originalHTML = button.innerHTML;
+    
+    button.disabled = true;
+    button.innerHTML = '<span>Deleting...</span>';
+    
+    try {
+        const response = await fetch(`/api/conversation/${conversationId}`, {
+            method: 'DELETE',
+            headers: { 'Content-Type': 'application/json' }
+        });
+        
+        const data = await response.json();
+        
+        if (response.ok && data.success) {
+            showNotification('Conversation deleted successfully!', 'success');
+            // Remove the conversation item from the DOM
+            const conversationItem = button.closest('.conversation-item');
+            conversationItem.style.opacity = '0';
+            conversationItem.style.transform = 'translateX(-20px)';
+            setTimeout(() => {
+                conversationItem.remove();
+                // Reload if no conversations left
+                if (document.querySelectorAll('.conversation-item').length === 0) {
+                    window.location.reload();
+                }
+            }, 300);
+        } else {
+            throw new Error(data.message || 'Delete failed');
+        }
+    } catch (error) {
+        console.error('Delete error:', error);
+        showNotification(error.message || 'Delete failed', 'error');
+        button.innerHTML = '<span>✗ Failed</span>';
+        setTimeout(() => {
+            button.disabled = false;
+            button.innerHTML = originalHTML;
+        }, 3000);
+    }
+}
+
+// Notification system
+function showNotification(message, type = 'success') {
+    let notification = document.getElementById('notification');
+    if (!notification) {
+        notification = document.createElement('div');
+        notification.id = 'notification';
+        notification.style.cssText = `
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 12px 24px;
+            border-radius: 8px;
+            color: white;
+            font-size: 14px;
+            font-weight: 500;
+            z-index: 9999;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            animation: slideIn 0.3s ease-out;
+        `;
+        document.body.appendChild(notification);
+    }
+    
+    notification.textContent = message;
+    notification.style.backgroundColor = type === 'success' ? '#10b981' : '#ef4444';
+    notification.style.display = 'block';
+    
+    setTimeout(() => {
+        notification.style.display = 'none';
+    }, 5000);
+}
+
+// Lazy loading / infinite scroll
+let currentPage = 1;
+let isLoading = false;
+let hasMore = true;
+
+const loadingIndicator = document.getElementById('loadingIndicator');
+const scrollSentinel = document.getElementById('scrollSentinel');
+const conversationList = document.querySelector('.conversation-list');
+
+// Get current filter parameters from URL or form
+function getFilterParams() {
+    const params = new URLSearchParams(window.location.search);
+    const source = params.get('source') || 'all';
+    const date = params.get('date') || 'all';
+    const sort = params.get('sort') || 'newest';
+    return { source, date, sort };
+}
+
+async function loadMoreConversations() {
+    if (isLoading || !hasMore) return;
+    
+    isLoading = true;
+    loadingIndicator.style.display = 'block';
+    
+    try {
+        currentPage++;
+        const filters = getFilterParams();
+        const params = new URLSearchParams({
+            page: currentPage,
+            limit: 30,
+            source: filters.source,
+            date: filters.date,
+            sort: filters.sort
+        });
+        const response = await fetch(`/api/conversations/list?${params.toString()}`);
+        const data = await response.json();
+        
+        if (data.conversations && data.conversations.length > 0) {
+            data.conversations.forEach(conv => {
+                const item = createConversationElement(conv);
+                conversationList.appendChild(item);
+            });
+            
+            // Format new dates
+            document.querySelectorAll('.date-to-format').forEach(formatDateElement);
+        }
+        
+        hasMore = data.has_more;
+        if (!hasMore) {
+            scrollSentinel.remove();
+        }
+    } catch (error) {
+        console.error('Failed to load more conversations:', error);
+        showNotification('Failed to load more conversations', 'error');
+    } finally {
+        isLoading = false;
+        loadingIndicator.style.display = 'none';
+    }
+}
+
+function createConversationElement(conv) {
+    const div = document.createElement('div');
+    div.className = 'conversation-item';
+    div.onclick = () => window.location.href = `/view/${conv.id}`;
+    
+    const sourceLower = conv.source.toLowerCase().trim();
+    const badgeClass = sourceLower === 'claude' ? 'badge-claude' : 
+                       sourceLower === 'chatgpt' ? 'badge-chatgpt' :
+                       sourceLower === 'openwebui' || sourceLower === 'open-webui' ? 'badge-openwebui' :
+                       sourceLower === 'docx' ? 'badge-word' : '';
+    const badgeText = sourceLower === 'docx' ? 'Word' : 
+                     sourceLower === 'claude' ? 'Claude' :
+                     sourceLower === 'chatgpt' ? 'ChatGPT' :
+                     sourceLower === 'openwebui' || sourceLower === 'open-webui' ? 'OpenWebUI' :
+                     conv.source.charAt(0).toUpperCase() + conv.source.slice(1);
+    
+    div.innerHTML = `
+        <div class="conversation-item-header">
+            <h2 class="conversation-title">
+                <a href="/view/${conv.id}">${conv.title}</a>
+            </h2>
+        </div>
+        <div class="conversation-meta">
+            <span class="badge ${badgeClass}">${badgeText}</span>
+            <span class="conversation-date date-to-format">${conv.latest_ts}</span>
+        </div>
+        <div class="conversation-preview">${conv.preview}</div>
+    `;
+    
+    return div;
+}
+
+function formatDateElement(element) {
+    const dateStr = element.textContent.trim();
+    if (dateStr && dateStr !== 'Unknown date') {
+        try {
+            const date = new Date(dateStr);
+            if (!isNaN(date.getTime())) {
+                const options = {
+                    year: 'numeric',
+                    month: 'short',
+                    day: 'numeric',
+                    hour: '2-digit',
+                    minute: '2-digit'
+                };
+                element.textContent = date.toLocaleDateString(undefined, options);
+            }
+        } catch (e) {
+            console.warn('Date parsing failed:', dateStr, e);
+        }
+    }
+}
+
+// Setup intersection observer for infinite scroll
+if (scrollSentinel && conversationList) {
+    const observer = new IntersectionObserver((entries) => {
+        entries.forEach(entry => {
+            if (entry.isIntersecting) {
+                loadMoreConversations();
+            }
+        });
+    }, {
+        rootMargin: '200px' // Start loading before reaching the bottom
+    });
+    
+    observer.observe(scrollSentinel);
+}
+
+// Format initial dates
+document.querySelectorAll('.date-to-format').forEach(formatDateElement);
+</script>
+
+<style>
+@keyframes slideIn {
+    from {
+        transform: translateX(100%);
+        opacity: 0;
+    }
+    to {
+        transform: translateX(0);
+        opacity: 1;
+    }
+}
+
+/* Spinner animation */
+.btn-search-spinner {
+    display: inline-block;
+    vertical-align: middle;
+}
+
+.spinner {
+    animation: rotate 1s linear infinite;
+    width: 18px;
+    height: 18px;
+}
+
+.spinner-path {
+    stroke: currentColor;
+    stroke-linecap: round;
+    animation: dash 1.5s ease-in-out infinite;
+}
+
+@keyframes rotate {
+    100% {
+        transform: rotate(360deg);
+    }
+}
+
+@keyframes dash {
+    0% {
+        stroke-dasharray: 1, 150;
+        stroke-dashoffset: 0;
+    }
+    50% {
+        stroke-dasharray: 90, 150;
+        stroke-dashoffset: -35;
+    }
+    100% {
+        stroke-dasharray: 90, 150;
+        stroke-dashoffset: -124;
+    }
+}
+
+.btn-search:disabled {
+    opacity: 0.7;
+    cursor: not-allowed;
+}
+</style>
+{% endblock %}

@@ -1,0 +1,1301 @@
+{% extends "base.html" %}
+
+{% block title %}View Conversation - ChatGPT Search{% endblock %}
+
+{% block page_title %}
+<a href="/conversations" class="back-arrow">
+    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+    </svg>
+</a>
+View Conversation
+{% endblock %}
+
+{% block styles %}
+<!-- Prism.js CSS for syntax highlighting in attachments only -->
+<link href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism.min.css" rel="stylesheet" />
+{{ super() }}
+{% endblock %}
+
+{% block page_styles %}
+    .back-arrow {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 40px;
+        height: 40px;
+        margin-right: 1rem;
+        border-radius: var(--radius);
+        color: hsl(var(--muted-foreground));
+        transition: var(--transition-base);
+        text-decoration: none;
+        cursor: pointer;
+        -webkit-tap-highlight-color: rgba(0, 0, 0, 0.1);
+        user-select: none;
+        -webkit-user-select: none;
+        -webkit-touch-callout: none;
+    }
+    .back-arrow:hover,
+    .back-arrow:active {
+        background-color: hsl(var(--secondary));
+        color: hsl(var(--foreground));
+    }
+    .back-arrow svg {
+        width: 24px;
+        height: 24px;
+        pointer-events: none;
+    }
+    .conversation-header {
+        margin-bottom: 2rem;
+        padding-bottom: 1.5rem;
+        border-bottom: 1px solid hsl(var(--border));
+    }
+    .conversation-title {
+        font-size: 2rem;
+        font-weight: 600;
+        color: hsl(var(--foreground));
+        margin-bottom: 0.75rem;
+        line-height: 1.3;
+    }
+    .conversation-metadata {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+        color: hsl(var(--muted-foreground));
+        font-size: 0.875rem;
+        margin-bottom: 0;
+    }
+    .conversation-metadata > div {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+    .message {
+        margin-bottom: 1rem;
+        border-radius: var(--radius);
+        overflow: hidden;
+        border: 1px solid hsl(var(--border));
+        background: white;
+    }
+    .message-header {
+        padding: 1rem 1.25rem;
+        font-weight: 600;
+        font-size: 0.875rem;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        border-bottom: 1px solid hsl(var(--border));
+    }
+    .message-header-left {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+    }
+    .copy-message-btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 28px;
+        height: 28px;
+        padding: 0;
+        background-color: transparent;
+        border: 1px solid hsl(var(--border));
+        border-radius: var(--radius);
+        color: hsl(var(--muted-foreground));
+        cursor: pointer;
+        transition: var(--transition-base);
+        opacity: 0.7;
+    }
+    .copy-message-btn:hover {
+        opacity: 1;
+        background-color: hsl(var(--secondary));
+        color: hsl(var(--foreground));
+    }
+    .copy-message-btn svg {
+        width: 16px;
+        height: 16px;
+    }
+    .message-body {
+        padding: 1.25rem;
+        line-height: 1.7;
+        font-size: 1rem;
+    }
+    .user-message .message-header {
+        background-color: hsl(220 70% 97%);
+        color: hsl(220 70% 40%);
+    }
+    .assistant-message .message-header {
+        background-color: hsl(140 50% 97%);
+        color: hsl(140 50% 40%);
+    }
+    .system-message .message-header {
+        background-color: hsl(var(--secondary));
+        color: hsl(var(--muted-foreground));
+    }
+    .timestamp {
+        font-size: 0.75rem;
+        color: hsl(var(--muted-foreground));
+        font-weight: 400;
+    }
+    /* Default pre/code styles for regular markdown content
+     * NOTE: We use :not([class*="language-"]) to exclude Prism.js syntax-highlighted blocks
+     * This prevents our generic styles from overriding Prism's token colors */
+    .message-content pre:not([class*="language-"]) {
+        background-color: hsl(var(--secondary));
+        padding: 1rem;
+        border-radius: var(--radius);
+        overflow-x: auto;
+        border: 1px solid hsl(var(--border));
+    }
+    .message-content code:not([class*="language-"]) {
+        padding: 0.2rem 0.4rem;
+        background-color: hsl(var(--secondary));
+        border-radius: 0.25rem;
+        color: hsl(var(--foreground));
+        font-size: 0.875em;
+    }
+    
+    /* CRITICAL: Override Bootstrap's reboot CSS for Prism syntax highlighting
+     * Bootstrap 5 includes _reboot.scss and _rfs.scss that apply generic code styles
+     * These styles override Prism's token colors, making all code appear gray
+     * Solution: Use high-specificity selector (pre > code with class attributes)
+     * plus !important to win the CSS cascade battle
+     * Without this, syntax highlighting will not work despite Prism loading correctly */
+    pre[class*="language-"] > code[class*="language-"] {
+        all: unset !important;
+        font-family: Consolas, Monaco, 'Andale Mono', 'Ubuntu Mono', monospace !important;
+        font-size: 1em !important;
+        line-height: 1.5 !important;
+        direction: ltr !important;
+        text-align: left !important;
+        white-space: pre !important;
+        word-spacing: normal !important;
+        word-break: normal !important;
+        tab-size: 4 !important;
+        hyphens: none !important;
+    }
+    .action-buttons {
+        margin-top: 2rem;
+        margin-bottom: 3rem;
+        display: flex;
+        gap: 0.75rem;
+        flex-wrap: wrap;
+    }
+    .message-content img {
+        max-width: 100%;
+        height: auto;
+    }
+    .message-content table {
+        width: 100%;
+        margin-bottom: 1rem;
+        border-collapse: collapse;
+    }
+    .message-content th,
+    .message-content td {
+        padding: 0.75rem;
+        border: 1px solid #dee2e6;
+    }
+    .message-content blockquote {
+        padding: 0.5rem 1rem;
+        margin: 0 0 1rem;
+        border-left: 0.25rem solid #e9ecef;
+        color: #6c757d;
+    }
+    .message-content h1 {
+        font-size: 1.5rem;
+        font-weight: 700;
+        margin-top: 2rem;
+        margin-bottom: 1rem;
+        line-height: 1.2;
+    }
+    .message-content h2 {
+        font-size: 1.25rem;
+        font-weight: 600;
+        margin-top: 1.5rem;
+        margin-bottom: 0.75rem;
+        line-height: 1.3;
+    }
+    .message-content h3 {
+        font-size: 1.1rem;
+        font-weight: 600;
+        margin-top: 1.25rem;
+        margin-bottom: 0.5rem;
+        line-height: 1.3;
+    }
+    .message-content h4 {
+        font-size: 1rem;
+        font-weight: 600;
+        margin-top: 1rem;
+        margin-bottom: 0.5rem;
+        line-height: 1.3;
+    }
+    .tools-menu-container {
+        position: relative;
+    }
+    .tools-menu-button {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 40px;
+        height: 40px;
+        background-color: hsl(var(--secondary));
+        border: 1px solid hsl(var(--border));
+        color: hsl(var(--foreground));
+        border-radius: var(--radius);
+        cursor: pointer;
+        transition: var(--transition-base);
+        -webkit-tap-highlight-color: rgba(0, 0, 0, 0.1);
+    }
+    .tools-menu-button:hover,
+    .tools-menu-button:active {
+        background-color: hsl(var(--secondary) / 0.8);
+        border-color: hsl(var(--muted-foreground) / 0.3);
+    }
+    .tools-menu-button svg {
+        width: 20px;
+        height: 20px;
+    }
+    .tools-dropdown {
+        position: absolute;
+        top: 100%;
+        right: 0;
+        margin-top: 0.5rem;
+        min-width: 220px;
+        background-color: white;
+        border: 1px solid hsl(var(--border));
+        border-radius: var(--radius);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        opacity: 0;
+        visibility: hidden;
+        transform: translateY(-10px);
+        transition: all 0.2s ease;
+        z-index: 1000;
+        white-space: nowrap;
+    }
+    .tools-dropdown.show {
+        opacity: 1;
+        visibility: visible;
+        transform: translateY(0);
+    }
+    .tools-dropdown-item {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        padding: 0.75rem 1rem;
+        color: hsl(var(--foreground));
+        font-size: 0.875rem;
+        cursor: pointer;
+        transition: var(--transition-base);
+        border: none;
+        background: none;
+        width: 100%;
+        text-align: left;
+        text-decoration: none;
+    }
+    .tools-dropdown-item:first-child {
+        border-radius: var(--radius) var(--radius) 0 0;
+    }
+    .tools-dropdown-item:last-child {
+        border-radius: 0 0 var(--radius) var(--radius);
+    }
+    .tools-dropdown-item:not(:last-child) {
+        border-bottom: 1px solid hsl(var(--border));
+    }
+    .tools-dropdown-item:hover,
+    .tools-dropdown-item:active {
+        background-color: hsl(var(--secondary));
+    }
+    .tools-dropdown-item svg {
+        width: 18px;
+        height: 18px;
+        flex-shrink: 0;
+    }
+    .tools-dropdown-item .spinner-border {
+        width: 18px;
+        height: 18px;
+    }
+    
+    /* Responsive improvements */
+    @media (max-width: 768px) {
+        .conversation-header {
+            margin-bottom: 1.5rem;
+        }
+        .conversation-title {
+            font-size: 1.5rem;
+            margin-bottom: 0.5rem;
+        }
+        .conversation-metadata {
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 0.5rem;
+            font-size: 0.8rem;
+        }
+        .message {
+            margin-bottom: 0.75rem;
+        }
+        .message-header {
+            padding: 0.75rem 1rem;
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 0.5rem;
+        }
+        .message-header-left {
+            width: 100%;
+            justify-content: space-between;
+        }
+        .message-body {
+            padding: 1rem;
+        }
+        .timestamp {
+            font-size: 0.7rem;
+        }
+        .action-buttons {
+            flex-direction: column;
+        }
+        .action-buttons .btn {
+            width: 100%;
+        }
+        .tools-dropdown {
+            min-width: 220px;
+        }
+        pre {
+            padding: 0.75rem;
+            font-size: 0.85rem;
+        }
+        code {
+            padding: 0.15rem 0.3rem;
+            font-size: 0.85rem;
+        }
+        .message-content th,
+        .message-content td {
+            padding: 0.5rem;
+            font-size: 0.85rem;
+        }
+        .message-content h1 {
+            font-size: 1.3rem;
+            margin-top: 1.5rem;
+            margin-bottom: 0.75rem;
+        }
+        .message-content h2 {
+            font-size: 1.1rem;
+            margin-top: 1.25rem;
+            margin-bottom: 0.5rem;
+        }
+        .message-content h3 {
+            font-size: 1rem;
+            margin-top: 1rem;
+            margin-bottom: 0.5rem;
+        }
+        .message-content h4 {
+            font-size: 0.95rem;
+            margin-top: 0.75rem;
+            margin-bottom: 0.25rem;
+        }
+    }
+    
+    @media (max-width: 576px) {
+        .message-header {
+            padding: 0.5rem;
+        }
+        .message-body {
+            padding: 0.5rem;
+        }
+        .copy-success {
+            top: 10px;
+            right: 10px;
+            left: 10px;
+            padding: 8px 15px;
+            font-size: 0.9rem;
+        }
+    }
+    
+    /* Attachment styles */
+    .attachment-container {
+        margin-top: 1rem;
+        padding-top: 1rem;
+        border-top: 1px solid hsl(var(--border));
+    }
+    
+    .attachment-item {
+        margin-bottom: 0.75rem;
+        border: 1px solid hsl(var(--border));
+        border-radius: var(--radius);
+        background: hsl(var(--secondary));
+        transition: var(--transition-base);
+    }
+    
+    .attachment-item:hover {
+        border-color: hsl(var(--muted-foreground) / 0.3);
+    }
+    
+    .attachment-item[open] {
+        background: white;
+    }
+    
+    .attachment-header {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        padding: 0.75rem 1rem;
+        cursor: pointer;
+        user-select: none;
+        list-style: none;
+    }
+    
+    .attachment-header::-webkit-details-marker {
+        display: none;
+    }
+    
+    .attachment-header::before {
+        content: '▶';
+        font-size: 0.7rem;
+        color: hsl(var(--muted-foreground));
+        transition: transform 0.2s ease;
+    }
+    
+    .attachment-item[open] .attachment-header::before {
+        transform: rotate(90deg);
+    }
+    
+    .attachment-badge {
+        display: inline-block;
+        padding: 0.25rem 0.5rem;
+        border-radius: 0.25rem;
+        font-size: 0.75rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.025em;
+    }
+    
+    .attachment-badge.file { background: #e0f2fe; color: #0369a1; }
+    .attachment-badge.image { background: #fef3c7; color: #92400e; }
+    .attachment-badge.code { background: #ddd6fe; color: #5b21b6; }
+    .attachment-badge.reasoning { background: #fce7f3; color: #9f1239; }
+    .attachment-badge.audio { background: #dcfce7; color: #166534; }
+    .attachment-badge.citation { background: #fed7aa; color: #9a3412; }
+    
+    .attachment-name {
+        flex: 1;
+        font-size: 0.875rem;
+        font-weight: 500;
+        color: hsl(var(--foreground));
+    }
+    
+    .attachment-size {
+        font-size: 0.75rem;
+        color: hsl(var(--muted-foreground));
+    }
+    
+    .attachment-content {
+        padding: 1rem;
+        border-top: 1px solid hsl(var(--border));
+        background: white;
+    }
+    
+    .attachment-content pre {
+        margin: 0;
+    }
+    
+    /* Minimal styling for Prism blocks in attachments
+     * Let Prism handle colors, padding, backgrounds - we only adjust margin and border */
+    .attachment-content pre[class*="language-"] {
+        margin: 0;
+        border-radius: var(--radius);
+    }
+    
+    .attachment-placeholder {
+        text-align: center;
+        padding: 2rem;
+        color: hsl(var(--muted-foreground));
+    }
+    
+    .attachment-placeholder-icon {
+        font-size: 2rem;
+        margin-bottom: 0.5rem;
+    }
+    
+    .attachment-placeholder-text {
+        font-size: 0.875rem;
+        font-weight: 500;
+        margin-bottom: 0.25rem;
+    }
+    
+    .attachment-placeholder-note {
+        font-size: 0.75rem;
+        opacity: 0.7;
+    }
+    
+    .attachment-copy-btn {
+        float: right;
+        padding: 0.375rem 0.75rem;
+        background: hsl(var(--secondary));
+        border: 1px solid hsl(var(--border));
+        border-radius: 0.25rem;
+        font-size: 0.75rem;
+        cursor: pointer;
+        transition: var(--transition-base);
+    }
+    
+    .attachment-copy-btn:hover {
+        background: white;
+    }
+    
+    .citation-list {
+        list-style: none;
+        padding: 0;
+        margin: 0;
+    }
+    
+    .citation-item {
+        padding: 0.75rem;
+        margin-bottom: 0.5rem;
+        background: hsl(var(--secondary));
+        border-radius: 0.375rem;
+        border-left: 3px solid hsl(var(--muted-foreground));
+    }
+    
+    .citation-title {
+        font-weight: 600;
+        margin-bottom: 0.25rem;
+    }
+    
+    .citation-url {
+        font-size: 0.75rem;
+        color: hsl(220 70% 50%);
+        text-decoration: none;
+        word-break: break-all;
+    }
+    
+    .citation-url:hover {
+        text-decoration: underline;
+    }
+    
+    .citation-snippet {
+        font-size: 0.875rem;
+        margin-top: 0.5rem;
+        color: hsl(var(--muted-foreground));
+    }
+    
+    .reasoning-summary {
+        padding: 0.75rem 1rem;
+        background: linear-gradient(135deg, #fce7f3 0%, #fce7f3 100%);
+        border-left: 3px solid #9f1239;
+        border-radius: 0.375rem;
+        margin-bottom: 1rem;
+        font-weight: 600;
+        color: #9f1239;
+    }
+    
+    .reasoning-content {
+        padding: 1rem;
+        background: hsl(var(--secondary));
+        border-radius: 0.375rem;
+        font-size: 0.875rem;
+        line-height: 1.6;
+    }
+    
+    @media (max-width: 768px) {
+        .attachment-header {
+            gap: 0.5rem;
+            padding: 0.625rem 0.875rem;
+        }
+        
+        .attachment-name {
+            font-size: 0.8125rem;
+        }
+    }
+{% endblock %}
+
+{% block content %}
+<div class="conversation-header">
+    <div class="d-flex align-items-start justify-content-between mb-3">
+        <h1 class="conversation-title">{{ conversation.meta.title }}</h1>
+        <div class="tools-menu-container">
+            <button class="tools-menu-button" onclick="toggleToolsMenu(event)" aria-label="Tools menu">
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z" />
+                </svg>
+            </button>
+            <div id="toolsDropdown" class="tools-dropdown">
+                <button class="tools-dropdown-item" onclick="copyConversationAsMarkdown(); closeToolsMenu();">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                    </svg>
+                    <span>Copy to Clipboard</span>
+                </button>
+                {% if doc_id %}
+                <a href="/export/{{ doc_id }}" class="tools-dropdown-item">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                    </svg>
+                    <span>Export as Markdown</span>
+                </a>
+                <button id="exportToOpenWebUIBtn" class="tools-dropdown-item" onclick="exportToOpenWebUI('{{ doc_id }}'); return false;">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                    </svg>
+                    <span class="button-text">Export to OpenWebUI</span>
+                    <span class="spinner-border spinner-border-sm d-none" role="status" aria-hidden="true"></span>
+                </button>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    <div class="conversation-metadata">
+        <div>
+            <strong>Source:</strong>
+            {% if conversation.meta.source|lower == 'claude' %}
+                <span class="badge badge-claude">Claude</span>
+            {% elif conversation.meta.source|lower == 'chatgpt' %}
+                <span class="badge badge-chatgpt">ChatGPT</span>
+            {% else %}
+                <span class="badge">{{ conversation.meta.source|capitalize }}</span>
+            {% endif %}
+        </div>
+        {% if conversation.meta.earliest_ts %}
+            <div><strong>Date:</strong> <span class="date-to-format">{{ conversation.meta.earliest_ts }}</span></div>
+        {% endif %}
+        {% if conversation.meta.message_count %}
+            <div><strong>Messages:</strong> {{ conversation.meta.message_count }}</div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Copy success notification -->
+<div id="copySuccess" style="display: none; position: fixed; top: 20px; right: 20px; padding: 10px 20px; background-color: #28a745; color: white; border-radius: 4px; z-index: 1000; box-shadow: 0 2px 5px rgba(0,0,0,0.2);"></div>
+
+<div class="conversation-messages">
+    {% for message in messages %}
+        <div class="message {{ message.role }}-message">
+            <div class="message-header">
+                <div class="message-header-left">
+                    <div class="role-name">
+                        {% if message.role == 'user' %}
+                            You
+                        {% elif message.role == 'assistant' %}
+                            {{ assistant_name }}
+                        {% else %}
+                            {{ message.role|capitalize }}
+                        {% endif %}
+                    </div>
+                    <button class="copy-message-btn" onclick="copyMessageContent(this)" aria-label="Copy message" title="Copy message">
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                        </svg>
+                    </button>
+                </div>
+                {% if message.timestamp %}
+                    <div class="timestamp date-to-format">{{ message.timestamp }}</div>
+                {% endif %}
+            </div>
+            <div class="message-body">
+                <div class="message-content">{{ message.content|safe }}</div>
+                
+                {% if message.attachments %}
+                <div class="attachment-container">
+                    {% for attachment in message.attachments %}
+                    <details class="attachment-item">
+                        <summary class="attachment-header">
+                            <span class="attachment-badge {{ attachment.type }}">{{ attachment.type }}</span>
+                            <span class="attachment-name">{{ attachment.file_name }}</span>
+                            {% if attachment.file_size %}
+                            <span class="attachment-size">{{ (attachment.file_size / 1024)|round(1) }} KB</span>
+                            {% endif %}
+                        </summary>
+                        <div class="attachment-content">
+                            {% if attachment.available and attachment.extracted_content %}
+                                {% if attachment.type == 'code' %}
+                                    <button class="attachment-copy-btn" onclick="copyAttachmentContent(this)">Copy</button>
+                                    {% set code_lang = attachment.get('language', 'python')|lower %}
+                                    <pre data-language="{{ code_lang }}"><code>{{ attachment.extracted_content }}</code></pre>
+                                {% elif attachment.type == 'file' %}
+                                    <button class="attachment-copy-btn" onclick="copyAttachmentContent(this)">Copy</button>
+                                    {% set file_ext = attachment.file_name.split('.')[-1]|lower if '.' in attachment.file_name else 'python' %}
+                                    <pre data-language="{{ file_ext }}"><code>{{ attachment.extracted_content }}</code></pre>
+                                {% elif attachment.type == 'reasoning' %}
+                                    <div class="reasoning-summary">
+                                        {{ attachment.get('thoughts', [{}])[0].get('summary', 'Thinking...') if attachment.get('thoughts') else 'Thought for a better answer' }}
+                                    </div>
+                                    <div class="reasoning-content">
+                                        {{ attachment.get('thoughts', [{}])[0].get('content', '') if attachment.get('thoughts') else attachment.get('recap_content', '') }}
+                                    </div>
+                                {% elif attachment.type == 'audio' %}
+                                    <p><strong>Audio Transcription:</strong></p>
+                                    <p>{{ attachment.transcription }}</p>
+                                {% elif attachment.type == 'citation' %}
+                                    <ul class="citation-list">
+                                    {% for citation in attachment.citations %}
+                                        <li class="citation-item">
+                                            <div class="citation-title">{{ citation.title }}</div>
+                                            <a href="{{ citation.url }}" class="citation-url" target="_blank" rel="noopener">{{ citation.url }}</a>
+                                            {% if citation.snippet %}
+                                            <div class="citation-snippet">{{ citation.snippet }}</div>
+                                            {% endif %}
+                                        </li>
+                                    {% endfor %}
+                                    </ul>
+                                {% elif attachment.type == 'image' %}
+                                    <img src="{{ attachment.extracted_content }}" alt="{{ attachment.file_name }}" style="max-width: 100%; height: auto; border-radius: var(--radius);" />
+                                {% endif %}
+                            {% else %}
+                                <div class="attachment-placeholder">
+                                    <div class="attachment-placeholder-icon">
+                                        {% if attachment.type == 'image' %}🖼️{% else %}📎{% endif %}
+                                    </div>
+                                    <div class="attachment-placeholder-text">{{ attachment.file_name }}</div>
+                                    <div class="attachment-placeholder-note">Not included in export</div>
+                                </div>
+                            {% endif %}
+                        </div>
+                    </details>
+                    {% endfor %}
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    {% endfor %}
+</div>
+
+<div class="action-buttons">
+    <a href="/conversations" class="btn btn-secondary">Back to Conversations</a>
+</div>
+{% endblock %}
+
+{% block page_scripts %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Format dates
+        formatDates();
+        
+        // Close menu when clicking outside
+        document.addEventListener('click', function(e) {
+            const toolsMenu = document.getElementById('toolsDropdown');
+            const toolsButton = document.querySelector('.tools-menu-button');
+            
+            if (toolsMenu && !toolsMenu.contains(e.target) && !toolsButton.contains(e.target)) {
+                toolsMenu.classList.remove('show');
+            }
+        });
+    });
+    
+    // Toggle tools menu
+    function toggleToolsMenu(event) {
+        event.stopPropagation();
+        const dropdown = document.getElementById('toolsDropdown');
+        dropdown.classList.toggle('show');
+    }
+    
+    // Close tools menu
+    function closeToolsMenu() {
+        const dropdown = document.getElementById('toolsDropdown');
+        dropdown.classList.remove('show');
+    }
+    
+    function formatDates() {
+        const dateElements = document.querySelectorAll('.date-to-format');
+        
+        dateElements.forEach(function(element) {
+            const dateStr = element.textContent.trim();
+            // Store original date for copy functionality
+            element.setAttribute('data-original', dateStr);
+            const formattedDate = formatDateNicely(dateStr);
+            element.textContent = formattedDate;
+        });
+    }
+    
+    // Copy conversation as markdown function
+    window.copyConversationAsMarkdown = function() {
+        try {
+            // Get the conversation title
+            const titleElement = document.querySelector('.conversation-title');
+            const title = titleElement ? titleElement.textContent.trim() : 'Conversation';
+            
+            // Get the date from metadata
+            const dateElement = document.querySelector('.conversation-metadata .date-to-format');
+            let date = '';
+            if (dateElement) {
+                // Get the original date text (before formatting)
+                const originalDate = dateElement.getAttribute('data-original') || dateElement.textContent.trim();
+                date = originalDate;
+            }
+            
+            // Start building markdown content
+            let markdown = `# ${title}\n\n`;
+            if (date) {
+                markdown += `**Date:** ${date}\n\n`;
+            }
+            markdown += '---\n\n';
+            
+            // Get all messages
+            const messages = document.querySelectorAll('.message');
+            
+            messages.forEach((message, index) => {
+                // Get the role
+                const roleElement = message.querySelector('.role-name');
+                const role = roleElement ? roleElement.textContent.trim() : 'Unknown';
+                
+                // Get the timestamp
+                const timestampElement = message.querySelector('.timestamp');
+                let timestamp = '';
+                if (timestampElement && timestampElement.textContent.trim()) {
+                    // Get original timestamp if available, otherwise formatted
+                    timestamp = timestampElement.getAttribute('data-original') || timestampElement.textContent.trim();
+                }
+                
+                // Get the message content and convert it back to markdown
+                const contentElement = message.querySelector('.message-content');
+                let content = '';
+                
+                if (contentElement) {
+                    // Clone the element to avoid modifying the original
+                    const clonedContent = contentElement.cloneNode(true);
+                    
+                    // Convert HTML back to approximate markdown
+                    content = htmlToMarkdown(clonedContent);
+                }
+                
+                // Add the message to markdown
+                if (timestamp && timestamp !== '') {
+                    markdown += `**${role}** *(on ${timestamp})*:\n\n`;
+                } else {
+                    markdown += `**${role}**:\n\n`;
+                }
+                markdown += content + '\n\n';
+            });
+            
+            // Debug: Log the markdown content
+            console.log('Markdown content to copy:', markdown.substring(0, 200) + '...');
+            
+            // Function to show success message
+            function showSuccessMessage(text, isError = false) {
+                const successMessage = document.getElementById('copySuccess');
+                if (successMessage) {
+                    successMessage.textContent = text;
+                    successMessage.style.backgroundColor = isError ? '#dc3545' : '#28a745';
+                    successMessage.style.display = 'block';
+                    
+                    setTimeout(function() {
+                        successMessage.style.display = 'none';
+                        successMessage.style.backgroundColor = '#28a745';
+                    }, 3000);
+                }
+            }
+            
+            // Function to fallback copy method
+            function fallbackCopy(text) {
+                // Create a temporary textarea
+                const textArea = document.createElement('textarea');
+                textArea.value = text;
+                textArea.style.position = 'fixed';
+                textArea.style.left = '-999999px';
+                textArea.style.top = '-999999px';
+                document.body.appendChild(textArea);
+                textArea.focus();
+                textArea.select();
+                
+                try {
+                    const successful = document.execCommand('copy');
+                    document.body.removeChild(textArea);
+                    return successful;
+                } catch (err) {
+                    console.error('Fallback copy failed:', err);
+                    document.body.removeChild(textArea);
+                    return false;
+                }
+            }
+            
+            // Try modern clipboard API first
+            if (navigator.clipboard && window.isSecureContext) {
+                navigator.clipboard.writeText(markdown).then(function() {
+                    console.log('Modern clipboard API succeeded');
+                    showSuccessMessage('Conversation copied to clipboard!');
+                }).catch(function(err) {
+                    console.error('Modern clipboard API failed:', err);
+                    // Try fallback method
+                    if (fallbackCopy(markdown)) {
+                        console.log('Fallback copy method succeeded');
+                        showSuccessMessage('Conversation copied to clipboard!');
+                    } else {
+                        console.error('Both clipboard methods failed');
+                        showSuccessMessage('Failed to copy to clipboard', true);
+                    }
+                });
+            } else {
+                console.log('Modern clipboard API not available, using fallback');
+                // Use fallback method directly
+                if (fallbackCopy(markdown)) {
+                    console.log('Fallback copy method succeeded');
+                    showSuccessMessage('Conversation copied to clipboard!');
+                } else {
+                    console.error('Fallback copy method failed');
+                    showSuccessMessage('Failed to copy to clipboard', true);
+                }
+            }
+        } catch (err) {
+            console.error('Error copying conversation:', err);
+        }
+    };
+    
+    // Helper function to convert HTML back to markdown
+    function htmlToMarkdown(element) {
+        let text = '';
+        
+        for (let node of element.childNodes) {
+            if (node.nodeType === Node.TEXT_NODE) {
+                text += node.textContent;
+            } else if (node.nodeType === Node.ELEMENT_NODE) {
+                const tagName = node.tagName.toLowerCase();
+                
+                switch (tagName) {
+                    case 'h1':
+                        text += '# ' + node.textContent + '\n\n';
+                        break;
+                    case 'h2':
+                        text += '## ' + node.textContent + '\n\n';
+                        break;
+                    case 'h3':
+                        text += '### ' + node.textContent + '\n\n';
+                        break;
+                    case 'h4':
+                        text += '#### ' + node.textContent + '\n\n';
+                        break;
+                    case 'h5':
+                        text += '##### ' + node.textContent + '\n\n';
+                        break;
+                    case 'h6':
+                        text += '###### ' + node.textContent + '\n\n';
+                        break;
+                    case 'p':
+                        text += htmlToMarkdown(node) + '\n\n';
+                        break;
+                    case 'strong':
+                    case 'b':
+                        text += '**' + node.textContent + '**';
+                        break;
+                    case 'em':
+                    case 'i':
+                        text += '*' + node.textContent + '*';
+                        break;
+                    case 'code':
+                        text += '`' + node.textContent + '`';
+                        break;
+                    case 'pre':
+                        const codeContent = node.textContent;
+                        text += '```\n' + codeContent + '\n```\n\n';
+                        break;
+                    case 'blockquote':
+                        const quoteLines = node.textContent.split('\n');
+                        text += quoteLines.map(line => '> ' + line).join('\n') + '\n\n';
+                        break;
+                    case 'ul':
+                        const ulItems = node.querySelectorAll('li');
+                        ulItems.forEach(li => {
+                            text += '- ' + li.textContent + '\n';
+                        });
+                        text += '\n';
+                        break;
+                    case 'ol':
+                        const olItems = node.querySelectorAll('li');
+                        olItems.forEach((li, index) => {
+                            text += `${index + 1}. ${li.textContent}\n`;
+                        });
+                        text += '\n';
+                        break;
+                    case 'table':
+                        // Simple table handling
+                        const rows = node.querySelectorAll('tr');
+                        rows.forEach((row, rowIndex) => {
+                            const cells = row.querySelectorAll('td, th');
+                            const cellContents = Array.from(cells).map(cell => cell.textContent.trim());
+                            text += '| ' + cellContents.join(' | ') + ' |\n';
+                            
+                            // Add header separator after first row
+                            if (rowIndex === 0 && node.querySelector('th')) {
+                                text += '|' + ' --- |'.repeat(cellContents.length) + '\n';
+                            }
+                        });
+                        text += '\n';
+                        break;
+                    case 'a':
+                        const href = node.getAttribute('href');
+                        if (href) {
+                            text += `[${node.textContent}](${href})`;
+                        } else {
+                            text += node.textContent;
+                        }
+                        break;
+                    case 'br':
+                        text += '\n';
+                        break;
+                    default:
+                        // For other elements, just get the text content and recurse
+                        text += htmlToMarkdown(node);
+                        break;
+                }
+            }
+        }
+        
+        return text;
+    }
+    
+    // Helper function to format dates nicely
+    function formatDateNicely(dateStr) {
+        try {
+            // Handle different formats
+            let date;
+            
+            // Try parsing different date formats
+            if (dateStr.match(/^\d{4}-\d{2}-\d{2}T/)) {
+                // ISO format: 2025-03-03T10:01:18
+                date = new Date(dateStr);
+            } 
+            else if (dateStr.match(/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}/)) {
+                // Format: 2025-03-03 10:01:18
+                date = new Date(dateStr.replace(' ', 'T'));
+            }
+            else if (dateStr.match(/^\d{4}-\d{2}-\d{2}$/)) {
+                // Format: 2025-03-03
+                date = new Date(dateStr);
+            }
+            else {
+                // Unknown format, return as is
+                return dateStr;
+            }
+            
+            // If date parsing failed, return original
+            if (isNaN(date.getTime())) {
+                return dateStr;
+            }
+            
+            // Format the date
+            const options = { 
+                month: 'short', 
+                day: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit'
+            };
+            
+            // Add year if not the current year
+            if (date.getFullYear() !== new Date().getFullYear()) {
+                options.year = 'numeric';
+            }
+            
+            return date.toLocaleDateString(undefined, options);
+            
+        } catch (e) {
+            console.error("Error formatting date:", e);
+            return dateStr;
+        }
+    }
+    
+    // Export to OpenWebUI function
+    window.exportToOpenWebUI = async function(conversationId) {
+        const button = document.getElementById('exportToOpenWebUIBtn');
+        const buttonText = button.querySelector('.button-text');
+        const spinner = button.querySelector('.spinner-border');
+        
+        // Close the dropdown menu
+        closeToolsMenu();
+        
+        // Disable button and show spinner
+        button.disabled = true;
+        buttonText.textContent = 'Exporting...';
+        spinner.classList.remove('d-none');
+        
+        try {
+            const response = await fetch(`/export_to_openwebui/${conversationId}`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                }
+            });
+            
+            const data = await response.json();
+            
+            if (response.ok && data.success) {
+                // Show success message
+                showNotification('Successfully exported to OpenWebUI!', 'success');
+                buttonText.textContent = 'Exported!';
+                
+                // Reset button after 2 seconds
+                setTimeout(() => {
+                    button.disabled = false;
+                    buttonText.textContent = 'Export to OpenWebUI';
+                    spinner.classList.add('d-none');
+                }, 2000);
+            } else {
+                // Show error message
+                const errorMsg = data.error || 'Failed to export to OpenWebUI';
+                showNotification(errorMsg, 'error');
+                buttonText.textContent = 'Export Failed';
+                
+                // Reset button after 3 seconds
+                setTimeout(() => {
+                    button.disabled = false;
+                    buttonText.textContent = 'Export to OpenWebUI';
+                    spinner.classList.add('d-none');
+                }, 3000);
+            }
+        } catch (error) {
+            console.error('Export error:', error);
+            showNotification('Network error: Could not connect to server', 'error');
+            buttonText.textContent = 'Export Failed';
+            
+            // Reset button after 3 seconds
+            setTimeout(() => {
+                button.disabled = false;
+                buttonText.textContent = 'Export to OpenWebUI';
+                spinner.classList.add('d-none');
+            }, 3000);
+        }
+    };
+    
+    // Helper function to show notifications
+    function showNotification(message, type = 'success') {
+        const copySuccess = document.getElementById('copySuccess');
+        if (copySuccess) {
+            copySuccess.textContent = message;
+            copySuccess.style.backgroundColor = type === 'success' ? '#28a745' : '#dc3545';
+            copySuccess.style.display = 'block';
+            
+            setTimeout(() => {
+                copySuccess.style.display = 'none';
+                copySuccess.style.backgroundColor = '#28a745';
+            }, 5000);
+        }
+    }
+    
+    // Copy individual message content
+    function copyMessageContent(button) {
+        // Find the message container
+        const messageDiv = button.closest('.message');
+        if (!messageDiv) return;
+        
+        // Get the message content element
+        const contentElement = messageDiv.querySelector('.message-content');
+        if (!contentElement) return;
+        
+        // Clone and convert to markdown
+        const clonedContent = contentElement.cloneNode(true);
+        const markdown = htmlToMarkdown(clonedContent);
+        
+        // Function to copy text
+        function copyText(text) {
+            // Try modern clipboard API first
+            if (navigator.clipboard && window.isSecureContext) {
+                return navigator.clipboard.writeText(text).then(() => true).catch(() => false);
+            } else {
+                // Fallback method
+                const textArea = document.createElement('textarea');
+                textArea.value = text;
+                textArea.style.position = 'fixed';
+                textArea.style.left = '-999999px';
+                textArea.style.top = '-999999px';
+                document.body.appendChild(textArea);
+                textArea.focus();
+                textArea.select();
+                
+                try {
+                    const successful = document.execCommand('copy');
+                    document.body.removeChild(textArea);
+                    return Promise.resolve(successful);
+                } catch (err) {
+                    document.body.removeChild(textArea);
+                    return Promise.resolve(false);
+                }
+            }
+        }
+        
+        // Copy the text and show feedback
+        copyText(markdown).then(success => {
+            if (success) {
+                showNotification('Message copied to clipboard!');
+            } else {
+                showNotification('Failed to copy message', 'error');
+            }
+        });
+    }
+    
+    // Copy attachment content
+    function copyAttachmentContent(button) {
+        const attachmentContent = button.parentElement.querySelector('code');
+        if (!attachmentContent) return;
+        
+        const text = attachmentContent.textContent;
+        
+        if (navigator.clipboard && window.isSecureContext) {
+            navigator.clipboard.writeText(text).then(() => {
+                button.textContent = 'Copied!';
+                setTimeout(() => {
+                    button.textContent = 'Copy';
+                }, 2000);
+            }).catch(() => {
+                showNotification('Failed to copy attachment', 'error');
+            });
+        } else {
+            // Fallback
+            const textArea = document.createElement('textarea');
+            textArea.value = text;
+            textArea.style.position = 'fixed';
+            textArea.style.left = '-999999px';
+            document.body.appendChild(textArea);
+            textArea.select();
+            
+            try {
+                document.execCommand('copy');
+                button.textContent = 'Copied!';
+                setTimeout(() => {
+                    button.textContent = 'Copy';
+                }, 2000);
+            } catch (err) {
+                showNotification('Failed to copy attachment', 'error');
+            }
+            
+            document.body.removeChild(textArea);
+        }
+    }
+</script>
+
+<!-- Prism.js for syntax highlighting - Load BEFORE our initialization -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-python.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-ruby.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-javascript.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-typescript.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-json.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-markdown.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-bash.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-sql.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-yaml.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-css.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-markup.min.js"></script>
+
+<script>
+// Syntax highlighting initialization
+// Applies Prism.js language classes to code blocks based on data-language attributes
+document.addEventListener('DOMContentLoaded', function() {
+    // 1) Attachments: Find all code blocks in attachments with data-language attribute
+    //    These are explicitly tagged with language info from the import process
+    document.querySelectorAll('pre[data-language]').forEach(function(pre) {
+        const language = pre.getAttribute('data-language');
+        const code = pre.querySelector('code');
+        if (code && language) {
+            pre.classList.add('language-' + language);
+            code.classList.add('language-' + language);
+            console.log('Added language class (attachment):', language);
+        }
+    });
+
+    // 2) Message content: Code blocks with language markers will be highlighted automatically
+    //    No default language assignment - let unmarked blocks remain plain text
+    
+    // Run Prism highlighting
+    console.log('Running Prism.highlightAll()...');
+    if (typeof Prism !== 'undefined') {
+        Prism.highlightAll();
+    }
+    
+    console.log('Syntax highlighting complete.');
+});
+</script>
+{% endblock %}

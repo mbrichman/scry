@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html style="overflow-x: hidden;">
+<head>
+    <title>{% block title %}ChatGPT Search{% endblock %}</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="description" content="Manage and search through AI conversation history">
+    
+    <!-- Favicon -->
+    <link rel="icon" type="image/png" href="{{ url_for('static', filename='images/logo.png') }}">
+    <link rel="shortcut icon" type="image/png" href="{{ url_for('static', filename='images/logo.png') }}">
+    
+    <!-- PWA Meta Tags -->
+    <meta name="theme-color" content="#1a365d">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="apple-mobile-web-app-title" content="DovOS">
+    <link rel="manifest" href="{{ url_for('static', filename='manifest.json') }}">
+    <link rel="apple-touch-icon" href="{{ url_for('static', filename='images/logo.png') }}">
+    
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="{{ url_for('static', filename='css/design-system.css') }}" rel="stylesheet">
+    {% block styles %}
+    <style>
+        body {
+            padding: 20px;
+        }
+        .container {
+            max-width: 1200px;
+        }
+        {% block page_styles %}{% endblock %}
+        
+    </style>
+    {% endblock %}
+</head>
+<body>
+    <div class="container">
+        {% block header %}
+        <div class="page-header">
+            <div class="page-header-left">
+                <a href="/conversations" style="display: flex; align-items: center; gap: 1rem; text-decoration: none; color: inherit;">
+                    <img src="{{ url_for('static', filename='images/logo.png') }}" alt="DovOS" class="logo" style="cursor: pointer;">
+                    <h1 class="page-title" style="cursor: pointer;">{% block page_title %}Page Title{% endblock %}</h1>
+                </a>
+            </div>
+            <button class="hamburger-menu" id="hamburgerMenu" aria-label="Menu">
+                <span></span>
+                <span></span>
+                <span></span>
+            </button>
+        </div>
+        
+        <!-- Mobile Navigation Menu -->
+        <div class="nav-menu" id="navMenu">
+            <div class="nav-menu-overlay" id="navMenuOverlay"></div>
+            <div class="nav-menu-content">
+                <div class="nav-menu-header">
+                    <h2>Menu</h2>
+                    <button class="nav-menu-close" id="navMenuClose" aria-label="Close menu">
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                    </button>
+                </div>
+                <nav class="nav-menu-items">
+                    <a href="/conversations" class="nav-menu-item {% if request.endpoint == 'conversations' %}active{% endif %}">
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+                        </svg>
+                        Conversations
+                    </a>
+                    <a href="/upload" class="nav-menu-item {% if request.endpoint == 'upload' %}active{% endif %}">
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
+                        </svg>
+                        Upload
+                    </a>
+                    <a href="/stats" class="nav-menu-item {% if request.endpoint == 'stats' %}active{% endif %}">
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                        </svg>
+                        Stats
+                    </a>
+                    <a href="/settings" class="nav-menu-item {% if request.endpoint == 'settings' %}active{% endif %}">
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                        </svg>
+                        Settings
+                    </a>
+                </nav>
+            </div>
+        </div>
+        {% endblock %}
+        
+        {% block content %}{% endblock %}
+    </div>
+    
+    {% block scripts %}
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
+    
+    <!-- PWA Service Worker Registration -->
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('/static/sw.js')
+                    .then(registration => {
+                        console.log('Service Worker registered:', registration);
+                    })
+                    .catch(error => {
+                        console.log('Service Worker registration failed:', error);
+                    });
+            });
+        }
+    </script>
+    
+    <!-- Hamburger Menu Script -->
+    <script>
+        const hamburgerMenu = document.getElementById('hamburgerMenu');
+        const navMenu = document.getElementById('navMenu');
+        const navMenuOverlay = document.getElementById('navMenuOverlay');
+        const navMenuClose = document.getElementById('navMenuClose');
+        
+        function openMenu() {
+            navMenu.classList.remove('closing');
+            navMenu.classList.add('active');
+            document.body.style.overflow = 'hidden';
+        }
+        
+        function closeMenu() {
+            navMenu.classList.add('closing');
+            navMenu.classList.remove('active');
+            
+            // Wait for animation to finish before hiding
+            setTimeout(() => {
+                navMenu.classList.remove('closing');
+                document.body.style.overflow = '';
+            }, 300);
+        }
+        
+        hamburgerMenu.addEventListener('click', openMenu);
+        navMenuClose.addEventListener('click', closeMenu);
+        navMenuOverlay.addEventListener('click', closeMenu);
+        
+        // Close menu on navigation
+        document.querySelectorAll('.nav-menu-item').forEach(item => {
+            item.addEventListener('click', closeMenu);
+        });
+    </script>
+    
+    {% block page_scripts %}{% endblock %}
+    {% endblock %}
+</body>
+</html>

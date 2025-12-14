@@ -1,0 +1,61 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+venv/
+env/
+ENV/
+
+# IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Git
+.git/
+.gitignore
+
+# Environment
+.env
+.env.local
+
+# Logs
+logs/
+*.log
+
+# Test files
+tests/
+test_reports/
+.pytest_cache/
+
+# Documentation
+docs/
+*.md
+!README.md
+!PREMIUM_FEATURES.md
+
+# Premium importers (not included in public Docker image)
+# These files should not exist in public-release branch
+db/importers/chatgpt.py
+db/importers/docx.py
+utils/docx_parser.py
+
+# Data files (if large)
+data/
+*.db
+*.sqlite
+
+# Mac
+.DS_Store
+
+# Docker
+Dockerfile
+docker-compose.yml
+.dockerignore
+
+# Misc
+scripts/

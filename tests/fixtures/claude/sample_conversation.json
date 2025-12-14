@@ -1,0 +1,90 @@
+[
+  {
+    "uuid": "synthetic-conv-claude-001",
+    "name": "REST API Design Best Practices",
+    "summary": "",
+    "created_at": "2024-11-15T10:30:00.000000Z",
+    "updated_at": "2024-11-15T10:45:00.000000Z",
+    "account": {
+      "uuid": "synthetic-account-001"
+    },
+    "chat_messages": [
+      {
+        "uuid": "synthetic-msg-001",
+        "text": "What are the key principles for designing a good REST API?",
+        "content": [
+          {
+            "start_timestamp": null,
+            "stop_timestamp": null,
+            "flags": null,
+            "type": "text",
+            "text": "What are the key principles for designing a good REST API?",
+            "citations": []
+          }
+        ],
+        "sender": "human",
+        "created_at": "2024-11-15T10:30:00.000000Z",
+        "updated_at": "2024-11-15T10:30:00.000000Z",
+        "attachments": [],
+        "files": []
+      },
+      {
+        "uuid": "synthetic-msg-002",
+        "text": "Great question! Here are the core principles for designing effective REST APIs:\n\nResource-Oriented Design:\n- Structure your API around resources (nouns) rather than actions (verbs)\n- Use standard HTTP verbs: GET for retrieval, POST for creation, PUT/PATCH for updates, DELETE for removal\n\nConsistent Naming:\n- Use plural nouns for collections: /api/users, /api/products\n- Use lowercase with hyphens for multi-word resources: /api/user-profiles\n\nHTTP Status Codes:\n- 200: Success\n- 201: Created\n- 204: No content\n- 400: Bad request\n- 401: Unauthorized\n- 404: Not found\n- 500: Server error\n\nVersion Your API:\n- Include version in URL: /api/v1/ or /api/v2/\n- This ensures backward compatibility\n\nPagination and Filtering:\n- Support pagination for large datasets: ?page=1&limit=20\n- Allow filtering: ?status=active&role=admin\n\nDocumentation:\n- Use tools like OpenAPI/Swagger\n- Document request/response examples\n- Explain error responses clearly\n\nWould you like me to elaborate on any of these principles or discuss error handling strategies?",
+        "content": [
+          {
+            "start_timestamp": null,
+            "stop_timestamp": null,
+            "flags": null,
+            "type": "text",
+            "text": "Great question! Here are the core principles for designing effective REST APIs:\n\nResource-Oriented Design:\n- Structure your API around resources (nouns) rather than actions (verbs)\n- Use standard HTTP verbs: GET for retrieval, POST for creation, PUT/PATCH for updates, DELETE for removal\n\nConsistent Naming:\n- Use plural nouns for collections: /api/users, /api/products\n- Use lowercase with hyphens for multi-word resources: /api/user-profiles\n\nHTTP Status Codes:\n- 200: Success\n- 201: Created\n- 204: No content\n- 400: Bad request\n- 401: Unauthorized\n- 404: Not found\n- 500: Server error\n\nVersion Your API:\n- Include version in URL: /api/v1/ or /api/v2/\n- This ensures backward compatibility\n\nPagination and Filtering:\n- Support pagination for large datasets: ?page=1&limit=20\n- Allow filtering: ?status=active&role=admin\n\nDocumentation:\n- Use tools like OpenAPI/Swagger\n- Document request/response examples\n- Explain error responses clearly\n\nWould you like me to elaborate on any of these principles or discuss error handling strategies?",
+            "citations": []
+          }
+        ],
+        "sender": "assistant",
+        "created_at": "2024-11-15T10:30:30.000000Z",
+        "updated_at": "2024-11-15T10:30:30.000000Z",
+        "attachments": [],
+        "files": []
+      },
+      {
+        "uuid": "synthetic-msg-003",
+        "text": "How should I handle authentication in a REST API?",
+        "content": [
+          {
+            "start_timestamp": null,
+            "stop_timestamp": null,
+            "flags": null,
+            "type": "text",
+            "text": "How should I handle authentication in a REST API?",
+            "citations": []
+          }
+        ],
+        "sender": "human",
+        "created_at": "2024-11-15T10:45:00.000000Z",
+        "updated_at": "2024-11-15T10:45:00.000000Z",
+        "attachments": [],
+        "files": []
+      },
+      {
+        "uuid": "synthetic-msg-004",
+        "text": "Here are the most common authentication approaches for REST APIs:\n\nAPI Keys:\n- Simple and easy to implement\n- Send key in Authorization header or query parameter\n- Good for public APIs with moderate security requirements\n\nBearer Tokens (JWT):\n- Widely adopted standard\n- Token includes claims about the user\n- Stateless authentication\n- Use with HTTPS only\n- Example: Authorization: Bearer eyJhbGc...\n\nBasic Authentication:\n- Send username:password encoded in Base64\n- Simple but requires HTTPS\n- Not ideal for production without additional security\n\nOAuth 2.0:\n- Industry standard for delegated access\n- Supports various grant types\n- Works well with third-party integrations\n\nBest Practices:\n- Always use HTTPS/TLS\n- Include expiration times on tokens\n- Implement rate limiting\n- Log authentication failures\n- Never expose credentials in URLs\n- Use refresh tokens for long-lived sessions\n\nWould you like guidance on implementing any of these authentication methods?",
+        "content": [
+          {
+            "start_timestamp": null,
+            "stop_timestamp": null,
+            "flags": null,
+            "type": "text",
+            "text": "Here are the most common authentication approaches for REST APIs:\n\nAPI Keys:\n- Simple and easy to implement\n- Send key in Authorization header or query parameter\n- Good for public APIs with moderate security requirements\n\nBearer Tokens (JWT):\n- Widely adopted standard\n- Token includes claims about the user\n- Stateless authentication\n- Use with HTTPS only\n- Example: Authorization: Bearer eyJhbGc...\n\nBasic Authentication:\n- Send username:password encoded in Base64\n- Simple but requires HTTPS\n- Not ideal for production without additional security\n\nOAuth 2.0:\n- Industry standard for delegated access\n- Supports various grant types\n- Works well with third-party integrations\n\nBest Practices:\n- Always use HTTPS/TLS\n- Include expiration times on tokens\n- Implement rate limiting\n- Log authentication failures\n- Never expose credentials in URLs\n- Use refresh tokens for long-lived sessions\n\nWould you like guidance on implementing any of these authentication methods?",
+            "citations": []
+          }
+        ],
+        "sender": "assistant",
+        "created_at": "2024-11-15T10:45:30.000000Z",
+        "updated_at": "2024-11-15T10:45:30.000000Z",
+        "attachments": [],
+        "files": []
+      }
+    ]
+  }
+]

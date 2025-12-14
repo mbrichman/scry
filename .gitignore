@@ -1,0 +1,116 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# PyInstaller
+*.manifest
+*.spec
+
+# Installer logs
+pip-log.txt
+pip-delete-this-directory.txt
+
+# Unit test / coverage reports
+htmlcov/
+.tox/
+.nox/
+.coverage
+.coverage.*
+.cache
+nosetests.xml
+coverage.xml
+*.cover
+*.py,cover
+.hypothesis/
+.pytest_cache/
+cover/
+
+# Environments
+.env
+.venv
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+
+# Flask
+instance/
+.webassets-cache
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Temporary uploads
+temp_upload.*
+temp_docx_dir/
+
+# Logs
+*.log
+extracted_attachments/
+data/
+scripts/archived/
+
+# Backups
+backups/
+*.sql
+*.sql.gz
+*.backup
+dovos_backups/
+
+# Large data files
+Source Files/
+*.json
+!tests/**/*.json
+!api/**/*.json
+sampe_word_docs/
+
+# Golden response files (generated dynamically, should not be committed)
+tests/fixtures/golden_responses/*.json
+tests/golden_responses/*.json
+!tests/fixtures/golden_responses/.gitkeep
+!tests/golden_responses/.gitkeep
+
+# Documentation (keep local, don't publish)
+docs/
+
+# Temporary summary files
+BRANCH_SUMMARY.md
+
+# Premium importers (not included in public release)
+db/importers/chatgpt.py
+db/importers/docx.py
+utils/docx_parser.py

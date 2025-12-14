@@ -1,0 +1,27 @@
+{
+  "start_time": "2025-10-22T02:55:19.876662",
+  "end_time": "2025-10-22T02:55:25.275404",
+  "total_duration": 5.398530960083008,
+  "overall_success_rate": 0.0,
+  "all_phases_passing": false,
+  "summary": {
+    "passed": 0,
+    "failed": 0,
+    "skipped": 0,
+    "errors": 0
+  },
+  "phases": [
+    {
+      "phase": "1.0_infrastructure",
+      "total_tests": 0,
+      "passed": 0,
+      "failed": 0,
+      "skipped": 0,
+      "errors": 0,
+      "duration": 5.397643089294434,
+      "success_rate": 0.0,
+      "is_passing": false,
+      "coverage_pct": null
+    }
+  ]
+}
