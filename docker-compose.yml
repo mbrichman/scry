@@ -44,6 +44,7 @@ services:
       - RAG_PROXIMITY_DECAY_LAMBDA=${RAG_PROXIMITY_DECAY_LAMBDA:-0.3}
       - RAG_APPLY_RECENCY_BONUS=${RAG_APPLY_RECENCY_BONUS:-false}
       - SECRET_KEY=${SECRET_KEY:-change-this-secret-key-in-production}
+      - DOVOS_LICENSE_KEY=${DOVOS_LICENSE_KEY:-}
     volumes:
       - ./logs:/app/logs
     depends_on:
