@@ -705,11 +705,20 @@ class APIFormatAdapter:
                     timeout=30,
                     verify=False
                 )
-                
+
                 if response.status_code == 200:
+                    # Extract chat ID from response
+                    response_data = response.json()
+                    chat_id = response_data.get('id', '')
+
+                    # Construct the URL to the conversation in OpenWebUI
+                    chat_url = f"{openwebui_url}/c/{chat_id}" if chat_id else openwebui_url
+
                     return {
                         "success": True,
-                        "message": "Conversation exported to OpenWebUI successfully"
+                        "message": "Conversation exported to OpenWebUI successfully",
+                        "url": chat_url,
+                        "chat_id": chat_id
                     }
                 else:
                     return {

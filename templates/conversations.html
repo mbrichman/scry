@@ -277,9 +277,24 @@ async function exportConversation(event, conversationId) {
         });
         
         const data = await response.json();
-        
+
         if (response.ok && data.success) {
-            showNotification('Successfully exported to OpenWebUI!', 'success');
+            // Copy URL to clipboard if available
+            if (data.url) {
+                try {
+                    await navigator.clipboard.writeText(data.url);
+                    showNotification('Exported to OpenWebUI! URL copied to clipboard.', 'success');
+                } catch (err) {
+                    showNotification('Successfully exported to OpenWebUI!', 'success');
+                    console.error('Failed to copy URL to clipboard:', err);
+                }
+
+                // Open URL in default browser
+                window.open(data.url, '_blank');
+            } else {
+                showNotification('Successfully exported to OpenWebUI!', 'success');
+            }
+
             button.innerHTML = '<span>✓ Exported to OpenWebUI</span>';
             setTimeout(() => {
                 button.disabled = false;
