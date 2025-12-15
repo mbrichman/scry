@@ -3,7 +3,7 @@
 {% block title %}View Conversation - ChatGPT Search{% endblock %}
 
 {% block page_title %}
-<a href="/conversations" class="back-arrow">
+<a href="javascript:history.back()" class="back-arrow">
     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
     </svg>
@@ -1083,19 +1083,15 @@ View Conversation
                 return dateStr;
             }
             
-            // Format the date
-            const options = { 
-                month: 'short', 
+            // Format the date (always include year)
+            const options = {
+                year: 'numeric',
+                month: 'short',
                 day: 'numeric',
                 hour: '2-digit',
                 minute: '2-digit'
             };
-            
-            // Add year if not the current year
-            if (date.getFullYear() !== new Date().getFullYear()) {
-                options.year = 'numeric';
-            }
-            
+
             return date.toLocaleDateString(undefined, options);
             
         } catch (e) {
