@@ -20,18 +20,15 @@
             </div>
             
             <div class="search-type-pills">
-                <button type="button" 
-                        class="pill {% if search_form.search_type.data == 'auto' or not search_form.search_type.data %}active{% endif %}" 
-                        data-type="auto">Auto</button>
-                <button type="button" 
-                        class="pill {% if search_form.search_type.data == 'semantic' %}active{% endif %}" 
+                <button type="button"
+                        class="pill {% if search_form.search_type.data == 'auto' or not search_form.search_type.data %}active{% endif %}"
+                        data-type="auto">Smart</button>
+                <button type="button"
+                        class="pill {% if search_form.search_type.data == 'semantic' %}active{% endif %}"
                         data-type="semantic">Semantic</button>
-                <button type="button" 
-                        class="pill {% if search_form.search_type.data == 'fts' %}active{% endif %}" 
+                <button type="button"
+                        class="pill {% if search_form.search_type.data == 'fts' %}active{% endif %}"
                         data-type="fts">Keyword</button>
-                <button type="button" 
-                        class="pill {% if search_form.search_type.data == 'hybrid' %}active{% endif %}" 
-                        data-type="hybrid">Hybrid</button>
             </div>
             
             <input type="hidden" name="search_type" id="searchType" value="{{ search_form.search_type.data or 'auto' }}">
