@@ -110,3 +110,9 @@ docs/
 
 # Temporary summary files
 BRANCH_SUMMARY.md
+
+# Agent usage and analysis files
+AGENT_USAGE.md
+scripts/utils/rag_analysis_example.py
+scripts/utils/rag_search_analyzer.py
+search_analysis/
