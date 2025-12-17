@@ -9,7 +9,6 @@ services:
       - PGDATA=/var/lib/postgresql/data/pgdata
     volumes:
       - postgres_data:/var/lib/postgresql/data
-      - ./init-scripts:/docker-entrypoint-initdb.d
     ports:
       - "5432:5432"
     healthcheck:
@@ -23,7 +22,7 @@ services:
       - dovos-network
 
   dovos-rag:
-    build: .
+    image: ghcr.io/mbrichman/dovos:main
     container_name: dovos-rag-api
     ports:
       - "5001:5001"
@@ -33,8 +32,6 @@ services:
       - PGAPPNAME=${PGAPPNAME:-dovos-api}
       - EMBEDDING_MODEL=${EMBEDDING_MODEL:-sentence-transformers/all-MiniLM-L6-v2}
       - EMBEDDING_DIM=${EMBEDDING_DIM:-384}
-      - OPENWEBUI_URL=${OPENWEBUI_URL}
-      - OPENWEBUI_API_KEY=${OPENWEBUI_API_KEY}
       - RAG_WINDOW_SIZE=${RAG_WINDOW_SIZE:-3}
       - RAG_MAX_WINDOW_SIZE=${RAG_MAX_WINDOW_SIZE:-10}
       - RAG_ADAPTIVE_WINDOWING=${RAG_ADAPTIVE_WINDOWING:-true}
@@ -61,7 +58,7 @@ services:
       start_period: 40s
 
   dovos-embedding-worker:
-    build: .
+    image: ghcr.io/mbrichman/dovos:main
     container_name: dovos-embedding-worker
     command: python -m db.workers.embedding_worker --workers 4 --batch-size 20 --verbose
     environment:

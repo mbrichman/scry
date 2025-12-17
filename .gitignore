@@ -116,3 +116,6 @@ AGENT_USAGE.md
 scripts/utils/rag_analysis_example.py
 scripts/utils/rag_search_analyzer.py
 search_analysis/
+
+# Archived docker files
+docker-archive/
