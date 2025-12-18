@@ -11,6 +11,9 @@ uuid
 # API Contract validation
 pydantic>=2.0
 
+# MCP Server
+mcp>=1.0.0
+
 # PostgreSQL dependencies
 sqlalchemy>=2.0
 psycopg[binary]>=3.0

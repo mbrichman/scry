@@ -79,6 +79,34 @@ services:
     networks:
       - dovos-network
 
+  dovos-mcp:
+    build:
+      context: .
+      dockerfile: dovos_mcp/Dockerfile
+    container_name: dovos-mcp-server
+    ports:
+      - "8001:8001"
+    environment:
+      - USE_PG_SINGLE_STORE=${USE_PG_SINGLE_STORE:-true}
+      - DATABASE_URL=postgresql+psycopg://${POSTGRES_USER:-dovos}:${POSTGRES_PASSWORD:-dovos_password}@postgres:5432/${POSTGRES_DB:-dovos}
+      - PGAPPNAME=${PGAPPNAME:-dovos-mcp-server}
+      - EMBEDDING_MODEL=${EMBEDDING_MODEL:-sentence-transformers/all-MiniLM-L6-v2}
+      - EMBEDDING_DIM=${EMBEDDING_DIM:-384}
+    volumes:
+      - ./logs:/app/logs
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+    networks:
+      - dovos-network
+    healthcheck:
+      test: ["CMD", "python", "-c", "import requests; requests.get('http://localhost:8001/health', timeout=5)"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 20s
+
 volumes:
   postgres_data:
     name: dovos_postgres_data
