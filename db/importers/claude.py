@@ -6,6 +6,42 @@ Claude stores conversations as a list of messages with sender and text fields.
 """
 
 from typing import Dict, List, Any, Optional
+import re
+
+
+def _clean_artifact_placeholders(text: str) -> str:
+    """
+    Remove Claude artifact placeholder messages from message text.
+
+    Claude.ai shows placeholder messages when artifacts can't be displayed,
+    but the actual artifact content is in the attachments. These placeholders
+    should be removed from the message text.
+
+    Args:
+        text: Message text that may contain placeholder messages
+
+    Returns:
+        Cleaned text with placeholders removed
+    """
+    # List of placeholder patterns to remove
+    # Note: Using DOTALL flag so . matches newlines inside code blocks
+    # Note: Using . to match the apostrophe (either ASCII or Unicode curly quote)
+    placeholders = [
+        r'```.*?This block is not supported on your current device yet\..*?```',
+        r'```.*?Viewing artifacts created via the Analysis Tool web feature preview isn.t yet supported on mobile\..*?```',
+        r'This block is not supported on your current device yet\.',
+        r'Viewing artifacts created via the Analysis Tool web feature preview isn.t yet supported on mobile\.',
+    ]
+
+    cleaned_text = text
+    for pattern in placeholders:
+        cleaned_text = re.sub(pattern, '', cleaned_text, flags=re.IGNORECASE | re.MULTILINE | re.DOTALL)
+
+    # Clean up extra whitespace
+    cleaned_text = re.sub(r'\n{3,}', '\n\n', cleaned_text)  # Replace 3+ newlines with 2
+    cleaned_text = cleaned_text.strip()
+
+    return cleaned_text
 
 
 def extract_messages(conversation_data: Optional[List], **kwargs) -> List[Dict]:
@@ -42,14 +78,21 @@ def extract_messages(conversation_data: Optional[List], **kwargs) -> List[Dict]:
         
         # Extract text content - required field
         text = msg_data.get('text', '')
-        
+
         # Skip empty or whitespace-only messages
         if not text or not text.strip():
             continue
-        
+
+        # Clean artifact placeholder messages from text
+        text = _clean_artifact_placeholders(text)
+
+        # Skip if text is now empty after cleaning
+        if not text or not text.strip():
+            continue
+
         # Map sender to role: human -> user, everything else -> assistant
         role = 'user' if sender == 'human' else 'assistant'
-        
+
         # Build message dict with required fields
         msg_dict = {
             'role': role,

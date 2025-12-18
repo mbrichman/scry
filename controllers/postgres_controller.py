@@ -964,30 +964,31 @@ class PostgresController:
 def extract_claude_attachments(message: Dict[str, Any]) -> List[Dict[str, Any]]:
     """
     Extract attachments from a Claude message.
-    
-    Claude exports have two types of attachments:
+
+    Claude exports have multiple types of attachments:
     - attachments[]: Files with extracted_content (text files, code, etc.)
     - files[]: File references without content (images, etc.)
-    
+    - content[]: Tool use artifacts (generated documents, code, etc.)
+
     Args:
-        message: Claude message dict with 'attachments' and 'files' fields
-        
+        message: Claude message dict with 'attachments', 'files', and 'content' fields
+
     Returns:
         List of normalized attachment dicts
     """
     attachments = []
-    
+
     # Process attachments with extracted content
     for attachment in message.get('attachments', []):
         file_name = attachment.get('file_name', 'unknown')
         file_type = attachment.get('file_type', '')
-        
+
         # Determine if it's an image based on file extension or type
         is_image = (
             file_name.lower().endswith(('.png', '.jpg', '.jpeg', '.gif', '.webp', '.bmp')) or
             'image' in file_type.lower()
         )
-        
+
         attachments.append({
             'type': 'image' if is_image else 'file',
             'file_name': file_name,
@@ -997,14 +998,14 @@ def extract_claude_attachments(message: Dict[str, Any]) -> List[Dict[str, Any]]:
             'available': bool(attachment.get('extracted_content')),
             'metadata': {}
         })
-    
+
     # Process file references (usually images without content)
     for file_ref in message.get('files', []):
         file_name = file_ref.get('file_name', 'unknown')
-        
+
         # Determine type from extension
         is_image = file_name.lower().endswith(('.png', '.jpg', '.jpeg', '.gif', '.webp', '.bmp'))
-        
+
         attachments.append({
             'type': 'image' if is_image else 'file',
             'file_name': file_name,
@@ -1014,7 +1015,58 @@ def extract_claude_attachments(message: Dict[str, Any]) -> List[Dict[str, Any]]:
             'available': False,  # Files without extracted_content are not available
             'metadata': {}
         })
-    
+
+    # Process content array for artifacts and other tool uses
+    for content_item in message.get('content', []):
+        if not isinstance(content_item, dict):
+            continue
+
+        content_type = content_item.get('type')
+
+        # Extract artifacts (generated documents, code, etc.)
+        if content_type == 'tool_use' and content_item.get('name') == 'artifacts':
+            artifact_input = content_item.get('input', {})
+            artifact_type = artifact_input.get('type', '')
+            artifact_title = artifact_input.get('title', 'Untitled Artifact')
+            artifact_content = artifact_input.get('content', '')
+            artifact_language = artifact_input.get('language')
+            artifact_id = artifact_input.get('id', '')
+
+            # Determine file extension based on artifact type
+            file_ext = '.txt'
+            if 'markdown' in artifact_type.lower():
+                file_ext = '.md'
+            elif 'html' in artifact_type.lower():
+                file_ext = '.html'
+            elif 'python' in artifact_type.lower() or artifact_language == 'python':
+                file_ext = '.py'
+            elif 'javascript' in artifact_type.lower() or artifact_language == 'javascript':
+                file_ext = '.js'
+            elif 'typescript' in artifact_type.lower() or artifact_language == 'typescript':
+                file_ext = '.ts'
+            elif artifact_language:
+                file_ext = f'.{artifact_language}'
+
+            # Generate filename from title (replace spaces and special chars with underscores)
+            safe_title = ''.join(c if c.isalnum() or c in ('-', '_') else '_' for c in artifact_title)
+            safe_title = safe_title.strip('_')[:100]  # Limit length and trim underscores
+            file_name = f"{safe_title}{file_ext}"
+
+            attachments.append({
+                'type': 'artifact',
+                'file_name': file_name,
+                'file_size': len(artifact_content) if artifact_content else None,
+                'file_type': artifact_type,
+                'extracted_content': artifact_content,
+                'available': bool(artifact_content),
+                'metadata': {
+                    'artifact_id': artifact_id,
+                    'title': artifact_title,
+                    'language': artifact_language,
+                    'citations': artifact_input.get('md_citations', [])
+                }
+            })
+
     return attachments
 
 

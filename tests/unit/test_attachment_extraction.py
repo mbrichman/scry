@@ -114,13 +114,131 @@ class TestClaudeAttachmentExtraction:
             "attachments": [],
             "files": []
         }
-        
+
         # Act
         from controllers.postgres_controller import extract_claude_attachments
         attachments = extract_claude_attachments(claude_message)
-        
+
         # Assert
         assert attachments == []
+
+    def test_extract_markdown_artifact(self):
+        """Test extraction of markdown artifact from content array."""
+        # Arrange
+        claude_message = {
+            "uuid": "msg-artifact-1",
+            "text": "Here's the document",
+            "sender": "assistant",
+            "attachments": [],
+            "files": [],
+            "content": [
+                {
+                    "type": "text",
+                    "text": "Here's the document"
+                },
+                {
+                    "type": "tool_use",
+                    "name": "artifacts",
+                    "input": {
+                        "id": "artifact-123",
+                        "type": "text/markdown",
+                        "title": "Project Overview",
+                        "content": "# Project Overview\n\nThis is a test document.",
+                        "language": None,
+                        "md_citations": []
+                    }
+                }
+            ]
+        }
+
+        # Act
+        from controllers.postgres_controller import extract_claude_attachments
+        attachments = extract_claude_attachments(claude_message)
+
+        # Assert
+        assert len(attachments) == 1
+        assert attachments[0]["type"] == "artifact"
+        assert attachments[0]["file_name"] == "Project_Overview.md"
+        assert attachments[0]["file_type"] == "text/markdown"
+        assert attachments[0]["extracted_content"] == "# Project Overview\n\nThis is a test document."
+        assert attachments[0]["available"] is True
+        assert attachments[0]["metadata"]["title"] == "Project Overview"
+        assert attachments[0]["metadata"]["artifact_id"] == "artifact-123"
+
+    def test_extract_python_artifact(self):
+        """Test extraction of Python code artifact."""
+        # Arrange
+        claude_message = {
+            "uuid": "msg-artifact-2",
+            "text": "Here's the code",
+            "sender": "assistant",
+            "attachments": [],
+            "files": [],
+            "content": [
+                {
+                    "type": "tool_use",
+                    "name": "artifacts",
+                    "input": {
+                        "id": "artifact-456",
+                        "type": "application/python",
+                        "title": "Hello World Script",
+                        "content": "print('Hello, World!')",
+                        "language": "python"
+                    }
+                }
+            ]
+        }
+
+        # Act
+        from controllers.postgres_controller import extract_claude_attachments
+        attachments = extract_claude_attachments(claude_message)
+
+        # Assert
+        assert len(attachments) == 1
+        assert attachments[0]["type"] == "artifact"
+        assert attachments[0]["file_name"] == "Hello_World_Script.py"
+        assert attachments[0]["metadata"]["language"] == "python"
+
+    def test_extract_combined_files_and_artifacts(self):
+        """Test extraction of both files and artifacts in same message."""
+        # Arrange
+        claude_message = {
+            "uuid": "msg-combined",
+            "text": "Image and document",
+            "sender": "human",
+            "attachments": [],
+            "files": [
+                {
+                    "file_name": "screenshot.png"
+                }
+            ],
+            "content": [
+                {
+                    "type": "tool_use",
+                    "name": "artifacts",
+                    "input": {
+                        "id": "artifact-789",
+                        "type": "text/html",
+                        "title": "Report",
+                        "content": "<html><body>Test</body></html>",
+                        "language": None
+                    }
+                }
+            ]
+        }
+
+        # Act
+        from controllers.postgres_controller import extract_claude_attachments
+        attachments = extract_claude_attachments(claude_message)
+
+        # Assert
+        assert len(attachments) == 2
+        # First should be the file
+        assert attachments[0]["type"] == "image"
+        assert attachments[0]["file_name"] == "screenshot.png"
+        # Second should be the artifact
+        assert attachments[1]["type"] == "artifact"
+        assert attachments[1]["file_name"] == "Report.html"
 
 
 class TestChatGPTAttachmentExtraction:

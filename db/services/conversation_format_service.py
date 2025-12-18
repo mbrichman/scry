@@ -378,8 +378,25 @@ class ConversationFormatService:
             
             # Extract attachments from metadata if present
             if msg.message_metadata and msg.message_metadata.get('attachments'):
-                msg_dict['attachments'] = msg.message_metadata['attachments']
-            
+                attachments = msg.message_metadata['attachments']
+
+                # Process artifacts to convert markdown content to HTML
+                processed_attachments = []
+                for attachment in attachments:
+                    attachment_copy = attachment.copy()
+
+                    # Convert artifact markdown content to HTML
+                    if attachment.get('type') == 'artifact' and attachment.get('extracted_content'):
+                        artifact_html = markdown.markdown(
+                            attachment['extracted_content'],
+                            extensions=["extra", "tables", "fenced_code", "nl2br"]
+                        )
+                        attachment_copy['extracted_content'] = artifact_html
+
+                    processed_attachments.append(attachment_copy)
+
+                msg_dict['attachments'] = processed_attachments
+
             messages.append(msg_dict)
         
         return messages
