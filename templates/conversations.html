@@ -45,8 +45,29 @@
         
         {% if search_triggered %}
         <div class="alert alert-info mt-3">
-            <strong>{{ search_form.search_type.data|title }} Search Results for:</strong> "{{ query }}"
-            <a href="/conversations" class="btn btn-sm btn-outline-secondary ms-2">Clear Search</a>
+            <div style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
+                <div style="flex: 1;">
+                    <strong>{{ search_form.search_type.data|title }} Search Results for:</strong> "{{ query }}"
+                    {% if search_metadata and search_metadata.truncated and conversations|length < search_metadata.total_results %}
+                    <div class="text-muted" style="font-size: 0.9em; margin-top: 0.25rem;">
+                        Showing top {{ conversations|length }} of {{ search_metadata.total_results }} results. Lower quality results hidden.
+                    </div>
+                    {% endif %}
+                </div>
+                <div style="white-space: nowrap; flex-shrink: 0;">
+                    {% if search_metadata and search_metadata.truncated and conversations|length < search_metadata.total_results %}
+                    <form method="POST" action="/conversations" style="display: inline;">
+                        <input type="hidden" name="query" value="{{ query }}">
+                        <input type="hidden" name="search_type" value="{{ search_form.search_type.data }}">
+                        <input type="hidden" name="show_all" value="true">
+                        <button type="submit" class="btn btn-sm btn-outline-primary">
+                            Show All Results
+                        </button>
+                    </form>
+                    {% endif %}
+                    <a href="/conversations" class="btn btn-sm btn-outline-secondary ms-2">Clear Search</a>
+                </div>
+            </div>
         </div>
         {% endif %}
     </form>
@@ -414,6 +435,12 @@ function showNotification(message, type = 'success') {
 let currentPage = 1;
 let isLoading = false;
 let hasMore = true;
+
+// Disable lazy loading when in search mode
+const isSearchMode = {{ 'true' if search_triggered else 'false' }};
+if (isSearchMode) {
+    hasMore = false;
+}
 
 const loadingIndicator = document.getElementById('loadingIndicator');
 const scrollSentinel = document.getElementById('scrollSentinel');

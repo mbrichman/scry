@@ -139,45 +139,48 @@ class PostgresController:
     def api_search(self) -> Dict[str, Any]:
         """
         GET /api/search
-        
+
         Search conversations with query parameters (legacy API format).
         """
         try:
             query = request.args.get("q")
             if not query:
                 return {"error": "No query provided"}
-            
+
             n_results = int(request.args.get("n", 5))
+            show_all = request.args.get("show_all", "false").lower() == "true"
 
             # Get search type from parameters (new way) or keyword flag (legacy way)
             # Support both 'search_type' and 'type' as parameter names
             search_type = request.args.get("search_type") or request.args.get("type", "auto")
             keyword = request.args.get("keyword", "false").lower() == "true"
-            
+
             # Use SearchService based on search type
+            # Note: All search methods now return (results, metadata) tuple
+            metadata = None
             if search_type in ("fts", "keyword") or keyword:
-                results = self.adapter.search_service.search_fts_only(query, limit=n_results)
+                results, metadata = self.adapter.search_service.search_fts_only(query, limit=n_results, show_all=show_all)
             elif search_type == "semantic":
                 results = self.adapter.search_service.search_vector_only(query, limit=n_results)
             elif search_type == "hybrid":
-                results = self.adapter.search_service.search(query, limit=n_results)
+                results, metadata = self.adapter.search_service.search(query, limit=n_results, show_all=show_all)
             else:  # auto
                 # Auto mode: hybrid if available, otherwise FTS
                 stats = self.adapter.search_service.get_search_stats()
                 if stats["hybrid_search_available"]:
-                    results = self.adapter.search_service.search(query, limit=n_results)
+                    results, metadata = self.adapter.search_service.search(query, limit=n_results, show_all=show_all)
                 else:
-                    results = self.adapter.search_service.search_fts_only(query, limit=n_results)
-            
+                    results, metadata = self.adapter.search_service.search_fts_only(query, limit=n_results, show_all=show_all)
+
             # Format results in legacy format
             formatted_results = []
             for result in results:
                 # Extract preview content (first 300 characters)
                 cleaned_preview = result.content[:300] + "..." if len(result.content) > 300 else result.content
-                
+
                 # Get the actual source for this conversation
                 source = self._get_conversation_source(result.conversation_id)
-                
+
                 formatted_results.append({
                     "title": result.conversation_title,
                     "date": result.created_at,
@@ -194,9 +197,15 @@ class PostgresController:
                         "role": result.role
                     }
                 })
-            
-            return {"query": query, "results": formatted_results}
-        
+
+            response = {"query": query, "results": formatted_results}
+
+            # Add metadata if available (from hybrid/auto search)
+            if metadata:
+                response["search_metadata"] = metadata
+
+            return response
+
         except Exception as e:
             logger.error(f"API search failed: {e}")
             return {"error": str(e)}

@@ -34,6 +34,11 @@ class SearchConfig:
     max_results: int = 50
     max_fts_results: int = 100
     max_vector_results: int = 100
+    initial_result_limit: int = 20  # Show top N results by default
+
+    # Quality cutoff
+    enable_quality_cutoff: bool = True
+    quality_drop_threshold: float = 0.5  # Stop if score drops to 50% of top score
 
     # Query processing
     enable_query_expansion: bool = True
@@ -121,68 +126,89 @@ class SearchService:
             self._embedding_generator = EmbeddingGenerator()
         return self._embedding_generator
     
-    def search(self, 
-               query: str, 
+    def search(self,
+               query: str,
                limit: Optional[int] = None,
                conversation_id: Optional[UUID] = None,
-               config_override: Optional[SearchConfig] = None) -> List[SearchResult]:
+               config_override: Optional[SearchConfig] = None,
+               show_all: bool = False) -> Tuple[List[SearchResult], Dict[str, Any]]:
         """
         Perform hybrid search combining FTS and vector similarity.
-        
+
         Args:
             query: Search query string
             limit: Maximum number of results
             conversation_id: Optional conversation filter
             config_override: Override default search configuration
-            
+            show_all: If True, bypass quality cutoff and show all results
+
         Returns:
-            List of SearchResult objects ranked by hybrid score
+            Tuple of (results, metadata) where metadata contains:
+            - total_results: Total number of results before cutoff
+            - truncated: Whether results were cut off for quality
+            - cutoff_index: Index where quality cutoff was applied
         """
         config = config_override or self.config
         limit = limit or config.max_results
-        
-        logger.info(f"🔍 Hybrid search: '{query[:50]}...' (limit: {limit})")
-        
+
+        logger.info(f"🔍 Hybrid search: '{query[:50]}...' (limit: {limit}, show_all: {show_all})")
+
         try:
             # Generate query embedding for vector search
             query_embedding = self._generate_query_embedding(query)
-            
+
             with get_unit_of_work() as uow:
                 # Perform both search types in parallel
                 fts_results = self._fts_search(uow, query, config, conversation_id)
                 vector_results = self._vector_search(uow, query_embedding, config, conversation_id)
-                
+
                 # Combine and rank results
                 combined_results = self._combine_and_rank_results(
                     fts_results, vector_results, config
                 )
-                
-                # Apply final filters and limits
+
+                # Apply quality cutoff if enabled and not showing all
+                metadata = {
+                    'total_results': len(combined_results),
+                    'truncated': False,
+                    'cutoff_index': None
+                }
+
+                if not show_all and config.enable_quality_cutoff and len(combined_results) > config.initial_result_limit:
+                    cutoff_index = self._find_quality_cutoff(combined_results, config)
+                    if cutoff_index and cutoff_index < len(combined_results):
+                        metadata['truncated'] = True
+                        metadata['cutoff_index'] = cutoff_index
+                        combined_results = combined_results[:cutoff_index]
+                        logger.info(f"📊 Quality cutoff applied at index {cutoff_index}")
+
+                # Apply final limit
                 final_results = combined_results[:limit]
-                
-                logger.info(f"✅ Search complete: {len(fts_results)} FTS + {len(vector_results)} vector → {len(final_results)} final")
-                
-                return final_results
-                
+
+                logger.info(f"✅ Search complete: {len(fts_results)} FTS + {len(vector_results)} vector → {len(final_results)} final (total: {metadata['total_results']})")
+
+                return final_results, metadata
+
         except Exception as e:
             logger.error(f"❌ Search failed: {e}")
             raise
     
-    def search_fts_only(self, 
-                        query: str, 
+    def search_fts_only(self,
+                        query: str,
                         limit: Optional[int] = None,
-                        conversation_id: Optional[UUID] = None) -> List[SearchResult]:
-        """Perform full-text search only."""
+                        conversation_id: Optional[UUID] = None,
+                        show_all: bool = False) -> Tuple[List[SearchResult], Dict[str, Any]]:
+        """Perform full-text search only with quality cutoff."""
         limit = limit or self.config.max_results
-        
-        logger.info(f"📝 FTS-only search: '{query[:50]}...'")
-        
+
+        logger.info(f"📝 FTS-only search: '{query[:50]}...' (show_all: {show_all})")
+
         with get_unit_of_work() as uow:
             fts_results = self._fts_search(uow, query, self.config, conversation_id)
-            
+
             # Convert to SearchResult format
             search_results = []
-            for result in fts_results[:limit]:
+            for result in fts_results:
                 meta = result['metadata']
                 search_results.append(SearchResult(
                     message_id=meta['message_id'],
@@ -196,9 +222,27 @@ class SearchService:
                     fts_rank=meta.get('rank', 0),
                     source='fts'
                 ))
-            
-            logger.info(f"✅ FTS search complete: {len(search_results)} results")
-            return search_results
+
+            # Apply quality cutoff if enabled and not showing all
+            metadata = {
+                'total_results': len(search_results),
+                'truncated': False,
+                'cutoff_index': None
+            }
+
+            if not show_all and self.config.enable_quality_cutoff and len(search_results) > self.config.initial_result_limit:
+                cutoff_index = self._find_quality_cutoff(search_results, self.config)
+                if cutoff_index and cutoff_index < len(search_results):
+                    metadata['truncated'] = True
+                    metadata['cutoff_index'] = cutoff_index
+                    search_results = search_results[:cutoff_index]
+                    logger.info(f"📊 FTS quality cutoff applied at index {cutoff_index}")
+
+            # Apply final limit
+            final_results = search_results[:limit]
+
+            logger.info(f"✅ FTS search complete: {len(final_results)} results (total: {metadata['total_results']})")
+            return final_results, metadata
     
     def search_vector_only(self, 
                           query: str, 
@@ -378,6 +422,32 @@ class SearchService:
             # If trigram extension is not available, log and return empty
             logger.warning(f"Fuzzy search failed (pg_trgm may not be installed): {e}")
             return []
+
+    def _find_quality_cutoff(self, results: List[SearchResult], config: SearchConfig) -> Optional[int]:
+        """
+        Find the index where result quality drops off significantly.
+
+        Returns the index after which results should be hidden by default,
+        or None if no cutoff should be applied.
+        """
+        if len(results) <= config.initial_result_limit:
+            return None
+
+        # Get the top score as reference
+        if not results or results[0].combined_score == 0:
+            return config.initial_result_limit
+
+        top_score = results[0].combined_score
+        threshold_score = top_score * config.quality_drop_threshold
+
+        # Find where score drops below threshold, but not before initial_result_limit
+        for i in range(config.initial_result_limit, len(results)):
+            if results[i].combined_score < threshold_score:
+                logger.debug(f"Quality drop detected at index {i}: score {results[i].combined_score:.3f} < threshold {threshold_score:.3f}")
+                return i
+
+        # No significant drop found, use initial limit
+        return config.initial_result_limit
     
     def _combine_and_rank_results(self, 
                                  fts_results: List[Dict[str, Any]], 

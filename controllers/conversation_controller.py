@@ -42,11 +42,11 @@ class ConversationController:
     
     def conversations_with_postgres_adapter(self, page, postgres_controller):
         """Display conversations using PostgreSQL backend
-        
+
         Args:
             page: Page number (unused with lazy loading)
             postgres_controller: PostgreSQL controller instance
-        
+
         Returns:
             Flask Response (rendered template)
         """
@@ -54,7 +54,8 @@ class ConversationController:
         search_form = SearchForm()
         search_triggered = False
         query = None
-        
+        search_metadata = None
+
         # Handle search query
         if request.method == "POST":
             if search_form.validate_on_submit():
@@ -64,15 +65,15 @@ class ConversationController:
             query = request.args.get("q")
             search_form.query.data = query
             search_triggered = True
-        
+
         # Get filter parameters
         source_filter = request.args.get("source", "all")
         date_filter = request.args.get("date", "all")
         sort_order = request.args.get("sort", "newest")
-        
+
         # Get conversations from postgres controller
         if search_triggered and query:
-            items = self._get_search_results(
+            items, search_metadata = self._get_search_results(
                 postgres_controller,
                 query,
                 search_form
@@ -84,7 +85,7 @@ class ConversationController:
                 date_filter,
                 sort_order
             )
-        
+
         # Check if OpenWebUI is configured
         openwebui_configured = postgres_controller.adapter.is_openwebui_configured()
 
@@ -98,6 +99,7 @@ class ConversationController:
             search_form=search_form,
             search_triggered=search_triggered,
             query=query,
+            search_metadata=search_metadata,
             openwebui_configured=openwebui_configured,
         )
     
@@ -254,48 +256,65 @@ class ConversationController:
     
     def _get_search_results(self, postgres_controller, query, search_form):
         """Get and format search results from postgres controller
-        
+
         Args:
             postgres_controller: PostgreSQL controller instance
             query: Search query string
             search_form: SearchForm instance
-        
+
         Returns:
-            List of formatted result items
+            Tuple of (formatted results list, search metadata dict)
         """
         try:
             from werkzeug.datastructures import ImmutableMultiDict
-            
+
             # Build search parameters
             original_args = request.args
             new_args = dict(original_args)
             new_args['q'] = query
             new_args['n'] = '20'
-            
+
             # Get search type from form or URL
             if request.method == "POST" and search_form.search_type.data:
                 search_type = search_form.search_type.data
             else:
                 search_type = request.args.get('search_type', 'auto')
-            
+
             new_args['search_type'] = search_type
-            
+
+            # Check for show_all parameter (from form POST or URL GET)
+            show_all = False
+            if request.method == "POST":
+                show_all = request.form.get('show_all', 'false').lower() == 'true'
+            else:
+                show_all = request.args.get('show_all', 'false').lower() == 'true'
+
+            new_args['show_all'] = 'true' if show_all else 'false'
+
             # Temporarily replace request.args
             request.args = ImmutableMultiDict(new_args)
-            
+
             # Get search results
             search_results = postgres_controller.api_search()
-            
+
             # Restore original args
             request.args = original_args
-            
-            # Format results using format service
-            return self.format_service.format_postgres_search_results(search_results.get('results', []))
-        
+
+            # Extract metadata and format results
+            metadata = search_results.get('search_metadata')
+            formatted_results = self.format_service.format_postgres_search_results(search_results.get('results', []))
+
+            # Debug logging
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.info(f"Search metadata: {metadata}")
+
+            return formatted_results, metadata
+
         except Exception as e:
             import logging
             logging.error(f"Error in PostgreSQL search: {e}")
-            return []
+            return [], None
     
     def _get_conversations_list(self, postgres_controller, source_filter, date_filter, sort_order):
         """Get and format conversations list from postgres controller
