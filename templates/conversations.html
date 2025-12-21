@@ -154,7 +154,43 @@
                 <h2 class="conversation-title">
                     <a href="{{ url_for('view_conversation', doc_id=conversation.id) }}">{{ conversation.meta.title }}</a>
                 </h2>
-                <span class="conversation-date date-to-format">{{ conversation.meta.latest_ts }}</span>
+                <div class="conversation-header-right">
+                    <span class="conversation-date date-to-format">{{ conversation.meta.latest_ts }}</span>
+                    <div class="conversation-menu">
+                        <button class="conversation-menu-button" onclick="event.stopPropagation(); toggleMenu(event, '{{ conversation.id }}')" aria-label="Options">
+                            <span>⋯</span>
+                        </button>
+                        <div class="conversation-menu-dropdown" id="menu-{{ conversation.id }}">
+                            <button class="conversation-menu-item" onclick="viewConversation('{{ conversation.id }}')">
+                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                                </svg>
+                                View
+                            </button>
+                            <a href="/export/{{ conversation.id }}" class="conversation-menu-item" onclick="event.stopPropagation()">
+                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                                </svg>
+                                Export as Markdown
+                            </a>
+                            {% if openwebui_configured %}
+                            <button id="export-{{ conversation.id }}" class="conversation-menu-item" onclick="exportConversation(event, '{{ conversation.id }}')">
+                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                                </svg>
+                                Export to OpenWebUI
+                            </button>
+                            {% endif %}
+                            <button class="conversation-menu-item conversation-menu-item-danger" onclick="deleteConversation(event, '{{ conversation.id }}')">
+                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                </svg>
+                                Delete
+                            </button>
+                        </div>
+                    </div>
+                </div>
             </div>
 
             <div class="conversation-summary">
