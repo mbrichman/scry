@@ -80,6 +80,26 @@ def init_routes(app):
         """Display all documents in a list with filtering, pagination, and search"""
         return conversation_controller.conversations_with_postgres_adapter(page, postgres_controller)
 
+    @app.route("/moments")
+    def moments():
+        """Display key moments/highlights from conversations"""
+        return render_template("moments.html")
+
+    @app.route("/topics")
+    def topics():
+        """Display topics extracted from conversations"""
+        return render_template("topics.html")
+
+    @app.route("/saved")
+    def saved():
+        """Display saved/bookmarked conversations"""
+        return render_template("saved.html")
+
+    @app.route("/insights")
+    def insights():
+        """Display insights and analytics about conversations"""
+        return render_template("insights.html")
+
     @app.route("/view/<doc_id>")
     def view_conversation(doc_id):
         """View a single conversation"""

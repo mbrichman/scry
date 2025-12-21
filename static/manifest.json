@@ -1,6 +1,6 @@
 {
-  "name": "DovOS Conversation Manager",
-  "short_name": "DovOS",
+  "name": "Scry Conversation Manager",
+  "short_name": "Scry",
   "description": "Manage and search through AI conversation history",
   "start_url": "/conversations",
   "display": "standalone",
@@ -9,19 +9,19 @@
   "orientation": "any",
   "icons": [
     {
-      "src": "/static/images/icon-192.png",
+      "src": "/static/images/scry.png",
       "sizes": "192x192",
       "type": "image/png",
       "purpose": "any"
     },
     {
-      "src": "/static/images/icon-512.png",
+      "src": "/static/images/scry.png",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any"
     },
     {
-      "src": "/static/images/icon-512.png",
+      "src": "/static/images/scry.png",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "maskable"

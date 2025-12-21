@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+
+{% block title %}Saved - Scry{% endblock %}
+
+{% block page_title %}Saved{% endblock %}
+
+{% block content %}
+<div class="empty-state">
+    <div class="empty-state-icon">📑</div>
+    <h3>Saved Conversations</h3>
+    <p>This will display your bookmarked and saved conversations.</p>
+    <p style="color: hsl(var(--muted-foreground)); font-size: 0.875rem; margin-top: 1rem;">
+        Features planned:
+    </p>
+    <ul style="text-align: left; max-width: 500px; margin: 1rem auto; color: hsl(var(--muted-foreground));">
+        <li>Bookmark favorite conversations</li>
+        <li>Create custom collections</li>
+        <li>Tag and organize saved items</li>
+        <li>Quick access to frequently referenced content</li>
+    </ul>
+</div>
+{% endblock %}

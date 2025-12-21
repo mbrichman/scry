@@ -1,8 +1,19 @@
 {% extends "base.html" %}
 
-{% block title %}Conversations - DovOS{% endblock %}
+{% block title %}Conversations - Scry{% endblock %}
 
 {% block page_title %}Conversations{% endblock %}
+
+{% block header %}
+<div class="page-header" style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 1.5rem;">
+    <div style="display: flex; align-items: center; gap: 1rem;">
+        <button class="mobile-menu-toggle" id="mobileMenuToggle" aria-label="Menu">
+            <span></span>
+        </button>
+        <h1 class="page-title">Conversations</h1>
+    </div>
+</div>
+{% endblock %}
 
 {% block content %}
 <!-- Search Section -->
@@ -10,29 +21,28 @@
     <form method="POST" action="/conversations" id="searchForm">
         {{ search_form.hidden_tag() }}
         <div class="search-wrapper">
-            <div class="search-input-group">
-                <input type="search" 
-                       name="query" 
+            <div class="search-input-wrapper">
+                <svg class="search-icon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                </svg>
+                <input type="search"
+                       name="query"
                        id="searchInput"
-                       placeholder="Search conversations..." 
+                       placeholder="Search conversations..."
                        value="{{ query or '' }}"
-                       class="form-control">
+                       class="search-input">
+                <div class="search-mode-select">
+                    <select name="search_type" id="searchType" class="search-mode-dropdown">
+                        <option value="auto" {% if search_form.search_type.data == 'auto' or not search_form.search_type.data %}selected{% endif %}>Smart</option>
+                        <option value="semantic" {% if search_form.search_type.data == 'semantic' %}selected{% endif %}>Semantic</option>
+                        <option value="fts" {% if search_form.search_type.data == 'fts' %}selected{% endif %}>Keyword</option>
+                    </select>
+                    <svg class="dropdown-icon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                    </svg>
+                </div>
             </div>
-            
-            <div class="search-type-pills">
-                <button type="button"
-                        class="pill {% if search_form.search_type.data == 'auto' or not search_form.search_type.data %}active{% endif %}"
-                        data-type="auto">Smart</button>
-                <button type="button"
-                        class="pill {% if search_form.search_type.data == 'semantic' %}active{% endif %}"
-                        data-type="semantic">Semantic</button>
-                <button type="button"
-                        class="pill {% if search_form.search_type.data == 'fts' %}active{% endif %}"
-                        data-type="fts">Keyword</button>
-            </div>
-            
-            <input type="hidden" name="search_type" id="searchType" value="{{ search_form.search_type.data or 'auto' }}">
-            
+
             <button type="submit" class="btn-search" id="searchButton">
                 <span class="btn-search-text">Search</span>
                 <span class="btn-search-spinner" style="display: none;">
@@ -122,72 +132,49 @@
 <div class="conversation-list">
     {% for conversation in conversations %}
     <div class="conversation-item" onclick="window.location.href='{{ url_for('view_conversation', doc_id=conversation.id) }}'">
-        <div class="conversation-item-header">
-            <h2 class="conversation-title">
-                <a href="{{ url_for('view_conversation', doc_id=conversation.id) }}">{{ conversation.meta.title }}</a>
-            </h2>
-            <div class="conversation-menu">
-                <button class="conversation-menu-button" onclick="event.stopPropagation(); toggleMenu(event, '{{ conversation.id }}')" aria-label="Options">
-                    <span>⋯</span>
-                </button>
-                <div class="conversation-menu-dropdown" id="menu-{{ conversation.id }}">
-                    <button class="conversation-menu-item" onclick="viewConversation('{{ conversation.id }}')">
-                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                        </svg>
-                        View
-                    </button>
-                    <a href="/export/{{ conversation.id }}" class="conversation-menu-item" onclick="event.stopPropagation()">
-                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                        </svg>
-                        Export as Markdown
-                    </a>
-                    {% if openwebui_configured %}
-                    <!-- TODO: Add "Open in OpenWebUI" menu option here
-                         IMPLEMENTATION APPROACH for list view:
-                         1. Add data attributes to conversation items: data-source="{{ conversation.meta.source }}" data-conv-id="{{ conversation.id }}"
-                         2. On page load (DOMContentLoaded), find all OpenWebUI conversations
-                         3. Make parallel API calls to /api/check_openwebui_conversation/<id> for all OpenWebUI convos
-                         4. Update menus with results:
-                            - Add "Open in OpenWebUI" button if exists
-                            - Change "Export" to "Clone" if exists
-                         5. This is BETTER than JIT check because users see correct options immediately
-                         6. See /templates/view.html lines 642-664, 1182-1228 for reference code -->
-                    <button id="export-{{ conversation.id }}" class="conversation-menu-item" onclick="exportConversation(event, '{{ conversation.id }}')">
-                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
-                        </svg>
-                        Export to OpenWebUI
-                    </button>
-                    {% endif %}
-                    <button class="conversation-menu-item conversation-menu-item-danger" onclick="deleteConversation(event, '{{ conversation.id }}')">
-                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                        </svg>
-                        Delete
-                    </button>
-                </div>
-            </div>
-        </div>
-        <div class="conversation-meta">
+        <!-- Avatar -->
+        <div class="conversation-avatar">
             {% set source_clean = (conversation.meta.source|string|lower|trim) %}
             {% if source_clean == 'claude' %}
-                <span class="badge badge-claude">Claude</span>
+                🤖
             {% elif source_clean == 'chatgpt' %}
-                <span class="badge badge-chatgpt">ChatGPT</span>
+                💬
             {% elif source_clean == 'openwebui' or source_clean == 'open-webui' or source_clean == 'open webui' %}
-                <span class="badge badge-openwebui">OpenWebUI</span>
+                🌐
             {% elif source_clean == 'docx' %}
-                <span class="badge badge-word">Word</span>
+                📄
             {% else %}
-                <span class="badge">{{ conversation.meta.source|capitalize }}</span>
+                💭
             {% endif %}
-            <span class="conversation-date date-to-format">{{ conversation.meta.latest_ts }}</span>
         </div>
-        <div class="conversation-preview">
-            {{ conversation.preview|safe }}
+
+        <!-- Content -->
+        <div class="conversation-content">
+            <div class="conversation-item-header">
+                <h2 class="conversation-title">
+                    <a href="{{ url_for('view_conversation', doc_id=conversation.id) }}">{{ conversation.meta.title }}</a>
+                </h2>
+                <span class="conversation-date date-to-format">{{ conversation.meta.latest_ts }}</span>
+            </div>
+
+            <div class="conversation-summary">
+                {{ conversation.preview|safe|striptags|truncate(120) }}
+            </div>
+
+            <div class="conversation-meta">
+                {% set source_clean = (conversation.meta.source|string|lower|trim) %}
+                {% if source_clean == 'claude' %}
+                    <span class="conversation-meta-pill violet">⎈ Claude</span>
+                {% elif source_clean == 'chatgpt' %}
+                    <span class="conversation-meta-pill green">⎈ ChatGPT</span>
+                {% elif source_clean == 'openwebui' or source_clean == 'open-webui' or source_clean == 'open webui' %}
+                    <span class="conversation-meta-pill blue">⎈ OpenWebUI</span>
+                {% elif source_clean == 'docx' %}
+                    <span class="conversation-meta-pill amber">⎈ Word</span>
+                {% else %}
+                    <span class="conversation-meta-pill teal">⎈ {{ conversation.meta.source|capitalize }}</span>
+                {% endif %}
+            </div>
         </div>
     </div>
     {% endfor %}
@@ -227,16 +214,6 @@ searchForm.addEventListener('submit', function(e) {
     searchButton.disabled = true;
     searchButtonText.style.display = 'none';
     searchButtonSpinner.style.display = 'inline-block';
-});
-
-// Search type pills
-document.querySelectorAll('.pill').forEach(pill => {
-    pill.addEventListener('click', function(e) {
-        e.preventDefault();
-        document.querySelectorAll('.pill').forEach(p => p.classList.remove('active'));
-        this.classList.add('active');
-        document.getElementById('searchType').value = this.dataset.type;
-    });
 });
 
 // Toggle filters
@@ -501,31 +478,43 @@ function createConversationElement(conv) {
     const div = document.createElement('div');
     div.className = 'conversation-item';
     div.onclick = () => window.location.href = `/view/${conv.id}`;
-    
+
     const sourceLower = conv.source.toLowerCase().trim();
-    const badgeClass = sourceLower === 'claude' ? 'badge-claude' : 
-                       sourceLower === 'chatgpt' ? 'badge-chatgpt' :
-                       sourceLower === 'openwebui' || sourceLower === 'open-webui' ? 'badge-openwebui' :
-                       sourceLower === 'docx' ? 'badge-word' : '';
-    const badgeText = sourceLower === 'docx' ? 'Word' : 
-                     sourceLower === 'claude' ? 'Claude' :
-                     sourceLower === 'chatgpt' ? 'ChatGPT' :
-                     sourceLower === 'openwebui' || sourceLower === 'open-webui' ? 'OpenWebUI' :
-                     conv.source.charAt(0).toUpperCase() + conv.source.slice(1);
-    
+    const avatar = sourceLower === 'claude' ? '🤖' :
+                   sourceLower === 'chatgpt' ? '💬' :
+                   sourceLower === 'openwebui' || sourceLower === 'open-webui' ? '🌐' :
+                   sourceLower === 'docx' ? '📄' : '💭';
+    const sourceText = sourceLower === 'docx' ? 'Word' :
+                       sourceLower === 'claude' ? 'Claude' :
+                       sourceLower === 'chatgpt' ? 'ChatGPT' :
+                       sourceLower === 'openwebui' || sourceLower === 'open-webui' ? 'OpenWebUI' :
+                       conv.source.charAt(0).toUpperCase() + conv.source.slice(1);
+    const pillColor = sourceLower === 'claude' ? 'violet' :
+                      sourceLower === 'chatgpt' ? 'green' :
+                      sourceLower === 'openwebui' || sourceLower === 'open-webui' ? 'blue' :
+                      sourceLower === 'docx' ? 'amber' : 'teal';
+
+    // Strip HTML and truncate preview
+    const tempDiv = document.createElement('div');
+    tempDiv.innerHTML = conv.preview;
+    const summary = (tempDiv.textContent || tempDiv.innerText || '').substring(0, 120);
+
     div.innerHTML = `
-        <div class="conversation-item-header">
-            <h2 class="conversation-title">
-                <a href="/view/${conv.id}">${conv.title}</a>
-            </h2>
+        <div class="conversation-avatar">${avatar}</div>
+        <div class="conversation-content">
+            <div class="conversation-item-header">
+                <h2 class="conversation-title">
+                    <a href="/view/${conv.id}">${conv.title}</a>
+                </h2>
+                <span class="conversation-date date-to-format">${conv.latest_ts}</span>
+            </div>
+            <div class="conversation-summary">${summary}</div>
+            <div class="conversation-meta">
+                <span class="conversation-meta-pill ${pillColor}">⎈ ${sourceText}</span>
+            </div>
         </div>
-        <div class="conversation-meta">
-            <span class="badge ${badgeClass}">${badgeText}</span>
-            <span class="conversation-date date-to-format">${conv.latest_ts}</span>
-        </div>
-        <div class="conversation-preview">${conv.preview}</div>
     `;
-    
+
     return div;
 }
 

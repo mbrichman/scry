@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+
+{% block title %}Moments - Scry{% endblock %}
+
+{% block page_title %}Moments{% endblock %}
+
+{% block content %}
+<div class="empty-state">
+    <div class="empty-state-icon">✨</div>
+    <h3>Moments Coming Soon</h3>
+    <p>This will display key moments and highlights from your conversations.</p>
+    <p style="color: hsl(var(--muted-foreground)); font-size: 0.875rem; margin-top: 1rem;">
+        Features planned:
+    </p>
+    <ul style="text-align: left; max-width: 500px; margin: 1rem auto; color: hsl(var(--muted-foreground));">
+        <li>Timeline view of conversation highlights</li>
+        <li>Extract key insights and quotable moments</li>
+        <li>Visual timeline with timestamps</li>
+        <li>Filter by source, date, and topic</li>
+    </ul>
+</div>
+{% endblock %}
