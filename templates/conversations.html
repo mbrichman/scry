@@ -175,7 +175,9 @@
                     <span class="conversation-date date-to-format">{{ conversation.meta.latest_ts }}</span>
                     <div class="conversation-menu">
                         <button class="conversation-menu-button" onclick="event.stopPropagation(); toggleMenu(event, '{{ conversation.id }}')" aria-label="Options">
-                            <span>⋯</span>
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z" />
+                            </svg>
                         </button>
                         <div class="conversation-menu-dropdown" id="menu-{{ conversation.id }}">
                             <button class="conversation-menu-item" onclick="viewConversation('{{ conversation.id }}')">
