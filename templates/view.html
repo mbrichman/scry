@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 
-{% block title %}View Conversation - ChatGPT Search{% endblock %}
+{% block title %}{{ conversation.meta.title }} - Scry{% endblock %}
 
 {% block page_title %}
 <a href="javascript:history.back()" class="back-arrow">
@@ -8,7 +8,7 @@
         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
     </svg>
 </a>
-View Conversation
+{{ conversation.meta.title }}
 {% endblock %}
 
 {% block styles %}
@@ -24,7 +24,8 @@ View Conversation
         justify-content: center;
         width: 40px;
         height: 40px;
-        margin-right: 1rem;
+        margin-left: -9px; /* Align arrow icon with content edge */
+        margin-right: 0.5rem;
         border-radius: var(--radius);
         color: hsl(var(--muted-foreground));
         transition: var(--transition-base);
@@ -46,6 +47,9 @@ View Conversation
         height: 22px;
         pointer-events: none;
         stroke-width: 1.75;
+    }
+    .page-header {
+        margin-bottom: 0;
     }
     .conversation-header {
         margin-bottom: 2.5rem;
@@ -882,8 +886,29 @@ View Conversation
 
 {% block content %}
 <div class="conversation-header">
-    <div class="d-flex align-items-start justify-content-between mb-3">
-        <h1 class="conversation-title">{{ conversation.meta.title }}</h1>
+    <div class="d-flex align-items-start justify-content-between">
+        <div class="conversation-metadata">
+            <div>
+                <strong>Source:</strong>
+                {% if conversation.meta.source|lower == 'claude' %}
+                    <span class="conversation-meta-pill violet">Claude</span>
+                {% elif conversation.meta.source|lower == 'chatgpt' %}
+                    <span class="conversation-meta-pill green">ChatGPT</span>
+                {% elif conversation.meta.source|lower == 'openwebui' %}
+                    <span class="conversation-meta-pill blue">OpenWebUI</span>
+                {% elif conversation.meta.source|lower == 'word' %}
+                    <span class="conversation-meta-pill amber">Word</span>
+                {% else %}
+                    <span class="conversation-meta-pill teal">{{ conversation.meta.source|capitalize }}</span>
+                {% endif %}
+            </div>
+            {% if conversation.meta.earliest_ts %}
+                <div><strong>Date:</strong> <span class="date-to-format">{{ conversation.meta.earliest_ts }}</span></div>
+            {% endif %}
+            {% if conversation.meta.message_count %}
+                <div><strong>Messages:</strong> {{ conversation.meta.message_count }}</div>
+            {% endif %}
+        </div>
         <div class="tools-menu-container">
             <button class="tools-menu-button" onclick="toggleToolsMenu(event)" aria-label="Tools menu">
                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -906,21 +931,18 @@ View Conversation
                 </a>
                 {% if openwebui_configured %}
                 <div class="openwebui-menu-group">
-                    <!-- Loading state while checking OpenWebUI -->
                     <div id="openwebuiLoading" class="tools-dropdown-item openwebui-group-item" style="display: none; opacity: 0.6; cursor: default;">
                         <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
                         </svg>
                         <span>Checking OpenWebUI...</span>
                     </div>
-                    <!-- Open in OpenWebUI button (shown only if conversation exists in OpenWebUI) -->
                     <a id="openInOpenWebUIBtn" class="tools-dropdown-item openwebui-group-item" href="#" target="_blank" style="display: none;">
                         <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
                         </svg>
                         <span>Open in OpenWebUI</span>
                     </a>
-                    <!-- Export/Clone button -->
                     <button id="exportToOpenWebUIBtn" class="tools-dropdown-item openwebui-group-item" onclick="exportToOpenWebUI('{{ doc_id }}'); return false;">
                         <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
@@ -939,28 +961,6 @@ View Conversation
                 {% endif %}
             </div>
         </div>
-    </div>
-    <div class="conversation-metadata">
-        <div>
-            <strong>Source:</strong>
-            {% if conversation.meta.source|lower == 'claude' %}
-                <span class="conversation-meta-pill violet">Claude</span>
-            {% elif conversation.meta.source|lower == 'chatgpt' %}
-                <span class="conversation-meta-pill green">ChatGPT</span>
-            {% elif conversation.meta.source|lower == 'openwebui' %}
-                <span class="conversation-meta-pill blue">OpenWebUI</span>
-            {% elif conversation.meta.source|lower == 'word' %}
-                <span class="conversation-meta-pill amber">Word</span>
-            {% else %}
-                <span class="conversation-meta-pill teal">{{ conversation.meta.source|capitalize }}</span>
-            {% endif %}
-        </div>
-        {% if conversation.meta.earliest_ts %}
-            <div><strong>Date:</strong> <span class="date-to-format">{{ conversation.meta.earliest_ts }}</span></div>
-        {% endif %}
-        {% if conversation.meta.message_count %}
-            <div><strong>Messages:</strong> {{ conversation.meta.message_count }}</div>
-        {% endif %}
     </div>
 </div>
 

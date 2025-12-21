@@ -149,23 +149,6 @@
 <div class="conversation-list">
     {% for conversation in conversations %}
     <div class="conversation-item" onclick="window.location.href='{{ url_for('view_conversation', doc_id=conversation.id) }}'">
-        <!-- Avatar -->
-        <div class="conversation-avatar">
-            {% set source_clean = (conversation.meta.source|string|lower|trim) %}
-            {% if source_clean == 'claude' %}
-                🤖
-            {% elif source_clean == 'chatgpt' %}
-                💬
-            {% elif source_clean == 'openwebui' or source_clean == 'open-webui' or source_clean == 'open webui' %}
-                🌐
-            {% elif source_clean == 'docx' %}
-                📄
-            {% else %}
-                💭
-            {% endif %}
-        </div>
-
-        <!-- Content -->
         <div class="conversation-content">
             <div class="conversation-item-header">
                 <h2 class="conversation-title">
@@ -594,10 +577,6 @@ function createConversationElement(conv) {
     div.onclick = () => window.location.href = `/view/${conv.id}`;
 
     const sourceLower = conv.source.toLowerCase().trim();
-    const avatar = sourceLower === 'claude' ? '🤖' :
-                   sourceLower === 'chatgpt' ? '💬' :
-                   sourceLower === 'openwebui' || sourceLower === 'open-webui' ? '🌐' :
-                   sourceLower === 'docx' ? '📄' : '💭';
     const sourceText = sourceLower === 'docx' ? 'Word' :
                        sourceLower === 'claude' ? 'Claude' :
                        sourceLower === 'chatgpt' ? 'ChatGPT' :
@@ -614,7 +593,6 @@ function createConversationElement(conv) {
     const summary = (tempDiv.textContent || tempDiv.innerText || '').substring(0, 120);
 
     div.innerHTML = `
-        <div class="conversation-avatar">${avatar}</div>
         <div class="conversation-content">
             <div class="conversation-item-header">
                 <h2 class="conversation-title">
