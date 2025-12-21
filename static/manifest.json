@@ -9,19 +9,19 @@
   "orientation": "any",
   "icons": [
     {
-      "src": "/static/images/scry.png",
+      "src": "/static/images/scry-192.png",
       "sizes": "192x192",
       "type": "image/png",
       "purpose": "any"
     },
     {
-      "src": "/static/images/scry.png",
+      "src": "/static/images/scry-512.png",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any"
     },
     {
-      "src": "/static/images/scry.png",
+      "src": "/static/images/scry-512.png",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "maskable"

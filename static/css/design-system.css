@@ -121,6 +121,54 @@
   --openwebui-badge: 24 85% 60%;
 }
 
+/* Auto dark mode based on system preference */
+@media (prefers-color-scheme: dark) {
+  :root {
+    --background: 252 20% 8%;
+    --foreground: 250 15% 95%;
+
+    --card: 252 18% 11%;
+    --card-foreground: 250 15% 95%;
+
+    --primary: 262 80% 65%;
+    --primary-hover: 262 80% 70%;
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 252 15% 15%;
+    --secondary-foreground: 250 15% 95%;
+
+    --muted: 252 12% 18%;
+    --muted-foreground: 250 10% 60%;
+
+    --accent: 262 50% 20%;
+    --accent-foreground: 262 80% 75%;
+
+    --destructive: 0 65% 55%;
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 252 15% 18%;
+    --input: 252 15% 18%;
+    --ring: 262 80% 65%;
+
+    --gradient-primary: linear-gradient(135deg, hsl(262 80% 60%), hsl(285 60% 65%));
+    --gradient-subtle: linear-gradient(180deg, hsl(252 20% 8%), hsl(252 18% 10%));
+    --gradient-card: linear-gradient(145deg, hsl(252 18% 12%), hsl(252 18% 10%));
+    --gradient-glow: radial-gradient(ellipse at 50% 0%, hsl(262 70% 40% / 0.25), transparent 70%);
+
+    --shadow-xs: 0 1px 2px hsl(0 0% 0% / 0.2);
+    --shadow-sm: 0 1px 3px hsl(0 0% 0% / 0.3), 0 1px 2px hsl(0 0% 0% / 0.2);
+    --shadow-md: 0 4px 6px -1px hsl(0 0% 0% / 0.35), 0 2px 4px -1px hsl(0 0% 0% / 0.2);
+    --shadow-lg: 0 10px 15px -3px hsl(0 0% 0% / 0.4), 0 4px 6px -2px hsl(0 0% 0% / 0.2);
+    --shadow-xl: 0 20px 25px -5px hsl(0 0% 0% / 0.5), 0 10px 10px -5px hsl(0 0% 0% / 0.2);
+    --shadow-glow: 0 0 50px hsl(262 70% 50% / 0.2);
+    --shadow-card-hover: 0 12px 28px -8px hsl(0 0% 0% / 0.5), 0 4px 12px -4px hsl(0 0% 0% / 0.3);
+
+    --claude-badge: 262 65% 62%;
+    --chatgpt-badge: 158 55% 50%;
+    --openwebui-badge: 24 85% 60%;
+  }
+}
+
 /* Base Styles */
 body {
   background: hsl(var(--background));

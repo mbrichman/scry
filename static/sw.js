@@ -1,8 +1,8 @@
-const CACHE_NAME = 'dovos-v1';
+const CACHE_NAME = 'dovos-v2';
 const STATIC_ASSETS = [
   '/conversations',
   '/static/css/design-system.css',
-  '/static/images/logo.png',
+  '/static/images/scry.png',
   'https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css',
   'https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js'
 ];
