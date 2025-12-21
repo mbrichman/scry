@@ -801,11 +801,16 @@ class APIFormatAdapter:
                     }
 
                 # Check if conversation is from OpenWebUI
-                first_message = messages[0]
-                metadata = first_message.message_metadata or {}
+                # First check conversation-level source tracking (new sync)
+                source = conversation.source_type
+                openwebui_uuid = conversation.source_id
 
-                source = metadata.get('source')
-                openwebui_uuid = metadata.get('original_conversation_id')
+                # Fallback to message metadata (old imports)
+                if not source or not openwebui_uuid:
+                    first_message = messages[0]
+                    metadata = first_message.message_metadata or {}
+                    source = metadata.get('source')
+                    openwebui_uuid = metadata.get('original_conversation_id')
 
                 if source != 'openwebui' or not openwebui_uuid:
                     return {
