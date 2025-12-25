@@ -228,16 +228,16 @@ class ContextualRetrievalService:
     def _search_messages(self, query: str, limit: int = 50) -> List[SearchResult]:
         """
         Search for matching messages using the search service.
-        
+
         Args:
             query: Search query
             limit: Maximum number of results
-            
+
         Returns:
             List of search results
         """
         try:
-            results = self.search_service.search(query, limit=limit)
+            results, _ = self.search_service.search(query, limit=limit)
             return results
         except Exception as e:
             logger.error(f"Search failed: {e}")
