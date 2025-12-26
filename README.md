@@ -1,128 +1,118 @@
-# Dovos
+# Scry
 
-[![Docker](https://img.shields.io/badge/docker-ghcr.io-blue?logo=docker)](https://ghcr.io/mbrichman/dovos)
+[![Docker](https://img.shields.io/badge/docker-ghcr.io-blue?logo=docker)](https://ghcr.io/mbrichman/Scry)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-A chat conversation archive and search application with PostgreSQL full-text search, RAG (Retrieval-Augmented Generation) integration, and OpenWebUI compatibility.
+**Own your AI conversations.** Scry is a self-hosted conversation archive that keeps your AI chat history private, searchable, and portable across providers.
 
-## Description
+## Why Scry?
 
-Dovos is a Flask-based web application designed to import, archive, and search through chat conversations from multiple sources (ChatGPT, Claude, etc.). It features:
+### Privacy First
+Your conversations contain personal thoughts, business ideas, and sensitive information that have no business being hosted by "big tech" on the public internet. Scry keeps everything local on your own machine—no cloud services, no telemetry, no data leaving your infrastructure. Your PostgreSQL database, your data, your control.
 
-- **Full-Text Search**: PostgreSQL-backed FTS for fast, accurate conversation search
-- **Vector Search**: Semantic search with pgvector embeddings
-- **Hybrid Search**: Combined FTS and vector similarity ranking
-- **OpenWebUI Compatibility**: Export and integration with Open WebUI
-- **PostgreSQL Backend**: Enterprise-grade database with proper ACID guarantees
-- **Chat Import**: Support for ChatGPT and Claude conversation formats
-- **Modern Web UI**: Flask-based interface with Jinja2 templates
+### Provider Portability
+Don't let your conversation history be locked into one AI provider. Scry imports from ChatGPT, Claude, and OpenWebUI, giving you a unified archive that survives provider switches, account changes, or service shutdowns. 
 
-## Setup and Installation
+### OpenWebUI Integration
+Seamlessly sync conversations with [Open WebUI](https://openwebui.com/)—pull your history into Scry for archival, or export conversations back to OpenWebUI. Use OpenWebUI as your AI frontend while Scry serves as your permanent, searchable archive.
 
-### Requirements
+## Features
 
-- Docker and Docker Compose
-- No additional dependencies needed
+- **Multi-Source Import**: ChatGPT JSON exports, Claude conversations, OpenWebUI API sync
+- **Smart Search**: Combined full-text and semantic vector search for finding exactly what you need
+- **RAG Integration**: Contextual retrieval for AI-powered search with surrounding conversation context
+- **Background Sync**: Automatic OpenWebUI synchronization with change detection
+- **Self-Contained**: Runs entirely on your own hardware with Docker
 
-### Quick Start
-
-**Pull from GitHub Container Registry:**
+## Quick Start
 
 ```bash
-# Pull the latest image
-docker pull ghcr.io/mbrichman/dovos:main
+# Pull the image
+docker pull ghcr.io/mbrichman/Scry:main
 
-# Or pull a specific version
-docker pull ghcr.io/mbrichman/dovos:v1.0.0
-```
-
-**Run with Docker Compose:**
-
-```bash
-# 1. Configure environment
+# Configure environment
 cp .env.example .env
 # Edit .env with your PostgreSQL credentials
 
-# 2. Start the entire stack (migrations run automatically)
+# Start the stack
 docker compose up -d
 
-# 3. Access the application
+# Access the application
 open http://localhost:5001
 ```
 
-### Environment Variables
+## Environment Variables
 
-Create a `.env` file in the project root (use `.env.example` as a template):
+Create a `.env` file (use `.env.example` as a template):
 
 ```env
 # PostgreSQL credentials
-POSTGRES_USER=dovos
+POSTGRES_USER=Scry
 POSTGRES_PASSWORD=your-secure-password
-POSTGRES_DB=dovos
+POSTGRES_DB=Scry
 
 # Application settings
 SECRET_KEY=your-secret-key-here
 ```
 
-## Directory Structure
+## OpenWebUI Sync
+
+To sync conversations from OpenWebUI:
+
+1. Go to **Settings** in Scry
+2. Enter your OpenWebUI URL (e.g., `https://your-openwebui-instance`)
+3. Add your OpenWebUI API key
+4. Click **Sync** to pull conversations
+
+Scry tracks sync state and only fetches new or updated conversations on subsequent syncs.
+
+## Architecture
 
 ```
-dovos/
-├── alembic/              # Database migrations
-├── api/                  # API endpoints
-├── controllers/          # MVC controllers
-├── data/                 # Application data (ignored by git)
-│   └── source/          # Source conversation files
-├── db/                   # Database layer
-│   ├── adapters/        # Legacy API format adapter
+Scry/
+├── api/                  # REST API endpoints
+├── controllers/          # Request handlers
+├── db/
 │   ├── models/          # SQLAlchemy models
-│   ├── repositories/    # Repository pattern implementations
-│   ├── services/        # Business logic services
-│   └── workers/         # Background workers (embedding, etc.)
-├── docs/                 # Project documentation
-├── models/              # Legacy models (being migrated)
-├── scripts/             # Utility scripts
-│   ├── archived/       # Deprecated scripts (gitignored)
-│   ├── database/       # DB maintenance scripts
-│   └── utils/          # General utility scripts
-├── static/              # Static web assets
-├── templates/           # Jinja2 templates
-├── tests/               # Test suite
-│   ├── unit/           # Unit tests
-│   ├── integration/    # Integration tests
-│   ├── e2e/            # End-to-end tests
-│   └── fixtures/       # Test fixtures
-├── app.py               # Flask application entry point
-├── config/              # Application configuration
-├── routes.py            # Web routes
-└── requirements.txt     # Python dependencies
+│   ├── repositories/    # Data access layer
+│   ├── services/        # Business logic
+│   │   ├── search_service.py          # Hybrid FTS + vector search
+│   │   ├── import_service.py          # Multi-format import
+│   │   ├── sync_service.py            # OpenWebUI sync
+│   │   └── contextual_retrieval_service.py  # RAG context windows
+│   └── workers/         # Background embedding generation
+├── templates/           # Web UI (Jinja2)
+└── tests/               # Test suite
 ```
 
-## Development Workflow
+## Tech Stack
 
-### Code Style
+- **Backend**: Flask, SQLAlchemy
+- **Database**: PostgreSQL 17 with pgvector
+- **Search**: PostgreSQL FTS + sentence-transformers embeddings
+- **Deployment**: Docker & Docker Compose
 
-- Python: Follow PEP 8 guidelines
-- Use type hints where applicable
-- Run `python -m compileall -q .` to check for syntax errors
+## API Endpoints
 
-## Testing
+| Endpoint | Purpose |
+|----------|---------|
+| `GET /api/conversations` | List conversations |
+| `GET /api/search?q=...` | Search conversations |
+| `POST /api/rag/query` | Contextual RAG retrieval |
+| `POST /api/sync/openwebui` | Trigger OpenWebUI sync |
+| `GET /api/sync/status` | Check sync progress |
 
-### Running Tests
+## Development
 
 ```bash
-# Run all tests
+# Run tests
 pytest
 
 # Run specific test categories
 pytest tests/unit/
 pytest tests/integration/
-pytest tests/e2e/
 
-# Run with verbose output
-pytest -v
-
-# Run with coverage
+# With coverage
 pytest --cov=. --cov-report=html
 ```
 
@@ -131,9 +121,8 @@ pytest --cov=. --cov-report=html
 1. Create a feature branch from `main`
 2. Make your changes
 3. Ensure tests pass: `pytest`
-4. Commit with descriptive messages
-5. Push and create a pull request
+4. Push and create a pull request
 
 ## License
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+MIT License - see [LICENSE](LICENSE) for details.
