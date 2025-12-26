@@ -5,7 +5,7 @@ Corresponds to the schema defined in db/schema.sql.
 
 import uuid
 from datetime import datetime
-from sqlalchemy import Column, String, Text, DateTime, Integer, ForeignKey, JSON, BigInteger, CheckConstraint, Index, Computed
+from sqlalchemy import Column, String, Text, DateTime, Integer, ForeignKey, JSON, BigInteger, CheckConstraint, Index, Computed, Boolean
 from sqlalchemy.orm import relationship, declarative_base
 from sqlalchemy.dialects.postgresql import UUID, TSVECTOR
 from pgvector.sqlalchemy import Vector
@@ -25,6 +25,9 @@ class Conversation(Base):
     source_id = Column(String(255), nullable=True)  # Original ID from source system
     source_type = Column(String(50), nullable=True)  # 'openwebui', 'claude', 'chatgpt'
     source_updated_at = Column(DateTime(timezone=True), nullable=True)  # Last known update time at source
+
+    # Saved/bookmarked status
+    is_saved = Column(Boolean, nullable=False, default=False)
 
     # Relationship to messages
     messages = relationship("Message", back_populates="conversation", cascade="all, delete-orphan")

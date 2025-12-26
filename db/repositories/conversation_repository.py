@@ -387,3 +387,43 @@ class ConversationRepository(BaseRepository[Conversation]):
         conversation.source_updated_at = source_updated_at
         self.session.flush()
         return True
+
+    def toggle_saved(self, conversation_id: UUID) -> Optional[bool]:
+        """
+        Toggle the saved/bookmarked status of a conversation.
+
+        Args:
+            conversation_id: The conversation ID to toggle
+
+        Returns:
+            The new is_saved value (True/False), or None if conversation not found
+        """
+        conversation = self.get_by_id(conversation_id)
+        if not conversation:
+            return None
+
+        conversation.is_saved = not conversation.is_saved
+        self.session.flush()
+        return conversation.is_saved
+
+    def get_saved(self, limit: Optional[int] = None, offset: int = 0) -> List[Conversation]:
+        """
+        Get all saved/bookmarked conversations.
+
+        Args:
+            limit: Maximum number of results to return
+            offset: Number of results to skip
+
+        Returns:
+            List of saved conversations ordered by updated_at descending
+        """
+        query = self.session.query(Conversation)\
+            .filter(Conversation.is_saved == True)\
+            .order_by(desc(Conversation.updated_at))
+
+        if offset > 0:
+            query = query.offset(offset)
+        if limit:
+            query = query.limit(limit)
+
+        return query.all()

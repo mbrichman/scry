@@ -152,6 +152,11 @@
         <div class="conversation-content">
             <div class="conversation-item-header">
                 <h2 class="conversation-title">
+                    {% if conversation.meta.is_saved %}
+                    <svg class="bookmark-icon saved" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" width="16" height="16" style="flex-shrink: 0; margin-right: 0.5rem; color: hsl(var(--primary));">
+                        <path fill-rule="evenodd" d="M6.32 2.577a49.255 49.255 0 0111.36 0c1.497.174 2.57 1.46 2.57 2.93V21a.75.75 0 01-1.085.67L12 18.089l-7.165 3.583A.75.75 0 013.75 21V5.507c0-1.47 1.073-2.756 2.57-2.93z" clip-rule="evenodd" />
+                    </svg>
+                    {% endif %}
                     <a href="{{ url_for('view_conversation', doc_id=conversation.id) }}">{{ conversation.meta.title }}</a>
                 </h2>
                 <div class="conversation-header-right">
@@ -162,7 +167,13 @@
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z" />
                             </svg>
                         </button>
-                        <div class="conversation-menu-dropdown" id="menu-{{ conversation.id }}">
+                        <div class="conversation-menu-dropdown" id="menu-{{ conversation.id }}" data-is-saved="{{ 'true' if conversation.meta.is_saved else 'false' }}">
+                            <button class="conversation-menu-item" onclick="toggleSaveConversation(event, '{{ conversation.id }}')">
+                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" />
+                                </svg>
+                                <span class="save-label">{{ 'Unsave' if conversation.meta.is_saved else 'Save' }}</span>
+                            </button>
                             <button class="conversation-menu-item" onclick="viewConversation('{{ conversation.id }}')">
                                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
@@ -474,6 +485,70 @@ async function deleteConversation(event, conversationId) {
     }
 }
 
+// Toggle save/bookmark conversation
+async function toggleSaveConversation(event, conversationId) {
+    event.stopPropagation();
+    const button = event.currentTarget;
+    const menu = document.getElementById(`menu-${conversationId}`);
+    const saveLabel = button.querySelector('.save-label');
+    const isSaved = menu.dataset.isSaved === 'true';
+    const originalText = saveLabel.textContent;
+
+    button.disabled = true;
+    saveLabel.textContent = isSaved ? 'Unsaving...' : 'Saving...';
+
+    try {
+        const response = await fetch(`/api/conversation/${conversationId}/save`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' }
+        });
+
+        const data = await response.json();
+
+        if (response.ok && data.success) {
+            const newIsSaved = data.is_saved;
+            menu.dataset.isSaved = newIsSaved ? 'true' : 'false';
+            saveLabel.textContent = newIsSaved ? 'Unsave' : 'Save';
+
+            // Update bookmark icon in the title
+            const conversationItem = button.closest('.conversation-item');
+            const titleElement = conversationItem.querySelector('.conversation-title');
+            const existingBookmark = titleElement.querySelector('.bookmark-icon');
+
+            if (newIsSaved && !existingBookmark) {
+                // Add bookmark icon
+                const bookmarkSvg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+                bookmarkSvg.setAttribute('class', 'bookmark-icon saved');
+                bookmarkSvg.setAttribute('viewBox', '0 0 24 24');
+                bookmarkSvg.setAttribute('fill', 'currentColor');
+                bookmarkSvg.setAttribute('width', '16');
+                bookmarkSvg.setAttribute('height', '16');
+                bookmarkSvg.style.cssText = 'flex-shrink: 0; margin-right: 0.5rem; color: hsl(var(--primary));';
+                bookmarkSvg.innerHTML = '<path fill-rule="evenodd" d="M6.32 2.577a49.255 49.255 0 0111.36 0c1.497.174 2.57 1.46 2.57 2.93V21a.75.75 0 01-1.085.67L12 18.089l-7.165 3.583A.75.75 0 013.75 21V5.507c0-1.47 1.073-2.756 2.57-2.93z" clip-rule="evenodd" />';
+                titleElement.insertBefore(bookmarkSvg, titleElement.firstChild);
+            } else if (!newIsSaved && existingBookmark) {
+                // Remove bookmark icon
+                existingBookmark.remove();
+            }
+
+            showNotification(newIsSaved ? 'Conversation saved!' : 'Conversation unsaved', 'success');
+        } else {
+            throw new Error(data.message || 'Failed to toggle save');
+        }
+    } catch (error) {
+        console.error('Toggle save error:', error);
+        showNotification(error.message || 'Failed to save conversation', 'error');
+        saveLabel.textContent = originalText;
+    } finally {
+        button.disabled = false;
+        // Close the menu
+        if (currentOpenMenu) {
+            currentOpenMenu.classList.remove('show');
+            currentOpenMenu = null;
+        }
+    }
+}
+
 // Notification system
 function showNotification(message, type = 'success') {
     let notification = document.getElementById('notification');
@@ -693,5 +768,20 @@ document.querySelectorAll('.date-to-format').forEach(formatDateElement);
     }
 }
 
+/* Bookmark icon in conversation title */
+.conversation-title {
+    display: flex;
+    align-items: center;
+}
+
+.bookmark-icon.saved {
+    animation: bookmarkPop 0.3s ease-out;
+}
+
+@keyframes bookmarkPop {
+    0% { transform: scale(0); }
+    50% { transform: scale(1.2); }
+    100% { transform: scale(1); }
+}
 </style>
 {% endblock %}

@@ -4,19 +4,492 @@
 
 {% block page_title %}Saved{% endblock %}
 
-{% block content %}
-<div class="empty-state">
-    <div class="empty-state-icon">📑</div>
-    <h3>Saved Conversations</h3>
-    <p>This will display your bookmarked and saved conversations.</p>
-    <p style="color: hsl(var(--muted-foreground)); font-size: 0.875rem; margin-top: 1rem;">
-        Features planned:
-    </p>
-    <ul style="text-align: left; max-width: 500px; margin: 1rem auto; color: hsl(var(--muted-foreground));">
-        <li>Bookmark favorite conversations</li>
-        <li>Create custom collections</li>
-        <li>Tag and organize saved items</li>
-        <li>Quick access to frequently referenced content</li>
-    </ul>
+{% block header %}
+<div class="page-header" style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 1.5rem;">
+    <div style="display: flex; align-items: center; gap: 1rem;">
+        <button class="mobile-menu-toggle" id="mobileMenuToggle" aria-label="Menu">
+            <span></span>
+        </button>
+        <h1 class="page-title">Saved</h1>
+    </div>
 </div>
+{% endblock %}
+
+{% block content %}
+<!-- Search Section -->
+<div class="search-section">
+    <div class="search-wrapper">
+        <div class="search-input-wrapper">
+            <svg class="search-icon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+            </svg>
+            <input type="search"
+                   id="searchInput"
+                   placeholder="Search saved conversations..."
+                   class="search-input">
+        </div>
+        <button type="button" class="btn-search" id="searchButton" onclick="searchSaved()">
+            <span class="btn-search-text">Search</span>
+        </button>
+    </div>
+</div>
+
+<!-- Filters Section -->
+<div class="filters-section">
+    <div class="filters-header" onclick="toggleFilters()">
+        <h3>Filters</h3>
+        <span class="filters-toggle" id="filtersToggle">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 15l7-7 7 7" />
+            </svg>
+        </span>
+    </div>
+    <div class="filters-content" id="filtersContent">
+        <div class="filters-grid">
+            <div class="filter-group">
+                <label for="sourceFilter">Source</label>
+                <select class="form-select" id="sourceFilter" onchange="applyFilters()">
+                    <option value="all">All Sources</option>
+                    <option value="chatgpt">ChatGPT</option>
+                    <option value="claude">Claude</option>
+                    <option value="openwebui">OpenWebUI</option>
+                    <option value="docx">Word Documents</option>
+                </select>
+            </div>
+            <div class="filter-group">
+                <label for="dateFilter">Date Range</label>
+                <select class="form-select" id="dateFilter" onchange="applyFilters()">
+                    <option value="all">All Time</option>
+                    <option value="today">Today</option>
+                    <option value="week">Past Week</option>
+                    <option value="month">Past Month</option>
+                    <option value="year">Past Year</option>
+                </select>
+            </div>
+            <div class="filter-group">
+                <label for="sortOrder">Sort Order</label>
+                <select class="form-select" id="sortOrder" onchange="applyFilters()">
+                    <option value="newest">Newest First</option>
+                    <option value="oldest">Oldest First</option>
+                    <option value="alphabetical">Alphabetical</option>
+                </select>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Loading indicator -->
+<div id="loadingIndicator" style="display: none; text-align: center; padding: 2rem;">
+    <svg class="spinner" viewBox="0 0 50 50" style="width: 40px; height: 40px;">
+        <circle class="spinner-path" cx="25" cy="25" r="20" fill="none" stroke-width="5"></circle>
+    </svg>
+    <p style="margin-top: 1rem; color: hsl(var(--muted-foreground));">Loading saved conversations...</p>
+</div>
+
+<!-- Conversation List -->
+<div class="conversation-list" id="conversationList"></div>
+
+<!-- Empty State -->
+<div id="emptyState" class="empty-state" style="display: none;">
+    <div class="empty-state-icon">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" width="48" height="48" style="color: hsl(var(--muted-foreground));">
+            <path fill-rule="evenodd" d="M6.32 2.577a49.255 49.255 0 0111.36 0c1.497.174 2.57 1.46 2.57 2.93V21a.75.75 0 01-1.085.67L12 18.089l-7.165 3.583A.75.75 0 013.75 21V5.507c0-1.47 1.073-2.756 2.57-2.93z" clip-rule="evenodd" />
+        </svg>
+    </div>
+    <h3>No Saved Conversations</h3>
+    <p>Save conversations from the list or detail view to see them here.</p>
+    <a href="/conversations" class="btn btn-primary mt-3">Browse Conversations</a>
+</div>
+{% endblock %}
+
+{% block page_scripts %}
+<script>
+let allSavedConversations = [];
+let filteredConversations = [];
+
+document.addEventListener('DOMContentLoaded', function() {
+    loadSavedConversations();
+
+    const searchInput = document.getElementById('searchInput');
+
+    // Search on enter key
+    searchInput.addEventListener('keypress', function(e) {
+        if (e.key === 'Enter') {
+            searchSaved();
+        }
+    });
+
+    // Restore all results when search is cleared (X button)
+    searchInput.addEventListener('search', function() {
+        if (!this.value) {
+            loadSavedConversations();
+        }
+    });
+
+    // Also reload when user deletes all text
+    searchInput.addEventListener('input', function() {
+        if (!this.value.trim()) {
+            loadSavedConversations();
+        }
+    });
+});
+
+async function loadSavedConversations() {
+    const loadingIndicator = document.getElementById('loadingIndicator');
+    const conversationList = document.getElementById('conversationList');
+    const emptyState = document.getElementById('emptyState');
+
+    loadingIndicator.style.display = 'block';
+    conversationList.innerHTML = '';
+    emptyState.style.display = 'none';
+
+    try {
+        const source = document.getElementById('sourceFilter').value;
+        const date = document.getElementById('dateFilter').value;
+        const sort = document.getElementById('sortOrder').value;
+
+        const params = new URLSearchParams({
+            source: source,
+            date: date,
+            sort: sort
+        });
+
+        const response = await fetch(`/api/conversations/saved?${params.toString()}`);
+        const data = await response.json();
+
+        allSavedConversations = [];
+
+        if (data.metadatas && data.metadatas.length > 0) {
+            for (let i = 0; i < data.metadatas.length; i++) {
+                allSavedConversations.push({
+                    id: data.ids[i],
+                    title: data.metadatas[i].title,
+                    source: data.metadatas[i].source,
+                    preview: data.documents[i],
+                    latest_ts: data.metadatas[i].latest_ts,
+                    message_count: data.metadatas[i].message_count,
+                    is_saved: true
+                });
+            }
+
+            filteredConversations = [...allSavedConversations];
+            renderConversations();
+        } else {
+            emptyState.style.display = 'block';
+        }
+    } catch (error) {
+        console.error('Failed to load saved conversations:', error);
+        showNotification('Failed to load saved conversations', 'error');
+    } finally {
+        loadingIndicator.style.display = 'none';
+    }
+}
+
+function renderConversations() {
+    const conversationList = document.getElementById('conversationList');
+    const emptyState = document.getElementById('emptyState');
+
+    conversationList.innerHTML = '';
+
+    if (filteredConversations.length === 0) {
+        emptyState.style.display = 'block';
+        return;
+    }
+
+    emptyState.style.display = 'none';
+
+    filteredConversations.forEach(conv => {
+        const item = createConversationElement(conv);
+        conversationList.appendChild(item);
+    });
+
+    // Format dates
+    document.querySelectorAll('.date-to-format').forEach(formatDateElement);
+}
+
+function createConversationElement(conv) {
+    const div = document.createElement('div');
+    div.className = 'conversation-item';
+    div.onclick = (e) => {
+        if (!e.target.closest('.conversation-menu')) {
+            window.location.href = `/view/${conv.id}`;
+        }
+    };
+
+    const sourceLower = (conv.source || 'unknown').toLowerCase().trim();
+    const sourceText = sourceLower === 'docx' ? 'Word' :
+                       sourceLower === 'claude' ? 'Claude' :
+                       sourceLower === 'chatgpt' ? 'ChatGPT' :
+                       sourceLower === 'openwebui' || sourceLower === 'open-webui' ? 'OpenWebUI' :
+                       (conv.source || 'Unknown').charAt(0).toUpperCase() + (conv.source || 'unknown').slice(1);
+    const pillColor = sourceLower === 'claude' ? 'violet' :
+                      sourceLower === 'chatgpt' ? 'green' :
+                      sourceLower === 'openwebui' || sourceLower === 'open-webui' ? 'blue' :
+                      sourceLower === 'docx' ? 'amber' : 'teal';
+
+    // Strip HTML and truncate preview
+    const tempDiv = document.createElement('div');
+    tempDiv.innerHTML = conv.preview || '';
+    const summary = (tempDiv.textContent || tempDiv.innerText || '').substring(0, 120);
+
+    div.innerHTML = `
+        <div class="conversation-content">
+            <div class="conversation-item-header">
+                <h2 class="conversation-title">
+                    <svg class="bookmark-icon saved" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" width="16" height="16" style="flex-shrink: 0; margin-right: 0.5rem; color: hsl(var(--primary));">
+                        <path fill-rule="evenodd" d="M6.32 2.577a49.255 49.255 0 0111.36 0c1.497.174 2.57 1.46 2.57 2.93V21a.75.75 0 01-1.085.67L12 18.089l-7.165 3.583A.75.75 0 013.75 21V5.507c0-1.47 1.073-2.756 2.57-2.93z" clip-rule="evenodd" />
+                    </svg>
+                    <a href="/view/${conv.id}">${escapeHtml(conv.title)}</a>
+                </h2>
+                <div class="conversation-header-right">
+                    <span class="conversation-date date-to-format">${conv.latest_ts}</span>
+                    <div class="conversation-menu">
+                        <button class="conversation-menu-button" onclick="event.stopPropagation(); toggleMenu(event, '${conv.id}')" aria-label="Options">
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z" />
+                            </svg>
+                        </button>
+                        <div class="conversation-menu-dropdown" id="menu-${conv.id}" data-is-saved="true">
+                            <button class="conversation-menu-item" onclick="unsaveConversation(event, '${conv.id}')">
+                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" />
+                                </svg>
+                                <span>Unsave</span>
+                            </button>
+                            <button class="conversation-menu-item" onclick="viewConversation('${conv.id}')">
+                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                                </svg>
+                                View
+                            </button>
+                            <a href="/export/${conv.id}" class="conversation-menu-item" onclick="event.stopPropagation()">
+                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                                </svg>
+                                Export as Markdown
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="conversation-summary">${escapeHtml(summary)}</div>
+            <div class="conversation-meta">
+                <span class="conversation-meta-pill ${pillColor}">&#x2388; ${sourceText}</span>
+            </div>
+        </div>
+    `;
+
+    return div;
+}
+
+function escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+}
+
+function searchSaved() {
+    const query = document.getElementById('searchInput').value.toLowerCase().trim();
+
+    if (!query) {
+        filteredConversations = [...allSavedConversations];
+    } else {
+        filteredConversations = allSavedConversations.filter(conv => {
+            return (conv.title && conv.title.toLowerCase().includes(query)) ||
+                   (conv.preview && conv.preview.toLowerCase().includes(query));
+        });
+    }
+
+    renderConversations();
+}
+
+function applyFilters() {
+    loadSavedConversations();
+}
+
+// Toggle filters
+function toggleFilters() {
+    const content = document.getElementById('filtersContent');
+    const toggle = document.getElementById('filtersToggle');
+
+    if (content.classList.contains('show')) {
+        content.classList.remove('show');
+        toggle.classList.remove('expanded');
+    } else {
+        content.classList.add('show');
+        toggle.classList.add('expanded');
+    }
+}
+
+// Toggle conversation menu
+let currentOpenMenu = null;
+
+function toggleMenu(event, conversationId) {
+    event.stopPropagation();
+    const menu = document.getElementById(`menu-${conversationId}`);
+
+    if (currentOpenMenu && currentOpenMenu !== menu) {
+        currentOpenMenu.classList.remove('show');
+    }
+
+    menu.classList.toggle('show');
+    currentOpenMenu = menu.classList.contains('show') ? menu : null;
+}
+
+// Close menus when clicking outside
+document.addEventListener('click', function() {
+    if (currentOpenMenu) {
+        currentOpenMenu.classList.remove('show');
+        currentOpenMenu = null;
+    }
+});
+
+function viewConversation(conversationId) {
+    window.location.href = `/view/${conversationId}`;
+}
+
+async function unsaveConversation(event, conversationId) {
+    event.stopPropagation();
+    const button = event.currentTarget;
+
+    button.disabled = true;
+    button.querySelector('span').textContent = 'Unsaving...';
+
+    try {
+        const response = await fetch(`/api/conversation/${conversationId}/save`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' }
+        });
+
+        const data = await response.json();
+
+        if (response.ok && data.success && data.is_saved === false) {
+            // Remove from lists
+            allSavedConversations = allSavedConversations.filter(c => c.id !== conversationId);
+            filteredConversations = filteredConversations.filter(c => c.id !== conversationId);
+
+            // Animate removal
+            const conversationItem = button.closest('.conversation-item');
+            conversationItem.style.opacity = '0';
+            conversationItem.style.transform = 'translateX(-20px)';
+            conversationItem.style.transition = 'opacity 0.3s, transform 0.3s';
+
+            setTimeout(() => {
+                renderConversations();
+            }, 300);
+
+            showNotification('Conversation unsaved', 'success');
+        } else {
+            throw new Error(data.message || 'Failed to unsave');
+        }
+    } catch (error) {
+        console.error('Unsave error:', error);
+        showNotification(error.message || 'Failed to unsave conversation', 'error');
+        button.querySelector('span').textContent = 'Unsave';
+    } finally {
+        button.disabled = false;
+        if (currentOpenMenu) {
+            currentOpenMenu.classList.remove('show');
+            currentOpenMenu = null;
+        }
+    }
+}
+
+function formatDateElement(element) {
+    const dateStr = element.textContent.trim();
+    if (dateStr && dateStr !== 'Unknown date') {
+        try {
+            const date = new Date(dateStr);
+            if (!isNaN(date.getTime())) {
+                const now = new Date();
+                const isMobile = window.innerWidth <= 768;
+
+                if (isMobile) {
+                    const isToday = date.toDateString() === now.toDateString();
+                    const isThisYear = date.getFullYear() === now.getFullYear();
+
+                    if (isToday) {
+                        element.textContent = date.toLocaleTimeString(undefined, {
+                            hour: 'numeric',
+                            minute: '2-digit'
+                        });
+                    } else if (isThisYear) {
+                        element.textContent = date.toLocaleDateString(undefined, {
+                            month: 'short',
+                            day: 'numeric'
+                        });
+                    } else {
+                        element.textContent = date.toLocaleDateString(undefined, {
+                            year: '2-digit',
+                            month: 'numeric',
+                            day: 'numeric'
+                        });
+                    }
+                } else {
+                    const options = {
+                        year: 'numeric',
+                        month: 'short',
+                        day: 'numeric',
+                        hour: '2-digit',
+                        minute: '2-digit'
+                    };
+                    element.textContent = date.toLocaleDateString(undefined, options);
+                }
+            }
+        } catch (e) {
+            console.warn('Date parsing failed:', dateStr, e);
+        }
+    }
+}
+
+// Notification system
+function showNotification(message, type = 'success') {
+    let notification = document.getElementById('notification');
+    if (!notification) {
+        notification = document.createElement('div');
+        notification.id = 'notification';
+        notification.style.cssText = `
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 12px 24px;
+            border-radius: 8px;
+            color: white;
+            font-size: 14px;
+            font-weight: 500;
+            z-index: 9999;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            animation: slideIn 0.3s ease-out;
+        `;
+        document.body.appendChild(notification);
+    }
+
+    notification.textContent = message;
+    notification.style.backgroundColor = type === 'success' ? '#10b981' : '#ef4444';
+    notification.style.display = 'block';
+
+    setTimeout(() => {
+        notification.style.display = 'none';
+    }, 5000);
+}
+</script>
+
+<style>
+@keyframes slideIn {
+    from {
+        transform: translateX(100%);
+        opacity: 0;
+    }
+    to {
+        transform: translateX(0);
+        opacity: 1;
+    }
+}
+
+.conversation-title {
+    display: flex;
+    align-items: center;
+}
+</style>
 {% endblock %}

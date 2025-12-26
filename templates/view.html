@@ -8,6 +8,11 @@
         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
     </svg>
 </a>
+{% if conversation.meta.is_saved %}
+<svg id="bookmarkIcon" class="bookmark-icon-title saved" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" width="20" height="20" style="flex-shrink: 0; margin-right: 0.5rem; color: hsl(var(--primary));">
+    <path fill-rule="evenodd" d="M6.32 2.577a49.255 49.255 0 0111.36 0c1.497.174 2.57 1.46 2.57 2.93V21a.75.75 0 01-1.085.67L12 18.089l-7.165 3.583A.75.75 0 013.75 21V5.507c0-1.47 1.073-2.756 2.57-2.93z" clip-rule="evenodd" />
+</svg>
+{% endif %}
 {{ conversation.meta.title }}
 {% endblock %}
 
@@ -915,7 +920,13 @@
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z" />
                 </svg>
             </button>
-            <div id="toolsDropdown" class="tools-dropdown">
+            <div id="toolsDropdown" class="tools-dropdown" data-is-saved="{{ 'true' if conversation.meta.is_saved else 'false' }}">
+                <button id="saveBtn" class="tools-dropdown-item" onclick="toggleSaveConversation('{{ doc_id }}'); return false;">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" />
+                    </svg>
+                    <span class="save-label">{{ 'Unsave' if conversation.meta.is_saved else 'Save' }}</span>
+                </button>
                 <button class="tools-dropdown-item" onclick="copyConversationAsMarkdown(); closeToolsMenu();">
                     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
@@ -1571,6 +1582,69 @@
             if (exportBtnText) {
                 exportBtnText.textContent = 'Export to OpenWebUI';
             }
+        }
+    }
+
+    // Toggle save/bookmark conversation
+    async function toggleSaveConversation(conversationId) {
+        const dropdown = document.getElementById('toolsDropdown');
+        const saveBtn = document.getElementById('saveBtn');
+        const saveLabel = saveBtn.querySelector('.save-label');
+        const isSaved = dropdown.dataset.isSaved === 'true';
+        const originalText = saveLabel.textContent;
+
+        saveBtn.disabled = true;
+        saveLabel.textContent = isSaved ? 'Unsaving...' : 'Saving...';
+
+        try {
+            const response = await fetch(`/api/conversation/${conversationId}/save`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' }
+            });
+
+            const data = await response.json();
+
+            if (response.ok && data.success) {
+                const newIsSaved = data.is_saved;
+                dropdown.dataset.isSaved = newIsSaved ? 'true' : 'false';
+                saveLabel.textContent = newIsSaved ? 'Unsave' : 'Save';
+
+                // Update bookmark icon in the title
+                const pageTitle = document.querySelector('.page-title');
+                const existingBookmark = document.getElementById('bookmarkIcon');
+
+                if (newIsSaved && !existingBookmark) {
+                    // Add bookmark icon
+                    const bookmarkSvg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+                    bookmarkSvg.setAttribute('id', 'bookmarkIcon');
+                    bookmarkSvg.setAttribute('class', 'bookmark-icon-title saved');
+                    bookmarkSvg.setAttribute('viewBox', '0 0 24 24');
+                    bookmarkSvg.setAttribute('fill', 'currentColor');
+                    bookmarkSvg.setAttribute('width', '20');
+                    bookmarkSvg.setAttribute('height', '20');
+                    bookmarkSvg.style.cssText = 'flex-shrink: 0; margin-right: 0.5rem; color: hsl(var(--primary));';
+                    bookmarkSvg.innerHTML = '<path fill-rule="evenodd" d="M6.32 2.577a49.255 49.255 0 0111.36 0c1.497.174 2.57 1.46 2.57 2.93V21a.75.75 0 01-1.085.67L12 18.089l-7.165 3.583A.75.75 0 013.75 21V5.507c0-1.47 1.073-2.756 2.57-2.93z" clip-rule="evenodd" />';
+                    // Insert after back arrow
+                    const backArrow = pageTitle.querySelector('.back-arrow');
+                    if (backArrow && backArrow.nextSibling) {
+                        pageTitle.insertBefore(bookmarkSvg, backArrow.nextSibling);
+                    }
+                } else if (!newIsSaved && existingBookmark) {
+                    // Remove bookmark icon
+                    existingBookmark.remove();
+                }
+
+                showNotification(newIsSaved ? 'Conversation saved!' : 'Conversation unsaved', 'success');
+            } else {
+                throw new Error(data.message || 'Failed to toggle save');
+            }
+        } catch (error) {
+            console.error('Toggle save error:', error);
+            showNotification(error.message || 'Failed to save conversation', 'error');
+            saveLabel.textContent = originalText;
+        } finally {
+            saveBtn.disabled = false;
+            closeToolsMenu();
         }
     }
 

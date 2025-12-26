@@ -88,19 +88,20 @@ class APIFormatAdapter:
             
             # Use raw SQL to query the conversation_summaries view
             query = text(f"""
-                SELECT 
+                SELECT
                     c.id,
                     c.title,
                     c.created_at,
                     c.updated_at,
+                    c.is_saved,
                     cs.message_count,
                     cs.earliest_message_at,
                     cs.latest_message_at,
                     cs.preview,
                     -- Get source from first message metadata
-                    (SELECT m.metadata->>'source' 
-                     FROM messages m 
-                     WHERE m.conversation_id = c.id 
+                    (SELECT m.metadata->>'source'
+                     FROM messages m
+                     WHERE m.conversation_id = c.id
                      ORDER BY m.created_at LIMIT 1) as source
                 FROM conversations c
                 LEFT JOIN conversation_summaries cs ON c.id = cs.id
@@ -129,7 +130,8 @@ class APIFormatAdapter:
                     "earliest_ts": row.earliest_message_at.isoformat() if row.earliest_message_at else row.created_at.isoformat(),
                     "latest_ts": row.latest_message_at.isoformat() if row.latest_message_at else row.updated_at.isoformat(),
                     "is_chunk": False,
-                    "conversation_id": str(row.id)
+                    "conversation_id": str(row.id),
+                    "is_saved": row.is_saved or False
                 }
                 
                 documents.append(document)
@@ -141,7 +143,106 @@ class APIFormatAdapter:
                 "metadatas": metadatas,
                 "ids": ids
             }
-    
+
+    def get_saved_conversations_summary(self, limit: int = 9999, offset: int = 0,
+                                        source_filter: str = 'all', date_filter: str = 'all',
+                                        sort_order: str = 'newest') -> Dict[str, Any]:
+        """
+        Get only saved/bookmarked conversations with summary data.
+
+        Same as get_conversations_summary but filtered to is_saved=True.
+        """
+        with get_unit_of_work() as uow:
+            # Build dynamic WHERE and ORDER BY clauses
+            where_clauses = ["c.is_saved = TRUE"]
+            params = {'limit': limit, 'offset': offset}
+
+            # Source filter
+            if source_filter != 'all':
+                where_clauses.append("""
+                    (SELECT m.metadata->>'source'
+                     FROM messages m
+                     WHERE m.conversation_id = c.id
+                     ORDER BY m.created_at LIMIT 1) = :source
+                """)
+                params['source'] = source_filter
+
+            # Date filter
+            if date_filter != 'all':
+                date_map = {
+                    'today': "COALESCE(cs.latest_message_at, c.updated_at) >= CURRENT_DATE",
+                    'week': "COALESCE(cs.latest_message_at, c.updated_at) >= CURRENT_DATE - INTERVAL '7 days'",
+                    'month': "COALESCE(cs.latest_message_at, c.updated_at) >= CURRENT_DATE - INTERVAL '30 days'",
+                    'year': "COALESCE(cs.latest_message_at, c.updated_at) >= CURRENT_DATE - INTERVAL '365 days'"
+                }
+                if date_filter in date_map:
+                    where_clauses.append(date_map[date_filter])
+
+            # Sort order
+            order_map = {
+                'newest': 'COALESCE(cs.latest_message_at, c.updated_at) DESC',
+                'oldest': 'COALESCE(cs.earliest_message_at, c.created_at) ASC',
+                'alphabetical': 'c.title ASC'
+            }
+            order_by = order_map.get(sort_order, order_map['newest'])
+
+            # Build WHERE clause
+            where_sql = ' AND '.join(where_clauses)
+
+            query = text(f"""
+                SELECT
+                    c.id,
+                    c.title,
+                    c.created_at,
+                    c.updated_at,
+                    c.is_saved,
+                    cs.message_count,
+                    cs.earliest_message_at,
+                    cs.latest_message_at,
+                    cs.preview,
+                    (SELECT m.metadata->>'source'
+                     FROM messages m
+                     WHERE m.conversation_id = c.id
+                     ORDER BY m.created_at LIMIT 1) as source
+                FROM conversations c
+                LEFT JOIN conversation_summaries cs ON c.id = cs.id
+                WHERE {where_sql}
+                ORDER BY {order_by}
+                LIMIT :limit OFFSET :offset
+            """)
+
+            result = uow.session.execute(query, params)
+
+            documents = []
+            metadatas = []
+            ids = []
+
+            for row in result:
+                preview = row.preview if row.preview else "No messages yet."
+                document = preview
+
+                metadata = {
+                    "id": str(row.id),
+                    "title": row.title,
+                    "source": row.source or "unknown",
+                    "message_count": row.message_count or 0,
+                    "earliest_ts": row.earliest_message_at.isoformat() if row.earliest_message_at else row.created_at.isoformat(),
+                    "latest_ts": row.latest_message_at.isoformat() if row.latest_message_at else row.updated_at.isoformat(),
+                    "is_chunk": False,
+                    "conversation_id": str(row.id),
+                    "is_saved": True
+                }
+
+                documents.append(document)
+                metadatas.append(metadata)
+                ids.append(str(row.id))
+
+            return {
+                "documents": documents,
+                "metadatas": metadatas,
+                "ids": ids
+            }
+
     def get_all_conversations(self, include: List[str] = None, limit: int = 9999) -> Dict[str, Any]:
         """
         Get all conversations in ChromaDB-compatible format.
@@ -214,7 +315,8 @@ class APIFormatAdapter:
                     "earliest_ts": earliest_ts.isoformat() if earliest_ts else conv.created_at.isoformat(),
                     "latest_ts": latest_ts.isoformat() if latest_ts else conv.updated_at.isoformat(),
                     "is_chunk": False,
-                    "conversation_id": str(conv.id)
+                    "conversation_id": str(conv.id),
+                    "is_saved": conv.is_saved or False
                 }
                 
                 documents.append(document)
@@ -298,13 +400,15 @@ class APIFormatAdapter:
                 "earliest_ts": earliest_ts.isoformat() if earliest_ts else conversation.created_at.isoformat(),
                 "latest_ts": latest_ts.isoformat() if latest_ts else conversation.updated_at.isoformat(),
                 "is_chunk": False,
-                "conversation_id": str(conversation.id)
+                "conversation_id": str(conversation.id),
+                "is_saved": conversation.is_saved or False
             }
-            
+
             return {
                 "documents": [document],
                 "metadatas": [metadata],
-                "ids": [str(conversation.id)]
+                "ids": [str(conversation.id)],
+                "is_saved": conversation.is_saved or False
             }
     
     def _handle_legacy_id_format(self, doc_id: str) -> Dict[str, Any]:

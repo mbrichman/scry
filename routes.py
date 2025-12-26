@@ -46,6 +46,17 @@ def init_routes(app):
     def api_conversation(conversation_id):
         return jsonify(postgres_controller.get_conversation(conversation_id))
 
+    @app.route("/api/conversation/<conversation_id>/save", methods=["POST"])
+    def api_toggle_save_conversation(conversation_id):
+        """Toggle saved/bookmarked status of a conversation"""
+        result, status_code = postgres_controller.toggle_save_conversation(conversation_id)
+        return jsonify(result), status_code
+
+    @app.route("/api/conversations/saved", methods=["GET"])
+    def api_saved_conversations():
+        """Get all saved/bookmarked conversations"""
+        return jsonify(postgres_controller.get_saved_conversations())
+
     @app.route("/settings")
     def settings():
         return postgres_controller.get_settings_page()

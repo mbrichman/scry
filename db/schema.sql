@@ -12,7 +12,13 @@ CREATE TABLE conversations (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     title TEXT NOT NULL,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    -- Source tracking for sync
+    source_id VARCHAR(255),
+    source_type VARCHAR(50),
+    source_updated_at TIMESTAMPTZ,
+    -- Saved/bookmarked status
+    is_saved BOOLEAN NOT NULL DEFAULT FALSE
 );
 
 -- Messages table with versioning for embedding staleness detection
@@ -56,6 +62,7 @@ CREATE TABLE jobs (
 -- Conversations indexes
 CREATE INDEX idx_conversations_created_at ON conversations(created_at DESC);
 CREATE INDEX idx_conversations_updated_at ON conversations(updated_at DESC);
+CREATE INDEX idx_conversations_is_saved ON conversations(is_saved) WHERE is_saved = TRUE;
 
 -- Messages indexes
 CREATE INDEX idx_messages_conversation_id ON messages(conversation_id);
@@ -126,11 +133,12 @@ CREATE TRIGGER increment_message_version_trigger BEFORE UPDATE ON messages
 
 -- View for conversation summaries with message counts and date ranges
 CREATE VIEW conversation_summaries AS
-SELECT 
+SELECT
     c.id,
     c.title,
     c.created_at,
     c.updated_at,
+    c.is_saved,
     COUNT(m.id) as message_count,
     MIN(m.created_at) as earliest_message_at,
     MAX(m.created_at) as latest_message_at,
@@ -141,7 +149,7 @@ SELECT
     ), 200) as preview
 FROM conversations c
 LEFT JOIN messages m ON c.id = m.conversation_id
-GROUP BY c.id, c.title, c.created_at, c.updated_at;
+GROUP BY c.id, c.title, c.created_at, c.updated_at, c.is_saved;
 
 -- View for embedding coverage
 CREATE VIEW embedding_coverage AS

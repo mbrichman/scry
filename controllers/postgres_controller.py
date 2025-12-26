@@ -445,7 +445,79 @@ class PostgresController:
                 "success": False,
                 "message": f"Failed to delete conversation: {str(e)}"
             }
-    
+
+    def toggle_save_conversation(self, doc_id: str) -> Tuple[Dict[str, Any], int]:
+        """
+        POST /api/conversation/<doc_id>/save
+
+        Toggle the saved/bookmarked status of a conversation.
+        Returns the new saved state.
+        """
+        try:
+            from uuid import UUID
+
+            # Parse UUID
+            try:
+                conv_uuid = UUID(doc_id)
+            except ValueError:
+                return {
+                    "success": False,
+                    "message": "Invalid conversation ID format"
+                }, 400
+
+            # Toggle saved status
+            with get_unit_of_work() as uow:
+                new_state = uow.conversations.toggle_saved(conv_uuid)
+
+                if new_state is None:
+                    return {
+                        "success": False,
+                        "message": "Conversation not found"
+                    }, 404
+
+                uow.commit()
+                logger.info(f"Toggled saved status for conversation {doc_id}: {new_state}")
+                return {
+                    "success": True,
+                    "id": doc_id,
+                    "is_saved": new_state
+                }, 200
+
+        except Exception as e:
+            logger.error(f"Toggle save failed: {e}")
+            return {
+                "success": False,
+                "message": f"Failed to toggle save: {str(e)}"
+            }, 500
+
+    def get_saved_conversations(self) -> Dict[str, Any]:
+        """
+        GET /api/conversations/saved
+
+        Returns all saved/bookmarked conversations.
+        """
+        try:
+            # Get filter parameters from request
+            source_filter = request.args.get('source', 'all')
+            date_filter = request.args.get('date', 'all')
+            sort_order = request.args.get('sort', 'newest')
+
+            result = self.adapter.get_saved_conversations_summary(
+                source_filter=source_filter,
+                date_filter=date_filter,
+                sort_order=sort_order
+            )
+            return result
+
+        except Exception as e:
+            logger.error(f"Failed to get saved conversations: {e}")
+            return {
+                "error": str(e),
+                "documents": [],
+                "metadatas": [],
+                "ids": []
+            }
+
     # ===== EXPORT ENDPOINTS =====
     
     def export_conversation(self, doc_id: str) -> Any:
