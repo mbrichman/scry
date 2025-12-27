@@ -22,7 +22,7 @@ services:
       - dovos-network
 
   dovos-rag:
-    image: ghcr.io/mbrichman/dovos:main
+    image: ghcr.io/mbrichman/scry:main
     container_name: dovos-rag-api
     ports:
       - "5001:5001"
@@ -58,7 +58,7 @@ services:
       start_period: 40s
 
   dovos-embedding-worker:
-    image: ghcr.io/mbrichman/dovos:main
+    image: ghcr.io/mbrichman/scry:main
     container_name: dovos-embedding-worker
     command: python -m db.workers.embedding_worker --workers 4 --batch-size 20 --verbose
     environment:
