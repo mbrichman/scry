@@ -73,7 +73,7 @@ class TestFormatDetection:
     def test_detect_openwebui_format(self):
         """Test detection of OpenWebUI export format."""
         from db.importers.registry import detect_format
-        
+
         openwebui_data = {
             "conversations": [
                 {
@@ -102,12 +102,55 @@ class TestFormatDetection:
                 }
             ]
         }
-        
+
         conversations, format_type = detect_format(openwebui_data)
         assert format_type == "OpenWebUI"
         assert len(conversations) == 1
         assert "chat" in conversations[0]
-    
+
+    def test_detect_youtube_format(self):
+        """Test detection of YouTube watch history format."""
+        from db.importers.registry import detect_format
+
+        youtube_data = [
+            {
+                "title": "Building a RAG System from Scratch",
+                "titleUrl": "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
+                "time": "2024-01-15T14:30:00.000Z",
+                "subtitles": [
+                    {
+                        "name": "Tech Education Channel",
+                        "url": "https://www.youtube.com/channel/UC1234567890"
+                    }
+                ]
+            },
+            {
+                "title": "Introduction to Vector Databases",
+                "titleUrl": "https://www.youtube.com/watch?v=abc123xyz",
+                "time": "2024-01-16T10:15:00.000Z"
+            }
+        ]
+
+        conversations, format_type = detect_format(youtube_data)
+        assert format_type == "YouTube"
+        assert len(conversations) == 2
+
+    def test_detect_youtube_with_youtu_be_url(self):
+        """Test YouTube detection with youtu.be short URLs."""
+        from db.importers.registry import detect_format
+
+        youtube_data = [
+            {
+                "title": "Short URL Video",
+                "titleUrl": "https://youtu.be/abc123xyz",
+                "time": "2024-01-15T14:30:00.000Z"
+            }
+        ]
+
+        conversations, format_type = detect_format(youtube_data)
+        assert format_type == "YouTube"
+        assert len(conversations) == 1
+
     def test_detect_unknown_format(self):
         """Test detection returns Unknown for unrecognized format."""
         from db.importers.registry import detect_format

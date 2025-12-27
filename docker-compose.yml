@@ -79,6 +79,26 @@ services:
     networks:
       - dovos-network
 
+  dovos-youtube-worker:
+    image: ghcr.io/mbrichman/dovos:main
+    container_name: dovos-youtube-transcription-worker
+    command: python -m db.workers.youtube_transcription_worker
+    environment:
+      - USE_PG_SINGLE_STORE=${USE_PG_SINGLE_STORE:-true}
+      - DATABASE_URL=postgresql+psycopg://${POSTGRES_USER:-dovos}:${POSTGRES_PASSWORD:-dovos_password}@postgres:5432/${POSTGRES_DB:-dovos}
+      - PGAPPNAME=${PGAPPNAME:-dovos-youtube-worker}
+      - YOUTUBE_WORKER_BATCH_SIZE=${YOUTUBE_WORKER_BATCH_SIZE:-5}
+      - YOUTUBE_WORKER_POLL_INTERVAL=${YOUTUBE_WORKER_POLL_INTERVAL:-2}
+      - YOUTUBE_WORKER_MAX_RETRIES=${YOUTUBE_WORKER_MAX_RETRIES:-3}
+    volumes:
+      - ./logs:/app/logs
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+    networks:
+      - dovos-network
+
   dovos-mcp:
     build:
       context: .

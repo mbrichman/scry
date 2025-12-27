@@ -12,36 +12,48 @@ from db.importers.errors import FormatDetectionError, ImporterNotAvailableError
 def detect_format(data: Dict[str, Any] | List[Dict]) -> Tuple[List[Dict], str]:
     """
     Detect the format of imported chat data.
-    
+
     Args:
         data: Either a dict with 'conversations' key or a list of conversations
-        
+
     Returns:
         Tuple of (conversations_list, format_type_string)
-        Format types: 'ChatGPT', 'Claude', 'OpenWebUI', 'Unknown'
-    
+        Format types: 'ChatGPT', 'Claude', 'OpenWebUI', 'YouTube', 'Unknown'
+
     Format signatures:
     - ChatGPT: has 'title', 'mapping', and 'create_time'
     - Claude: has 'uuid', 'name', and 'chat_messages'
     - OpenWebUI: has 'chat.history.messages' as dict with id/role/content/timestamp
+    - YouTube: has 'title', 'titleUrl', and 'time' (watch history from Google Takeout)
     """
     # Ensure data is normalized to a list of conversations
     if isinstance(data, dict):
         conversations = data.get("conversations", [])
     else:
         conversations = data if isinstance(data, list) else []
-    
+
     if not conversations:
         return [], "Unknown"
-    
+
     # Check first conversation to determine format
     first_conv = conversations[0] if conversations else {}
     
-    # Check for OpenWebUI format first (most specific structure)
+    # Check for YouTube watch history format first (most specific)
+    # YouTube has 'title', 'titleUrl' (with youtube.com), and 'time'
+    if (isinstance(first_conv, dict) and
+        "title" in first_conv and
+        "titleUrl" in first_conv and
+        "time" in first_conv):
+        # Verify it's actually YouTube by checking the URL
+        title_url = first_conv.get("titleUrl", "")
+        if "youtube.com" in title_url or "youtu.be" in title_url:
+            return conversations, "YouTube"
+
+    # Check for OpenWebUI format (most specific structure)
     chat = first_conv.get("chat", {}) if isinstance(first_conv, dict) else {}
     hist = chat.get("history", {}) if isinstance(chat, dict) else {}
     msgs = hist.get("messages")
-    
+
     if isinstance(msgs, dict) and msgs:
         # Validate that at least one message has required OpenWebUI fields
         try:
@@ -50,10 +62,10 @@ def detect_format(data: Dict[str, Any] | List[Dict]) -> Tuple[List[Dict], str]:
                 return conversations, "OpenWebUI"
         except (StopIteration, TypeError):
             pass
-    
+
     # Check for Claude format
     # Claude has uuid, name (can be empty string), and chat_messages
-    if (first_conv.get("uuid") and 
+    if (first_conv.get("uuid") and
         first_conv.get("name") is not None and  # name can be empty string
         "chat_messages" in first_conv):
         return conversations, "Claude"

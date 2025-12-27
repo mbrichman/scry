@@ -1,0 +1,67 @@
+[
+  {
+    "header": "YouTube",
+    "title": "Building a RAG System from Scratch",
+    "titleUrl": "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
+    "subtitles": [
+      {
+        "name": "Tech Education Channel",
+        "url": "https://www.youtube.com/channel/UC1234567890"
+      }
+    ],
+    "time": "2024-01-15T14:30:00.000Z",
+    "products": ["YouTube"]
+  },
+  {
+    "header": "YouTube",
+    "title": "Introduction to Vector Databases",
+    "titleUrl": "https://www.youtube.com/watch?v=abc123xyz",
+    "subtitles": [
+      {
+        "name": "Database Learning",
+        "url": "https://www.youtube.com/channel/UC9876543210"
+      }
+    ],
+    "time": "2024-01-16T10:15:00.000Z",
+    "products": ["YouTube"]
+  },
+  {
+    "header": "YouTube",
+    "title": "Python FastAPI Tutorial - Full Course",
+    "titleUrl": "https://www.youtube.com/watch?v=xyz789abc",
+    "subtitles": [
+      {
+        "name": "Code with Python",
+        "url": "https://www.youtube.com/channel/UC5555555555"
+      }
+    ],
+    "time": "2024-01-17T20:45:00.000Z",
+    "products": ["YouTube"]
+  },
+  {
+    "header": "YouTube",
+    "title": "Understanding Embeddings and Semantic Search",
+    "titleUrl": "https://www.youtube.com/watch?v=semantic123",
+    "subtitles": [
+      {
+        "name": "AI Explained",
+        "url": "https://www.youtube.com/channel/UC7777777777"
+      }
+    ],
+    "time": "2024-01-18T09:00:00.000Z",
+    "products": ["YouTube"]
+  },
+  {
+    "header": "YouTube",
+    "title": "Docker Compose Best Practices",
+    "titleUrl": "https://www.youtube.com/watch?v=docker456",
+    "subtitles": [
+      {
+        "name": "DevOps Mastery",
+        "url": "https://www.youtube.com/channel/UC8888888888"
+      }
+    ],
+    "time": "2024-01-19T16:20:00.000Z",
+    "products": ["YouTube"]
+  }
+]

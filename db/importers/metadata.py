@@ -108,4 +108,26 @@ DEFAULT_METADATA: Dict[str, ExtractorMetadata] = {
         },
         breaking_changes=[],
     ),
+    'youtube': ExtractorMetadata(
+        name='YouTube',
+        version='1.0.0',
+        description='YouTube watch history format message extractor. Extracts watch events from Google Takeout YouTube watch history.',
+        author='DovOS Contributors',
+        supported_extensions=['.json'],
+        capabilities={
+            'auto_detect': True,
+            'streaming': False,
+            'transcription': True,
+            'summarization': True,
+        },
+        format_spec={
+            'description': 'YouTube watch history from Google Takeout',
+            'input_type': 'list',
+            'structure': 'List of watch history items with title, titleUrl, time, and optional subtitles',
+            'required_fields': ['title', 'titleUrl', 'time'],
+            'timestamp_format': 'ISO 8601',
+            'video_id_extraction': 'Extracted from titleUrl',
+        },
+        breaking_changes=[],
+    ),
 }

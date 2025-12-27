@@ -98,22 +98,32 @@ class ConversationImportService:
             result.messages.append(f"📥 Importing {len(conversations)} conversations from {format_type} format")
             logger.info(f"🔍 Detected {format_type} format with {len(conversations)} conversations")
             logger.info(f"📥 Importing {len(conversations)} conversations from {format_type} format")
-            
+
             # Build map of existing conversations for duplicate detection
             existing_conv_map = self._build_existing_conversations_map()
             result.messages.append(f"Found {len(existing_conv_map)} existing conversations for duplicate checking")
-            
-            # Process each conversation
-            for conv_data in conversations:
+
+            # Special handling for YouTube watch history
+            if format_type == 'YouTube':
                 try:
-                    self._import_single_conversation(
-                        conv_data, format_type, existing_conv_map, result
-                    )
+                    self._import_youtube_watch_history(conversations, existing_conv_map, result)
                 except Exception as e:
-                    error_msg = f"Failed to import conversation '{conv_data.get('title', 'Unknown')}': {e}"
+                    error_msg = f"Failed to import YouTube watch history: {e}"
                     result.errors.append(error_msg)
                     result.failed_count += 1
                     logger.error(error_msg)
+            else:
+                # Process each conversation
+                for conv_data in conversations:
+                    try:
+                        self._import_single_conversation(
+                            conv_data, format_type, existing_conv_map, result
+                        )
+                    except Exception as e:
+                        error_msg = f"Failed to import conversation '{conv_data.get('title', 'Unknown')}': {e}"
+                        result.errors.append(error_msg)
+                        result.failed_count += 1
+                        logger.error(error_msg)
             
             # Generate summary message
             if result.imported_count == 0:
@@ -302,6 +312,11 @@ class ConversationImportService:
             elif 'chat' in conv_data and 'history' in conv_data.get('chat', {}) and 'messages' in conv_data['chat']['history']:  # OpenWebUI format
                 if 'openwebui' in FORMAT_REGISTRY:
                     messages = FORMAT_REGISTRY['openwebui'](conv_data['chat']['history']['messages'])
+            elif format_type == 'YouTube' and 'titleUrl' in conv_data:  # YouTube watch history - single item in list
+                # For YouTube, the entire watch history is one conversation
+                # conv_data is already a watch event, not a conversation
+                if 'youtube' in FORMAT_REGISTRY:
+                    messages = FORMAT_REGISTRY['youtube']([conv_data])
         except (KeyError, TypeError, ValueError) as e:
             available_formats = list(FORMAT_REGISTRY.keys())
             error = ExtractionError(
@@ -490,6 +505,149 @@ class ConversationImportService:
 
         if result.imported_count % 50 == 0:
             logger.info(f"Imported {result.imported_count} conversations...")
+
+    def _import_youtube_watch_history(
+        self,
+        watch_events: List[Dict[str, Any]],
+        existing_conv_map: Dict[str, Tuple[str, str, datetime]],
+        result: ImportResult
+    ) -> None:
+        """
+        Import YouTube watch history as a single conversation.
+
+        Args:
+            watch_events: List of YouTube watch events
+            existing_conv_map: Map of existing conversations for duplicate detection
+            result: ImportResult object to update with counts
+
+        Raises:
+            Exceptions are caught and recorded in result
+        """
+        if not watch_events or 'youtube' not in FORMAT_REGISTRY:
+            return
+
+        # Extract all messages from watch history
+        try:
+            messages = FORMAT_REGISTRY['youtube'](watch_events)
+        except (KeyError, TypeError, ValueError) as e:
+            available_formats = list(FORMAT_REGISTRY.keys())
+            from db.importers.errors import ExtractionError, get_user_friendly_error_message
+            error = ExtractionError(format_name='YouTube', original_error=e)
+            user_msg = get_user_friendly_error_message(error, available_formats)
+            logger.error(f"Failed to extract messages from YouTube: {e}")
+            raise ValueError(user_msg)
+
+        if not messages:
+            logger.warning("No valid YouTube watch events found")
+            return
+
+        # Create a title with date range
+        timestamps = [msg.get('created_at') for msg in messages if msg.get('created_at')]
+        if timestamps:
+            earliest = min(timestamps)
+            latest = max(timestamps)
+            earliest_dt = datetime.fromtimestamp(earliest, tz=timezone.utc)
+            latest_dt = datetime.fromtimestamp(latest, tz=timezone.utc)
+            title = f"YouTube Watch History ({earliest_dt.strftime('%Y-%m-%d')} to {latest_dt.strftime('%Y-%m-%d')})"
+        else:
+            title = "YouTube Watch History"
+
+        # Use a consistent source_id for YouTube watch history
+        source_id = 'youtube_watch_history'
+
+        # Check if we already have a YouTube watch history conversation
+        if source_id in existing_conv_map:
+            existing_hash, existing_db_id, existing_source_updated_at = existing_conv_map[source_id]
+
+            # Calculate content hash for comparison
+            full_content = "\n\n".join(msg['content'] for msg in messages if msg['content'].strip())
+            content_hash = hashlib.sha256(full_content.encode()).hexdigest()
+
+            if content_hash == existing_hash:
+                # Identical content, skip
+                result.skipped_duplicates += 1
+                logger.info(f"Skipping duplicate YouTube watch history")
+                return
+            else:
+                # Content changed - update the existing conversation
+                # For YouTube, we'll replace the messages since the whole history changed
+                logger.info(f"Updating existing YouTube watch history with {len(messages)} watch events")
+                result.updated_count += 1
+                # TODO: Implement update logic if needed
+                return
+
+        # Import as a new conversation
+        with get_unit_of_work() as uow:
+            # Create conversation with YouTube source tracking
+            conv_kwargs = {
+                'title': title,
+                'source_id': source_id,
+                'source_type': 'youtube',
+            }
+
+            # Set timestamps from messages
+            if timestamps:
+                conv_kwargs['created_at'] = datetime.fromtimestamp(min(timestamps), tz=timezone.utc)
+                conv_kwargs['updated_at'] = datetime.fromtimestamp(max(timestamps), tz=timezone.utc)
+                conv_kwargs['source_updated_at'] = datetime.fromtimestamp(max(timestamps), tz=timezone.utc)
+
+            conversation = uow.conversations.create(**conv_kwargs)
+            uow.session.flush()
+
+            # Create all watch event messages
+            for msg in messages:
+                message_metadata = msg.get('metadata', {})
+
+                msg_kwargs = {
+                    'conversation_id': conversation.id,
+                    'role': msg['role'],
+                    'content': msg['content'],
+                    'message_metadata': message_metadata
+                }
+
+                # Add timestamp if available
+                msg_ts = msg.get('created_at')
+                if msg_ts:
+                    try:
+                        msg_kwargs['created_at'] = datetime.fromtimestamp(msg_ts, tz=timezone.utc)
+                    except (ValueError, TypeError, OSError):
+                        pass
+
+                message = uow.messages.create(**msg_kwargs)
+                uow.session.flush()
+
+                # Enqueue embedding job
+                job_payload = {
+                    'message_id': str(message.id),
+                    'conversation_id': str(conversation.id),
+                    'content': msg['content'],
+                    'model': 'all-MiniLM-L6-v2'
+                }
+
+                uow.jobs.enqueue(
+                    kind='generate_embedding',
+                    payload=job_payload
+                )
+
+                # Enqueue transcription job if video_id is present
+                if message_metadata.get('video_id'):
+                    transcription_payload = {
+                        'message_id': str(message.id),
+                        'video_id': message_metadata['video_id'],
+                        'video_url': message_metadata.get('video_url', ''),
+                    }
+
+                    uow.jobs.enqueue(
+                        kind='youtube_transcription',
+                        payload=transcription_payload
+                    )
+
+            # Commit transaction
+            uow.commit()
+
+        result.imported_count += 1
+        result.messages.append(f"✅ Imported YouTube watch history with {len(messages)} videos")
+        logger.info(f"✅ Imported YouTube watch history with {len(messages)} videos")
 
     def _extract_source_updated_at(self, conv_data: Dict[str, Any], format_type: str) -> datetime:
         """
