@@ -7,6 +7,7 @@ Unified SearchService with hybrid ranking combining:
 """
 
 import logging
+from datetime import datetime, timezone
 from typing import List, Dict, Any, Optional, Tuple
 from uuid import UUID
 from dataclasses import dataclass
@@ -23,8 +24,9 @@ logger = logging.getLogger(__name__)
 class SearchConfig:
     """Configuration for search behavior and ranking weights."""
     # Ranking weights (must sum to 1.0)
-    vector_weight: float = 0.6
-    fts_weight: float = 0.4
+    # Changed from 0.6/0.4 to 0.4/0.6 - FTS is more reliable for exact queries
+    vector_weight: float = 0.4
+    fts_weight: float = 0.6
 
     # Search thresholds
     vector_similarity_threshold: float = 0.2  # Minimum cosine similarity
@@ -45,7 +47,23 @@ class SearchConfig:
     enable_typo_tolerance: bool = True
     typo_tolerance_threshold: float = 0.15  # Minimum trigram similarity for fuzzy matches
     typo_fallback_min_results: int = 3  # If FTS returns fewer results, try fuzzy matching
-    
+
+    # Phrase matching (Phase 1 improvements)
+    enable_phrase_matching: bool = True  # Use phraseto_tsquery for multi-word queries
+    phrase_boost: float = 2.0  # Boost multiplier for phrase matches
+
+    # Exact substring boost (Phase 1 improvements)
+    enable_exact_substring_boost: bool = True  # Boost results containing exact query
+    exact_substring_boost: float = 1.5  # Multiplier for exact substring matches
+
+    # Recency boost - favor recent conversations in search
+    enable_recency_boost: bool = True  # Boost newer conversations
+    recency_weight: float = 0.15  # 15% of score comes from recency
+    recency_full_boost_days: int = 30  # Full recency score for last 30 days
+    recency_half_boost_days: int = 60  # 75% score for 30-60 days
+    recency_quarter_boost_days: int = 180  # 50% score for 60-180 days
+    # Older than 180 days gets 25% recency score
+
     def __post_init__(self):
         """Validate configuration."""
         if abs(self.vector_weight + self.fts_weight - 1.0) > 0.01:
@@ -164,7 +182,7 @@ class SearchService:
 
                 # Combine and rank results
                 combined_results = self._combine_and_rank_results(
-                    fts_results, vector_results, config
+                    fts_results, vector_results, config, query
                 )
 
                 # Apply quality cutoff if enabled and not showing all
@@ -339,19 +357,30 @@ class SearchService:
         return self.embedding_generator.generate_embedding(query)
     
     def _fts_search(self, uow, query: str, config: SearchConfig, conversation_id: Optional[UUID]) -> List[Dict[str, Any]]:
-        """Perform full-text search with typo tolerance fallback."""
+        """Perform full-text search with phrase matching and typo tolerance."""
         # Expand query if enabled
         if config.enable_query_expansion:
             expanded_query = self._expand_query(query)
         else:
             expanded_query = query
 
-        # Search with expanded query
-        results = uow.messages.search_full_text(
-            query=expanded_query,
-            limit=config.max_fts_results,
-            conversation_id=conversation_id
-        )
+        # Use phrase matching for multi-word queries if enabled
+        if config.enable_phrase_matching and len(query.strip().split()) >= 2:
+            # Use phrase-aware search (boosts exact phrase matches)
+            results = uow.messages.search_full_text_phrase(
+                query=query,  # Use original query for phrase matching
+                limit=config.max_fts_results,
+                conversation_id=conversation_id,
+                phrase_boost=config.phrase_boost
+            )
+            logger.debug(f"📝 Using phrase matching for multi-word query")
+        else:
+            # Standard FTS for single words or when phrase matching disabled
+            results = uow.messages.search_full_text(
+                query=expanded_query,
+                limit=config.max_fts_results,
+                conversation_id=conversation_id
+            )
 
         # Filter by rank threshold
         filtered_results = [
@@ -449,53 +478,76 @@ class SearchService:
         # No significant drop found, use initial limit
         return config.initial_result_limit
     
-    def _combine_and_rank_results(self, 
-                                 fts_results: List[Dict[str, Any]], 
-                                 vector_results: List[Dict[str, Any]], 
-                                 config: SearchConfig) -> List[SearchResult]:
-        """Combine FTS and vector results with hybrid ranking."""
-        
+    def _combine_and_rank_results(self,
+                                 fts_results: List[Dict[str, Any]],
+                                 vector_results: List[Dict[str, Any]],
+                                 config: SearchConfig,
+                                 query: str = "") -> List[SearchResult]:
+        """Combine FTS and vector results with hybrid ranking and exact substring boost."""
+
         # Index results by message_id for merging
         fts_by_id = {r['metadata']['message_id']: r for r in fts_results}
         vector_by_id = {r['metadata']['message_id']: r for r in vector_results}
-        
+
         # Get all unique message IDs
         all_message_ids = set(fts_by_id.keys()) | set(vector_by_id.keys())
-        
+
+        # Prepare for exact substring matching
+        query_lower = query.lower().strip() if query else ""
+        exact_boost_applied = 0
+
         combined_results = []
-        
+
         for message_id in all_message_ids:
             fts_result = fts_by_id.get(message_id)
             vector_result = vector_by_id.get(message_id)
-            
+
             # Extract scores (normalize to 0-1 range)
             fts_score = 0.0
             vector_score = 0.0
-            
+
             if fts_result:
                 fts_rank = fts_result['metadata'].get('rank', 0)
                 fts_score = self._normalize_fts_score(fts_rank)
-            
+
             if vector_result:
                 similarity = vector_result['metadata'].get('similarity', 0)
                 vector_score = max(0, similarity)  # Similarity is already 0-1
-            
+
             # Calculate combined score
             combined_score = (
-                config.fts_weight * fts_score + 
+                config.fts_weight * fts_score +
                 config.vector_weight * vector_score
             )
-            
+
             # Use the result with more complete data (prefer vector for content quality)
             base_result = vector_result or fts_result
             meta = base_result['metadata']
-            
+            content = self._extract_content_from_document(base_result['document'])
+
+            # Apply exact substring boost if enabled
+            if (config.enable_exact_substring_boost and
+                query_lower and
+                len(query_lower) >= 3 and
+                query_lower in content.lower()):
+                combined_score *= config.exact_substring_boost
+                exact_boost_applied += 1
+
+            # Apply recency boost if enabled
+            if config.enable_recency_boost:
+                recency_score = self._calculate_recency_score(meta['earliest_ts'], config)
+                # Blend: (1 - recency_weight) * relevance + recency_weight * recency
+                combined_score = (
+                    (1 - config.recency_weight) * combined_score +
+                    config.recency_weight * recency_score
+                )
+
             # Create unified search result
             search_result = SearchResult(
                 message_id=meta['message_id'],
                 conversation_id=meta['conversation_id'],
                 role=meta['role'],
-                content=self._extract_content_from_document(base_result['document']),
+                content=content,
                 created_at=meta['earliest_ts'],
                 conversation_title=meta['title'],
                 combined_score=combined_score,
@@ -506,12 +558,14 @@ class SearchService:
                 distance=vector_result['metadata'].get('distance') if vector_result else None,
                 source='hybrid'
             )
-            
+
             combined_results.append(search_result)
-        
+
         # Sort by combined score (descending)
         combined_results.sort(key=lambda x: x.combined_score, reverse=True)
-        
+
+        if exact_boost_applied > 0:
+            logger.debug(f"🎯 Exact substring boost applied to {exact_boost_applied} results")
         logger.debug(f"Combined: {len(all_message_ids)} unique messages")
         return combined_results
     
@@ -521,11 +575,51 @@ class SearchService:
         # But can be higher, so we use a logarithmic normalization
         if fts_rank <= 0:
             return 0.0
-        
+
         # Use log normalization to handle wide range of FTS scores
         normalized = math.log(1 + fts_rank) / math.log(2)  # log2(1 + rank)
         return min(1.0, normalized)
-    
+
+    def _calculate_recency_score(self, created_at: str, config: SearchConfig) -> float:
+        """
+        Calculate recency score (0-1) based on age of content.
+
+        Uses linear window decay:
+        - Last 30 days: 1.0 (full score)
+        - 30-60 days: 0.75
+        - 60-180 days: 0.5
+        - Older: 0.25
+        """
+        try:
+            # Parse timestamp
+            if isinstance(created_at, str):
+                if 'T' in created_at:
+                    dt = datetime.fromisoformat(created_at.replace('Z', '+00:00'))
+                else:
+                    dt = datetime.strptime(created_at, "%Y-%m-%d %H:%M:%S")
+                    dt = dt.replace(tzinfo=timezone.utc)
+            else:
+                dt = created_at
+
+            now = datetime.now(timezone.utc)
+            age_days = (now - dt).days
+
+            if age_days < 0:
+                age_days = 0
+
+            # Linear window decay
+            if age_days <= config.recency_full_boost_days:
+                return 1.0
+            elif age_days <= config.recency_half_boost_days:
+                return 0.75
+            elif age_days <= config.recency_quarter_boost_days:
+                return 0.5
+            else:
+                return 0.25
+
+        except Exception:
+            return 0.5  # Default to middle score on parse error
+
     def _expand_query(self, query: str) -> str:
         """Expand query with synonyms and related terms."""
         # Simple query expansion - in production, use a proper synonym dictionary

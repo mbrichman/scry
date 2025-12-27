@@ -146,8 +146,162 @@ class MessageRepository(BaseRepository[Message]):
             })
         
         return messages
-    
-    def search_trigram(self, query: str, limit: int = 10, 
+
+    def search_full_text_phrase(self, query: str, limit: int = 10,
+                                conversation_id: Optional[UUID] = None,
+                                phrase_boost: float = 2.0) -> List[Dict[str, Any]]:
+        """
+        Perform full-text search with phrase matching support.
+
+        For multi-word queries, this method:
+        1. Uses phraseto_tsquery to find exact phrase matches (words in sequence)
+        2. Uses plainto_tsquery to find general word matches
+        3. Boosts phrase matches by the specified multiplier
+
+        This significantly improves ranking for queries like "circumstances have changed"
+        where the exact phrase should rank higher than scattered word matches.
+        """
+        words = query.strip().split()
+        use_phrase_matching = len(words) >= 2
+
+        if use_phrase_matching:
+            # Combined query: phrase matches get boosted score
+            if conversation_id:
+                sql_query = text("""
+                    WITH phrase_matches AS (
+                        SELECT
+                            m.id,
+                            m.conversation_id,
+                            m.role,
+                            m.content,
+                            m.created_at,
+                            m.metadata,
+                            c.title as conversation_title,
+                            ts_rank(m.message_search, phraseto_tsquery('english', :query)) * :phrase_boost as rank,
+                            TRUE as is_phrase_match
+                        FROM messages m
+                        JOIN conversations c ON m.conversation_id = c.id
+                        WHERE m.message_search @@ phraseto_tsquery('english', :query)
+                        AND m.conversation_id = :conversation_id
+                    ),
+                    word_matches AS (
+                        SELECT
+                            m.id,
+                            m.conversation_id,
+                            m.role,
+                            m.content,
+                            m.created_at,
+                            m.metadata,
+                            c.title as conversation_title,
+                            ts_rank(m.message_search, plainto_tsquery('english', :query)) as rank,
+                            FALSE as is_phrase_match
+                        FROM messages m
+                        JOIN conversations c ON m.conversation_id = c.id
+                        WHERE m.message_search @@ plainto_tsquery('english', :query)
+                        AND m.conversation_id = :conversation_id
+                        AND m.id NOT IN (SELECT id FROM phrase_matches)
+                    ),
+                    combined AS (
+                        SELECT * FROM phrase_matches
+                        UNION ALL
+                        SELECT * FROM word_matches
+                    )
+                    SELECT * FROM combined
+                    ORDER BY rank DESC, created_at DESC, id DESC
+                    LIMIT :limit
+                """)
+                params = {
+                    'query': query,
+                    'conversation_id': conversation_id,
+                    'phrase_boost': phrase_boost,
+                    'limit': limit
+                }
+            else:
+                sql_query = text("""
+                    WITH phrase_matches AS (
+                        SELECT
+                            m.id,
+                            m.conversation_id,
+                            m.role,
+                            m.content,
+                            m.created_at,
+                            m.metadata,
+                            c.title as conversation_title,
+                            ts_rank(m.message_search, phraseto_tsquery('english', :query)) * :phrase_boost as rank,
+                            TRUE as is_phrase_match
+                        FROM messages m
+                        JOIN conversations c ON m.conversation_id = c.id
+                        WHERE m.message_search @@ phraseto_tsquery('english', :query)
+                    ),
+                    word_matches AS (
+                        SELECT
+                            m.id,
+                            m.conversation_id,
+                            m.role,
+                            m.content,
+                            m.created_at,
+                            m.metadata,
+                            c.title as conversation_title,
+                            ts_rank(m.message_search, plainto_tsquery('english', :query)) as rank,
+                            FALSE as is_phrase_match
+                        FROM messages m
+                        JOIN conversations c ON m.conversation_id = c.id
+                        WHERE m.message_search @@ plainto_tsquery('english', :query)
+                        AND m.id NOT IN (SELECT id FROM phrase_matches)
+                    ),
+                    combined AS (
+                        SELECT * FROM phrase_matches
+                        UNION ALL
+                        SELECT * FROM word_matches
+                    )
+                    SELECT * FROM combined
+                    ORDER BY rank DESC, created_at DESC, id DESC
+                    LIMIT :limit
+                """)
+                params = {
+                    'query': query,
+                    'phrase_boost': phrase_boost,
+                    'limit': limit
+                }
+        else:
+            # Single word: just use standard FTS
+            return self.search_full_text(query, limit, conversation_id)
+
+        result = self.session.execute(sql_query, params)
+        messages = []
+
+        for row in result:
+            timestamp_str = row.created_at.strftime("%Y-%m-%d %H:%M:%S")
+
+            if row.role == 'user':
+                document_content = f"**You said** *(on {timestamp_str})*:\n\n{row.content}"
+            elif row.role == 'assistant':
+                document_content = f"**Assistant said** *(on {timestamp_str})*:\n\n{row.content}"
+            elif row.role == 'system':
+                document_content = f"**System** *(on {timestamp_str})*:\n\n{row.content}"
+            else:
+                document_content = f"**{row.role.capitalize()}** *(on {timestamp_str})*:\n\n{row.content}"
+
+            messages.append({
+                'id': str(row.conversation_id),
+                'document': document_content,
+                'metadata': {
+                    'title': row.conversation_title,
+                    'source': 'postgres',
+                    'message_count': 1,
+                    'earliest_ts': row.created_at.isoformat(),
+                    'latest_ts': row.created_at.isoformat(),
+                    'conversation_id': str(row.conversation_id),
+                    'message_id': str(row.id),
+                    'role': row.role,
+                    'rank': float(row.rank),
+                    'is_phrase_match': row.is_phrase_match
+                }
+            })
+
+        return messages
+
+    def search_trigram(self, query: str, limit: int = 10,
                       similarity_threshold: float = 0.1) -> List[Dict[str, Any]]:
         """
         Perform fuzzy text search using PostgreSQL's pg_trgm extension.
