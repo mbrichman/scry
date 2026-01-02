@@ -186,3 +186,13 @@ def init_routes(app):
     def api_sync_status():
         """Get sync status and statistics"""
         return jsonify(postgres_controller.get_sync_status())
+
+    @app.route("/api/watch-folder/status", methods=["GET"])
+    def api_watch_folder_status():
+        """Get watch folder status"""
+        return jsonify(postgres_controller.get_watch_folder_status())
+
+    @app.route("/api/watch-folder/test", methods=["POST"])
+    def api_watch_folder_test():
+        """Test if a folder path is valid and writable"""
+        return jsonify(postgres_controller.test_watch_folder(request))

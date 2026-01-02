@@ -1125,6 +1125,93 @@ class PostgresController:
                 "sync_running": False
             }
 
+    # ===== WATCH FOLDER ENDPOINTS =====
+
+    def get_watch_folder_status(self) -> Dict[str, Any]:
+        """
+        GET /api/watch-folder/status
+
+        Get watch folder configuration and worker status.
+
+        Returns:
+            Dict with watch folder status information
+        """
+        from datetime import datetime, timezone
+
+        try:
+            with get_unit_of_work() as uow:
+                folder_path = uow.settings.get_value('watch_folder_path', '')
+                enabled = uow.settings.get_value('watch_folder_enabled', 'false').lower() == 'true'
+                last_check = uow.settings.get_value('watch_folder_last_check')
+                heartbeat_str = uow.settings.get_value('watch_folder_worker_heartbeat')
+
+                # Check if worker is running based on heartbeat
+                worker_running = False
+                if heartbeat_str:
+                    try:
+                        heartbeat = datetime.fromisoformat(heartbeat_str)
+                        elapsed = (datetime.now(timezone.utc) - heartbeat).total_seconds()
+                        worker_running = elapsed < 60  # Worker is running if heartbeat is less than 60s old
+                    except ValueError:
+                        logger.warning(f"Invalid watch folder heartbeat: {heartbeat_str}")
+
+                return {
+                    "folder_path": folder_path,
+                    "enabled": enabled,
+                    "last_check": last_check,
+                    "worker_status": "running" if worker_running else "stopped",
+                    "worker_heartbeat": heartbeat_str
+                }
+
+        except Exception as e:
+            logger.error(f"Failed to get watch folder status: {e}")
+            return {
+                "folder_path": "",
+                "enabled": False,
+                "last_check": None,
+                "worker_status": "unknown",
+                "error": str(e)
+            }
+
+    def test_watch_folder(self, request_obj) -> Dict[str, Any]:
+        """
+        POST /api/watch-folder/test
+
+        Test if a folder path is valid and writable.
+
+        Args:
+            request_obj: Flask request object with JSON body containing 'path'
+
+        Returns:
+            Dict with validation result
+        """
+        from db.services.watch_folder_service import WatchFolderService
+
+        try:
+            data = request_obj.get_json()
+            folder_path = data.get('path', '')
+
+            if not folder_path:
+                return {
+                    "valid": False,
+                    "message": "No folder path provided"
+                }
+
+            service = WatchFolderService()
+            is_valid, message = service.validate_folder(folder_path)
+
+            return {
+                "valid": is_valid,
+                "message": message
+            }
+
+        except Exception as e:
+            logger.error(f"Failed to test watch folder: {e}")
+            return {
+                "valid": False,
+                "message": str(e)
+            }
+
 
 # ===== ATTACHMENT EXTRACTION UTILITIES =====
 

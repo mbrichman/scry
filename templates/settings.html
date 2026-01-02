@@ -236,6 +236,69 @@
     </div>
 
     <div class="settings-card">
+        <h3>📁 Watch Folder Import</h3>
+
+        <p style="margin-bottom: 15px; color: #666;">
+            Automatically import conversations from .zip and .json files dropped into a watched folder.
+        </p>
+
+        <form id="watchFolderForm">
+            <div class="form-group">
+                <label for="watch_folder_path">Watch Folder Path</label>
+                <input
+                    type="text"
+                    id="watch_folder_path"
+                    name="watch_folder_path"
+                    placeholder="/path/to/watch/folder"
+                    value="{{ settings.get('watch_folder_path', '') }}"
+                >
+                <div class="form-help">
+                    Absolute path to the folder to monitor for import files. Subfolders <code>archive/</code> and <code>failed/</code> will be created automatically.
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label style="display: flex; align-items: center; gap: 10px; cursor: pointer;">
+                    <input
+                        type="checkbox"
+                        id="watch_folder_enabled"
+                        name="watch_folder_enabled"
+                        style="width: auto;"
+                        {% if settings.get('watch_folder_enabled', 'false') == 'true' %}checked{% endif %}
+                    >
+                    <span>Enable Watch Folder</span>
+                </label>
+                <div class="form-help" style="margin-left: 28px;">
+                    When enabled, the folder will be scanned periodically for new files.
+                </div>
+            </div>
+
+            <div class="button-group">
+                <button type="submit" class="btn btn-primary">Save Settings</button>
+                <button type="button" class="btn btn-secondary" onclick="testWatchFolder()">Test Folder</button>
+            </div>
+        </form>
+
+        <!-- Watch Folder Status Section -->
+        <div style="margin-top: 20px; padding: 15px; background: #f8f9fa; border-radius: 4px;">
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+                <div>
+                    <strong>Worker Status:</strong>
+                    <span id="watchFolderWorkerStatus" style="margin-left: 8px;">
+                        <span class="status-indicator">⚪</span> Checking...
+                    </span>
+                </div>
+                <button type="button" class="btn btn-secondary" style="padding: 5px 10px;" onclick="refreshWatchFolderStatus()">
+                    🔄 Refresh
+                </button>
+            </div>
+            <div id="watchFolderStats" style="margin-top: 10px; font-size: 14px; color: #666;">
+                Loading status...
+            </div>
+        </div>
+    </div>
+
+    <div class="settings-card">
         <h3>🧠 Embedding Configuration</h3>
 
         <!-- Worker Status Section -->
@@ -570,7 +633,114 @@
     document.addEventListener('DOMContentLoaded', function() {
         refreshEmbeddingStatus();
         refreshSyncStatus();
+        refreshWatchFolderStatus();
     });
+
+    // ==== WATCH FOLDER FUNCTIONS ====
+
+    document.getElementById('watchFolderForm').addEventListener('submit', async function(e) {
+        e.preventDefault();
+
+        const formData = new FormData(this);
+        const settings = {
+            watch_folder_path: formData.get('watch_folder_path'),
+            watch_folder_enabled: document.getElementById('watch_folder_enabled').checked ? 'true' : 'false'
+        };
+
+        try {
+            const response = await fetch('/api/settings', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(settings)
+            });
+
+            const data = await response.json();
+
+            if (response.ok) {
+                showMessage('Watch folder settings saved successfully!', 'success');
+                // Refresh status after saving
+                setTimeout(refreshWatchFolderStatus, 500);
+            } else {
+                showMessage('Error: ' + (data.error || 'Failed to save settings'), 'error');
+            }
+        } catch (error) {
+            showMessage('Error: ' + error.message, 'error');
+        }
+    });
+
+    async function testWatchFolder() {
+        const folderPath = document.getElementById('watch_folder_path').value;
+
+        if (!folderPath) {
+            showMessage('Please enter a folder path to test', 'info');
+            return;
+        }
+
+        showMessage('Testing folder access...', 'testing');
+
+        try {
+            const response = await fetch('/api/watch-folder/test', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ path: folderPath })
+            });
+
+            const data = await response.json();
+
+            if (data.valid) {
+                showMessage('Folder is valid and writable!', 'success');
+            } else {
+                showMessage('Folder test failed: ' + data.message, 'error');
+            }
+        } catch (error) {
+            showMessage('Error testing folder: ' + error.message, 'error');
+        }
+    }
+
+    async function refreshWatchFolderStatus() {
+        try {
+            const response = await fetch('/api/watch-folder/status');
+            const data = await response.json();
+
+            // Update worker status
+            const statusEl = document.getElementById('watchFolderWorkerStatus');
+            if (data.worker_status === 'running') {
+                statusEl.innerHTML = '<span style="color: #28a745;">🟢 Running</span>';
+            } else {
+                statusEl.innerHTML = '<span style="color: #dc3545;">🔴 Stopped</span>';
+            }
+
+            // Update stats
+            const statsEl = document.getElementById('watchFolderStats');
+            let statsHtml = '';
+
+            if (data.enabled) {
+                statsHtml += `<strong>Status:</strong> Enabled`;
+            } else {
+                statsHtml += `<strong>Status:</strong> Disabled`;
+            }
+
+            if (data.folder_path) {
+                statsHtml += ` | <strong>Path:</strong> ${data.folder_path}`;
+            }
+
+            if (data.last_check) {
+                const lastCheck = new Date(data.last_check);
+                statsHtml += `<br><strong>Last Check:</strong> ${lastCheck.toLocaleString()}`;
+            }
+
+            statsEl.innerHTML = statsHtml || 'No status available';
+
+        } catch (error) {
+            console.error('Failed to fetch watch folder status:', error);
+            document.getElementById('watchFolderWorkerStatus').innerHTML = '<span style="color: #999;">⚪ Unknown</span>';
+            document.getElementById('watchFolderStats').textContent = 'Failed to load status';
+        }
+    }
 
     // ==== SYNC FUNCTIONS ====
 

@@ -26,6 +26,8 @@ services:
     container_name: dovos-rag-api
     ports:
       - "5001:5001"
+    extra_hosts:
+      - "oi.dovrichman.site:host-gateway"
     environment:
       - USE_PG_SINGLE_STORE=${USE_PG_SINGLE_STORE:-true}
       - DATABASE_URL=postgresql+psycopg://${POSTGRES_USER:-dovos}:${POSTGRES_PASSWORD:-dovos_password}@postgres:5432/${POSTGRES_DB:-dovos}
@@ -72,6 +74,24 @@ services:
       - CUDA_VISIBLE_DEVICES=""
     volumes:
       - ./logs:/app/logs
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+    networks:
+      - dovos-network
+
+  dovos-watch-folder-worker:
+    image: ghcr.io/mbrichman/scry:main
+    container_name: dovos-watch-folder-worker
+    command: python -m db.workers.watch_folder_worker --verbose
+    environment:
+      - USE_PG_SINGLE_STORE=${USE_PG_SINGLE_STORE:-true}
+      - DATABASE_URL=postgresql+psycopg://${POSTGRES_USER:-dovos}:${POSTGRES_PASSWORD:-dovos_password}@postgres:5432/${POSTGRES_DB:-dovos}
+      - PGAPPNAME=${PGAPPNAME:-dovos-watch-folder-worker}
+    volumes:
+      - ./logs:/app/logs
+      - ${WATCH_FOLDER_PATH:-./watch}:/app/watch
     depends_on:
       postgres:
         condition: service_healthy
