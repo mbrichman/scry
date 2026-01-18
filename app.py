@@ -37,15 +37,14 @@ def create_app(database_url=None):
     app.config["SECURITY_REGISTERABLE"] = True
     app.config["SECURITY_SEND_REGISTER_EMAIL"] = False  # No email verification
 
-    # Note: Password required at registration, but passkey is primary login method
-    # This is the standard pattern (Apple/Google/Microsoft all work this way)
-    # Users can login with passkey after adding one in settings
+    # Password is required (passkeys are additive, not a replacement)
+    app.config["SECURITY_PASSWORD_REQUIRED"] = True
 
     # WebAuthn/Passkey configuration
     app.config["SECURITY_WEBAUTHN"] = True
-    app.config["SECURITY_WAN_ALLOW_AS_FIRST_FACTOR"] = True  # Passkeys can be primary auth
-    app.config["SECURITY_WAN_ALLOW_AS_MULTI_FACTOR"] = True  # Passkeys can be 2FA
-    app.config["SECURITY_WAN_ALLOW_AS_VERIFY"] = ["first", "secondary"]
+    app.config["SECURITY_WAN_ALLOW_AS_FIRST_FACTOR"] = False  # Passkeys as 2FA only for now
+    app.config["SECURITY_WAN_ALLOW_AS_MULTI_FACTOR"] = True   # Passkeys can be 2FA
+    app.config["SECURITY_WAN_ALLOW_AS_VERIFY"] = ["secondary"]
     app.config["SECURITY_WAN_ALLOW_USER_HINTS"] = True
 
     # WebAuthn Relying Party settings
