@@ -1,0 +1,350 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login - Scry</title>
+    <link rel="icon" type="image/png" href="{{ url_for('static', filename='images/scry.png') }}">
+    <link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="{{ url_for('static', filename='css/design-system.css') }}" rel="stylesheet">
+    <style>
+        body {
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: var(--bg-primary);
+            margin: 0;
+            padding: 1rem;
+        }
+
+        .login-container {
+            width: 100%;
+            max-width: 400px;
+        }
+
+        .login-card {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: 16px;
+            padding: 2rem;
+            box-shadow: 0 4px 24px rgba(0, 0, 0, 0.1);
+        }
+
+        .login-logo {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.75rem;
+            margin-bottom: 2rem;
+        }
+
+        .login-logo img {
+            width: 48px;
+            height: 48px;
+            border-radius: 12px;
+        }
+
+        .login-logo h1 {
+            font-size: 1.75rem;
+            font-weight: 600;
+            color: var(--text-primary);
+            margin: 0;
+        }
+
+        .login-title {
+            text-align: center;
+            margin-bottom: 1.5rem;
+        }
+
+        .login-title h2 {
+            font-size: 1.25rem;
+            font-weight: 500;
+            color: var(--text-primary);
+            margin: 0;
+        }
+
+        .login-title p {
+            color: var(--text-secondary);
+            margin: 0.5rem 0 0;
+            font-size: 0.875rem;
+        }
+
+        .form-group {
+            margin-bottom: 1rem;
+        }
+
+        .form-label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-weight: 500;
+            color: var(--text-primary);
+            font-size: 0.875rem;
+        }
+
+        .form-control {
+            width: 100%;
+            padding: 0.75rem 1rem;
+            font-size: 1rem;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            transition: border-color 0.2s, box-shadow 0.2s;
+        }
+
+        .form-control:focus {
+            outline: none;
+            border-color: var(--accent-color);
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+        }
+
+        .btn-primary {
+            width: 100%;
+            padding: 0.75rem 1rem;
+            font-size: 1rem;
+            font-weight: 500;
+            border: none;
+            border-radius: 8px;
+            background: var(--accent-color);
+            color: white;
+            cursor: pointer;
+            transition: background 0.2s;
+            margin-top: 0.5rem;
+        }
+
+        .btn-primary:hover {
+            background: var(--accent-hover);
+        }
+
+        .btn-secondary {
+            width: 100%;
+            padding: 0.75rem 1rem;
+            font-size: 1rem;
+            font-weight: 500;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            cursor: pointer;
+            transition: background 0.2s, border-color 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+        }
+
+        .btn-secondary:hover {
+            background: var(--bg-tertiary);
+            border-color: var(--text-secondary);
+        }
+
+        .divider {
+            display: flex;
+            align-items: center;
+            margin: 1.5rem 0;
+            color: var(--text-secondary);
+            font-size: 0.875rem;
+        }
+
+        .divider::before,
+        .divider::after {
+            content: '';
+            flex: 1;
+            height: 1px;
+            background: var(--border-color);
+        }
+
+        .divider span {
+            padding: 0 1rem;
+        }
+
+        .passkey-icon {
+            width: 20px;
+            height: 20px;
+        }
+
+        .alert {
+            padding: 0.75rem 1rem;
+            border-radius: 8px;
+            margin-bottom: 1rem;
+            font-size: 0.875rem;
+        }
+
+        .alert-danger {
+            background: rgba(239, 68, 68, 0.1);
+            border: 1px solid rgba(239, 68, 68, 0.2);
+            color: #ef4444;
+        }
+
+        .alert-info {
+            background: rgba(59, 130, 246, 0.1);
+            border: 1px solid rgba(59, 130, 246, 0.2);
+            color: var(--accent-color);
+        }
+
+        .register-link {
+            text-align: center;
+            margin-top: 1.5rem;
+            font-size: 0.875rem;
+            color: var(--text-secondary);
+        }
+
+        .register-link a {
+            color: var(--accent-color);
+            text-decoration: none;
+            font-weight: 500;
+        }
+
+        .register-link a:hover {
+            text-decoration: underline;
+        }
+
+        #passkey-error {
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="login-container">
+        <div class="login-card">
+            <div class="login-logo">
+                <img src="{{ url_for('static', filename='images/scry.png') }}" alt="Scry">
+                <h1>Scry</h1>
+            </div>
+
+            <div class="login-title">
+                <h2>Welcome back</h2>
+                <p>Sign in to access your conversations</p>
+            </div>
+
+            {% with messages = get_flashed_messages(with_categories=true) %}
+                {% if messages %}
+                    {% for category, message in messages %}
+                        <div class="alert alert-{{ category }}">{{ message }}</div>
+                    {% endfor %}
+                {% endif %}
+            {% endwith %}
+
+            <div id="passkey-error" class="alert alert-danger"></div>
+
+            <!-- Passkey login button -->
+            <button type="button" id="passkey-login-btn" class="btn-secondary" style="margin-bottom: 1rem;">
+                <svg class="passkey-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
+                </svg>
+                Sign in with Passkey
+            </button>
+
+            <div class="divider">
+                <span>or use email</span>
+            </div>
+
+            <!-- Traditional login form -->
+            <form method="POST" action="{{ url_for('security.login') }}" id="login-form">
+                {{ login_user_form.hidden_tag() if login_user_form.hidden_tag }}
+
+                <div class="form-group">
+                    <label class="form-label" for="email">Email</label>
+                    <input type="email" id="email" name="email" class="form-control"
+                           placeholder="you@example.com" required autofocus>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label" for="password">Password</label>
+                    <input type="password" id="password" name="password" class="form-control"
+                           placeholder="Enter your password">
+                </div>
+
+                <button type="submit" class="btn-primary">Sign In</button>
+            </form>
+
+            <div class="register-link">
+                Don't have an account? <a href="{{ url_for('security.register') }}">Create one</a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Flask-Security WebAuthn JS -->
+    <script src="{{ url_for('security.static', filename='js/webauthn.js') }}"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const passkeyBtn = document.getElementById('passkey-login-btn');
+            const errorDiv = document.getElementById('passkey-error');
+
+            // Check if WebAuthn is supported
+            if (!window.PublicKeyCredential) {
+                passkeyBtn.style.display = 'none';
+                return;
+            }
+
+            passkeyBtn.addEventListener('click', async function() {
+                errorDiv.style.display = 'none';
+                passkeyBtn.disabled = true;
+                passkeyBtn.textContent = 'Authenticating...';
+
+                try {
+                    // Start WebAuthn signin flow
+                    const response = await fetch('{{ url_for("security.wan_signin") }}', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({})
+                    });
+
+                    const data = await response.json();
+
+                    if (data.credential_options) {
+                        // Convert base64 to ArrayBuffer for credential options
+                        const options = FlaskSecurity.webauthnParseOptions(data.credential_options);
+
+                        // Get credential
+                        const credential = await navigator.credentials.get({
+                            publicKey: options
+                        });
+
+                        // Send credential to server
+                        const verifyResponse = await fetch('{{ url_for("security.wan_signin") }}', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                            },
+                            body: JSON.stringify({
+                                credential: FlaskSecurity.webauthnPackCredential(credential)
+                            })
+                        });
+
+                        const verifyData = await verifyResponse.json();
+
+                        if (verifyData.user && verifyData.user.authentication_token) {
+                            // Success - redirect
+                            window.location.href = '{{ url_for("conversations") }}';
+                        } else if (verifyData.error) {
+                            throw new Error(verifyData.error);
+                        } else {
+                            // Redirect to the next page
+                            window.location.href = verifyData.next || '{{ url_for("conversations") }}';
+                        }
+                    } else if (data.error) {
+                        throw new Error(data.error);
+                    }
+                } catch (error) {
+                    console.error('Passkey error:', error);
+                    errorDiv.textContent = error.message || 'Passkey authentication failed. Please try again or use email/password.';
+                    errorDiv.style.display = 'block';
+                } finally {
+                    passkeyBtn.disabled = false;
+                    passkeyBtn.innerHTML = `
+                        <svg class="passkey-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
+                        </svg>
+                        Sign in with Passkey
+                    `;
+                }
+            });
+        });
+    </script>
+</body>
+</html>

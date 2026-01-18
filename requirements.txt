@@ -2,6 +2,10 @@ flask
 flask-cors
 flask-wtf
 wtforms
+
+# Authentication with passkey support
+flask-security-too[mfa]
+bcrypt
 sentence-transformers
 markdown
 python-docx

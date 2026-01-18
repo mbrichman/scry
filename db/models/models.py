@@ -5,12 +5,132 @@ Corresponds to the schema defined in db/schema.sql.
 
 import uuid
 from datetime import datetime
-from sqlalchemy import Column, String, Text, DateTime, Integer, ForeignKey, JSON, BigInteger, CheckConstraint, Index, Computed, Boolean
+from sqlalchemy import Column, String, Text, DateTime, Integer, ForeignKey, JSON, BigInteger, CheckConstraint, Index, Computed, Boolean, LargeBinary
 from sqlalchemy.orm import relationship, declarative_base
 from sqlalchemy.dialects.postgresql import UUID, TSVECTOR
 from pgvector.sqlalchemy import Vector
+from flask_security import UserMixin, RoleMixin, AsaList
+from sqlalchemy.ext.mutable import MutableList
 
 Base = declarative_base()
+
+
+# ============================================================================
+# Authentication Models (Flask-Security-Too)
+# ============================================================================
+
+class RolesUsers(Base):
+    """Junction table linking users to roles."""
+    __tablename__ = 'roles_users'
+
+    id = Column(Integer, primary_key=True)
+    user_id = Column(UUID(as_uuid=True), ForeignKey('users.id', ondelete='CASCADE'))
+    role_id = Column(UUID(as_uuid=True), ForeignKey('roles.id', ondelete='CASCADE'))
+
+
+class Role(Base, RoleMixin):
+    """User roles for permission management."""
+    __tablename__ = 'roles'
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    name = Column(String(80), unique=True, nullable=False)
+    description = Column(String(255))
+
+    # Flask-Security permissions field
+    permissions = Column(MutableList.as_mutable(AsaList()), nullable=True)
+
+    def __repr__(self):
+        return f"<Role(name='{self.name}')>"
+
+
+class User(Base, UserMixin):
+    """User model for authentication."""
+    __tablename__ = 'users'
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    email = Column(String(255), unique=True, nullable=False)
+    username = Column(String(255), unique=True, nullable=True)
+
+    # Password (optional - can be null for passkey-only users)
+    password = Column(String(255), nullable=True)
+
+    # Flask-Security required fields
+    active = Column(Boolean, default=True, nullable=False)
+    fs_uniquifier = Column(String(64), unique=True, nullable=False, default=lambda: uuid.uuid4().hex)
+
+    # Timestamps
+    created_at = Column(DateTime(timezone=True), nullable=False, default=datetime.utcnow)
+    last_login_at = Column(DateTime(timezone=True), nullable=True)
+    current_login_at = Column(DateTime(timezone=True), nullable=True)
+    last_login_ip = Column(String(100), nullable=True)
+    current_login_ip = Column(String(100), nullable=True)
+    login_count = Column(Integer, default=0)
+
+    # Two-factor authentication
+    tf_primary_method = Column(String(64), nullable=True)
+    tf_totp_secret = Column(String(255), nullable=True)
+
+    # Relationships
+    roles = relationship(
+        'Role',
+        secondary='roles_users',
+        backref='users'
+    )
+    webauthn = relationship(
+        'WebAuthn',
+        back_populates='user',
+        cascade='all, delete-orphan'
+    )
+
+    def __repr__(self):
+        return f"<User(email='{self.email}')>"
+
+
+class WebAuthn(Base):
+    """WebAuthn/Passkey credentials for passwordless authentication."""
+    __tablename__ = 'webauthn'
+
+    id = Column(BigInteger, primary_key=True, autoincrement=True)
+
+    # Foreign key to user
+    user_id = Column(UUID(as_uuid=True), ForeignKey('users.id', ondelete='CASCADE'), nullable=False)
+
+    # Credential info
+    credential_id = Column(LargeBinary, unique=True, nullable=False, index=True)
+    public_key = Column(LargeBinary, nullable=False)
+    sign_count = Column(Integer, default=0, nullable=False)
+
+    # Transports for this credential (e.g., ['usb', 'nfc', 'ble', 'internal'])
+    transports = Column(MutableList.as_mutable(AsaList()), nullable=True)
+
+    # Device info
+    name = Column(String(64), nullable=False)  # User-friendly name for the passkey
+    usage = Column(String(64), nullable=False)  # 'first' or 'secondary'
+    backup_state = Column(Boolean, nullable=False)
+    device_type = Column(String(64), nullable=False)  # 'single_device' or 'multi_device'
+
+    # Extensions data (JSON-encoded)
+    extensions = Column(String(255), nullable=True)
+
+    # Timestamps
+    lastuse_datetime = Column(DateTime(timezone=True), nullable=False, default=datetime.utcnow)
+    registered_at = Column(DateTime(timezone=True), nullable=False, default=datetime.utcnow)
+
+    # Relationship
+    user = relationship('User', back_populates='webauthn')
+
+    # Flask-Security requires this method
+    def get_user_mapping(self):
+        return {"id": self.user_id, "email": self.user.email}
+
+    def __repr__(self):
+        return f"<WebAuthn(name='{self.name}', user_id='{self.user_id}')>"
+
+
+# Indexes for auth tables
+Index('idx_users_email', User.email)
+Index('idx_users_fs_uniquifier', User.fs_uniquifier)
+Index('idx_webauthn_user_id', WebAuthn.user_id)
 
 
 class Conversation(Base):

@@ -10,9 +10,23 @@ load_dotenv()
 
 # === CONFIG ===
 SECRET_KEY = os.getenv("SECRET_KEY", "your-secret-key-change-this-in-production")
+SECURITY_PASSWORD_SALT = os.getenv("SECURITY_PASSWORD_SALT", "your-password-salt-change-this")
 
 # PostgreSQL Configuration
 DATABASE_URL = os.getenv("DATABASE_URL", "postgresql+psycopg://user:pass@localhost:5432/dovos_dev")
+
+# === Authentication Configuration ===
+# Whether authentication is required (can be disabled for local-only setups)
+AUTH_ENABLED = os.getenv("AUTH_ENABLED", "true").lower() == "true"
+
+# WebAuthn/Passkey Configuration
+# The Relying Party (RP) name shown to users during passkey registration
+WEBAUTHN_RP_NAME = os.getenv("WEBAUTHN_RP_NAME", "Scry")
+# The RP ID should be the domain name (without protocol/port)
+# For localhost development, use "localhost"
+WEBAUTHN_RP_ID = os.getenv("WEBAUTHN_RP_ID", "localhost")
+# The origin URL for WebAuthn (must match the URL users access the app from)
+WEBAUTHN_ORIGIN = os.getenv("WEBAUTHN_ORIGIN", "http://localhost:5001")
 PGAPPNAME = os.getenv("PGAPPNAME", "dovos-api")
 EMBEDDING_MODEL = os.getenv("EMBEDDING_MODEL", "sentence-transformers/all-MiniLM-L6-v2")
 EMBEDDING_DIM = int(os.getenv("EMBEDDING_DIM", "384"))
@@ -44,6 +58,7 @@ from .synonyms import SEARCH_SYNONYMS, get_synonyms, add_synonym_mapping
 
 __all__ = [
     'SECRET_KEY',
+    'SECURITY_PASSWORD_SALT',
     'DATABASE_URL',
     'PGAPPNAME',
     'EMBEDDING_MODEL',
@@ -60,5 +75,9 @@ __all__ = [
     'RAG_DEFAULT_TOP_K_WINDOWS',
     'RAG_DEFAULT_MAX_TOKENS',
     'RAG_PROXIMITY_DECAY_LAMBDA',
-    'RAG_APPLY_RECENCY_BONUS'
+    'RAG_APPLY_RECENCY_BONUS',
+    'AUTH_ENABLED',
+    'WEBAUTHN_RP_NAME',
+    'WEBAUTHN_RP_ID',
+    'WEBAUTHN_ORIGIN',
 ]
